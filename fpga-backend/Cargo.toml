@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-routing-fpga = {path = "../routing-fpga"}
+router = {path = "../router"}
 rand = "0.9.2"
 rayon = "1.11.0"
 regex = "1.12.2"

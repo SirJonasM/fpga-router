@@ -15,10 +15,10 @@ use std::sync::RwLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use routing_fpga::{IterationResult, SimpleSolver, SimpleSteinerSolver, Solver, SteinerSolver};
-use routing_fpga::{FabricGraph, Routing, TestCase, export_steiner_to_json, validate_routing};
+use router::{IterationResult, SimpleSolver, SimpleSteinerSolver, Solver, SteinerSolver};
+use router::{FabricGraph, Routing, TestCase, export_steiner_to_json, validate_routing};
 
-use routing_fpga::{Logging, route};
+use router::{Logging, route};
 
 #[derive(Serialize)]
 struct ErrorResponse {
