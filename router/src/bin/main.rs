@@ -1,5 +1,5 @@
 use clap::Parser;
-use routing_fpga::FabricGraph;
+use router::FabricGraph;
 pub fn main(){
     let args = Args::parse();
     let graph = FabricGraph::from_file(&args.graph).unwrap();
