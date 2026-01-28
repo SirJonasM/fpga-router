@@ -43,17 +43,18 @@ Options:
   ```
   The format of the route-plan is the following:
   ```json
-    [
-  {
-    "sinks": [
-      "LD_I2/X1Y4",
-      "LD_I1/X3Y4",
-      "LG_I3/X3Y3",
-      "LE_I2/X3Y3"
-    ],
-    "signal": "LH_O/X1Y4",
-    "result": null
-  }]
+[
+    {
+        "sinks": [
+            "LD_I2/X1Y4",
+            "LD_I1/X3Y4",
+            "LG_I3/X3Y3",
+            "LE_I2/X3Y3"
+        ],
+        "signal": "LH_O/X1Y4",
+        "result": null
+    }
+]
   ```
 ## route
 ```sh
