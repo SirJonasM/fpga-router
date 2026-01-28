@@ -41,6 +41,20 @@ Options:
   -p, --percentage <PERCENTAGE>      [default: 0.2]
   -h, --help                         Print help
   ```
+  The format of the route-plan is the following:
+  ```json
+    [
+  {
+    "sinks": [
+      "LD_I2/X1Y4",
+      "LD_I1/X3Y4",
+      "LG_I3/X3Y3",
+      "LE_I2/X3Y3"
+    ],
+    "signal": "LH_O/X1Y4",
+    "result": null
+  }]
+  ```
 ## route
 ```sh
 λ router route --help
@@ -57,3 +71,4 @@ Options:
   -l, --log-file <LOG_FILE>
   -h, --help                         Print help
   ```
+## fasm
