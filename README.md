@@ -72,4 +72,46 @@ Options:
   -l, --log-file <LOG_FILE>
   -h, --help                         Print help
   ```
+It uses the same output file but this time it is filled with the result:
+```json
+[
+    {
+        "sinks": [
+            "LE_I2/X3Y3",
+            "LG_I3/X3Y3",
+            "LD_I2/X1Y4",
+            "LD_I1/X3Y4"
+        ],
+        "signal": "LH_O/X1Y4",
+        "result": {
+            "paths": {
+                "LD_I1/X3Y4": [
+                    "LH_O/X1Y4",
+                    ...
+                    "LD_I1/X3Y4"
+                ],
+                "LE_I2/X3Y3": [
+                    "LE_I2/X3Y3"
+                    ...
+                    "LE_I2/X3Y3"
+                ],
+                "LG_I3/X3Y3": [
+                    "LH_O/X1Y4",
+                    ...
+                    "LG_I3/X3Y3"
+                ],
+                "LD_I2/X1Y4": [
+                    "LH_O/X1Y4",
+                    ...
+                    "LD_I2/X1Y4"
+                ]
+          },
+          "nodes": [
+            "J2END_CD_BEG1/X3Y4",
+            ...
+            "N1END2/X3Y3"
+          ]
+    }
+]
+```
 ## fasm
