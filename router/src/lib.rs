@@ -14,7 +14,7 @@
 // mod typst_table;
 mod dijkstra;
 mod fabric_graph;
-#[cfg(feature = "JSON")]
+#[cfg(feature = "serde")]
 mod graph_to_json;
 mod node;
 mod path_finder;
@@ -29,18 +29,18 @@ pub(crate) const SEED: u64 = 42;
 // Public API
 
 /// The FPGA fabric graph, representing nodes and connections.
-pub use fabric_graph::{FabricGraph, Routing};
+pub use fabric_graph::{FabricGraph, Routing, RoutingExpanded};
 
 /// Represents a node in the FPGA fabric.
 pub use node::Node;
 
 /// Path finding utilities and structures.
-pub use path_finder::{IterationResult, Logging, TestCase, route, validate_routing};
+pub use path_finder::{IterationResult, Logging, Config, route, validate_routing};
 
 /// Solver implementations for routing optimization.
 pub use solver::{SimpleSolver, SimpleSteinerSolver, SolveRouting, Solver, SteinerSolver};
 
-/// Export routing results to JSON format (requires `JSON` feature).
-#[cfg(feature = "JSON")]
+/// Export routing results to JSON format (requires `serde` feature).
+#[cfg(feature = "serde")]
 pub use graph_to_json::export_steiner_to_json;
 

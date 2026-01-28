@@ -21,7 +21,7 @@ pub enum Solver {
     SimpleSteiner(SimpleSteinerSolver),
 }
 
-#[derive(Deserialize, Debug, Clone, Serialize)]
+#[derive(Default, Deserialize, Debug, Clone, Serialize)]
 pub struct SimpleSolver;
 pub trait SolveRouting {
     const MAX_ITERATIONS: usize;
@@ -36,7 +36,7 @@ impl SolveRouting for SimpleSolver {
         for sink in &routing.sinks {
             let (path, _cost) = match graph.dijkstra(routing.signal, *sink) {
                 Some(res) => res,
-                None => return Err(format!("Could not find a route for sink: {sink}")),
+                None => return Err(format!("Could not find a route for sink: {} id: {}, from signal: {}, id: {}",sink, graph.nodes[*sink].id(), routing.signal, graph.nodes[routing.signal].id())),
             };
             nodes.extend(&path);
             paths.insert(*sink, path);
@@ -49,7 +49,7 @@ impl SolveRouting for SimpleSolver {
         "Simple Solver"
     }
 }
-#[derive(Deserialize, Debug, Clone, Serialize)]
+#[derive(Default, Deserialize, Debug, Clone, Serialize)]
 pub struct SteinerSolver;
 
 impl SolveRouting for SteinerSolver {
@@ -155,7 +155,7 @@ impl SolveRouting for SteinerSolver {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, Serialize)]
+#[derive(Default,Deserialize, Debug, Clone, Serialize)]
 pub struct SimpleSteinerSolver;
 
 impl SolveRouting for SimpleSteinerSolver {
@@ -191,3 +191,4 @@ impl SolveRouting for SimpleSteinerSolver {
         "SimpleSteinerSolver"
     }
 }
+

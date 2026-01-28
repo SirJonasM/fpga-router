@@ -2,22 +2,14 @@ use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 
 use crate::fabric_graph::FabricGraph;
-use crate::node::NodeType;
 use crate::Routing;
 
 
-#[derive(Serialize, Debug, )]
-enum JsonNodeType {
-    LutInput,
-    LutOutput,
-    Default,
-}
 #[derive(Serialize, Debug, )]
 struct JsonNode {
     id: usize,
     label: String,
     usage: u32,
-    typ: JsonNodeType,
     signals: HashSet<usize>,
 }
 
@@ -91,17 +83,11 @@ fn add_json_node(
 
     let gnode = &fg.nodes[node_id];
     let gcost = &fg.costs[node_id];
-    let typ = match gnode.typ {
-        NodeType::LutInput(_) => JsonNodeType::LutInput,
-        NodeType::LutOutput(_) => JsonNodeType::LutOutput,
-        NodeType::Default(_) => JsonNodeType::Default,
-    };
 
     nodes.push(JsonNode {
         id: node_id,
-        label: gnode.node.id.clone(),
+        label: gnode.id.clone(),
         usage: gcost.usage,
-        typ,
         signals: HashSet::from([signal_id]),
     });
 

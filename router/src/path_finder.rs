@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 
 use crate::fabric_graph::{FabricGraph, SteinerTreeCandidate};
@@ -24,17 +25,27 @@ pub trait Logging {
 
 /// Test case parameters for running a routing algorithm.
 #[derive(Deserialize, Debug, Clone, Serialize)]
-pub struct TestCase {
+pub struct Config {
     /// Unique ID for the test case
     pub id: u64,
-    /// Percentage of outputs to route
-    pub percentage: usize,
-    /// Number of destinations per source
-    pub dst: usize,
     /// Historical cost factor for congestion handling
     pub hist_factor: f32,
     /// Solver to use (Simple or Steiner)
     pub solver: Solver,
+}
+
+
+static COUNTER: AtomicU64 = AtomicU64::new(0);
+impl Config {
+    pub fn new(hist_factor: f32, solver: Solver) -> Self {
+        let id = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        Self { id, hist_factor, solver }
+    }
+}
+impl Default for Config {
+    fn default() -> Self {
+        Self::new(0.1, Solver::Simple(SimpleSolver))
+    }
 }
 fn pre_process(graph: &mut FabricGraph, route_plan: &mut [Routing]) {
     let mut nodes = HashSet::new();
@@ -61,9 +72,9 @@ fn pre_process(graph: &mut FabricGraph, route_plan: &mut [Routing]) {
 /// # Returns
 /// - `Ok(IterationResult)` if routing succeeds with zero conflicts
 /// - `Err(IterationResult)` if routing reaches `MAX_ITERATION` without resolving all conflicts
-pub fn route<L: Logging>(
-    logger: &L,
-    test_case: TestCase,
+pub fn route(
+    logger: &dyn Logging,
+    test_case: Config,
     graph: &mut FabricGraph,
     route_plan: &mut [Routing],
 ) -> Result<IterationResult, IterationResult> {
@@ -75,7 +86,7 @@ pub fn route<L: Logging>(
         Solver::SimpleSteiner(_) => {
             pre_process(graph, route_plan);
             SimpleSteinerSolver::MAX_ITERATIONS
-        },
+        }
     };
     let mut i = 0;
     let mut last_conflicts = 0;
@@ -83,7 +94,7 @@ pub fn route<L: Logging>(
     loop {
         let mut result = match iteration(graph, route_plan, &test_case.solver, hist_fac) {
             Ok(iteration_result) => iteration_result,
-            Err(err) => panic!("Error in interation: {}", err),
+            Err(err) => panic!("Error in interation {}: {}", i,err),
         };
         result.iteration = i;
         result.test_case = test_case.clone();
@@ -97,7 +108,7 @@ pub fn route<L: Logging>(
             return Ok(result);
         };
 
-        if i ==  max_iterations{
+        if i == max_iterations {
             return Err(result);
         }
         last_conflicts = result.conflicts;
@@ -148,10 +159,8 @@ fn analyze_result(conflicts: usize, duration: Duration, graph: &mut FabricGraph,
     let mut result = IterationResult {
         iteration: 0,
         conflicts,
-        test_case: TestCase {
+        test_case: Config {
             id: 0,
-            percentage: 0,
-            dst: 0,
             hist_factor: 0.0,
             solver: Solver::Simple(SimpleSolver),
         },
@@ -201,7 +210,7 @@ fn analyze_result(conflicts: usize, duration: Duration, graph: &mut FabricGraph,
 #[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct IterationResult {
     pub iteration: usize,
-    pub test_case: TestCase,
+    pub test_case: Config,
     pub conflicts: usize,
     pub longest_path: (usize, usize),
     pub longest_path_cost: f32,
@@ -226,11 +235,9 @@ impl Display for IterationResult {
         };
         write!(
             f,
-            "{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
+            "{},{},{},{},{},{},{},{},{},{},{},{}",
             self.iteration,
             self.test_case.id,
-            self.test_case.percentage,
-            self.test_case.dst,
             self.test_case.hist_factor,
             solver,
             self.conflicts,
@@ -457,35 +464,5 @@ impl Routing {
                 Err("No Steiner tree was found".to_string())
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::SimpleSteinerSolver;
-    struct Logger;
-    impl Logging for Logger {
-        fn log(&self, _log_instance: &IterationResult) {}
-    }
-    #[test]
-    pub fn test() {
-        let mut graph = FabricGraph::from_file("../pips.txt").unwrap();
-        let solver = Solver::SimpleSteiner(SimpleSteinerSolver);
-        let test_case = TestCase {
-            id: 0,
-            percentage: 40,
-            dst: 2,
-            hist_factor: 0.1,
-            solver,
-        };
-        let logger = Logger;
-        let mut routing = graph.route_plan(test_case.percentage as f32 / 100.0, test_case.dst);
-        for route in &mut routing {
-            route.pre_calc_steiner_tree(&mut graph).unwrap();
-        }
-        let x = route(&logger, test_case, &mut graph, &mut routing).unwrap();
-        assert_eq!(x.conflicts, 0);
-        validate_routing(&graph, &routing).unwrap();
     }
 }

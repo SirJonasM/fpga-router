@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use router::{IterationResult, SimpleSolver, SimpleSteinerSolver, Solver, SteinerSolver};
-use router::{FabricGraph, Routing, TestCase, export_steiner_to_json, validate_routing};
+use router::{FabricGraph, Routing, Config, export_steiner_to_json, validate_routing};
 
 use router::{Logging, route};
 
@@ -351,7 +351,7 @@ async fn run_test(test: Test, app_state: Arc<AppState>) -> Result<(IterationResu
             SolverType::SteinerSolver => Solver::Steiner(SteinerSolver),
             SolverType::SimpleSteinerSolver => Solver::SimpleSteiner(SimpleSteinerSolver),
         };
-        let test_case = TestCase {
+        let test_case = Config {
             id: test.id,
             percentage: test.percentage,
             dst: test.dst,
