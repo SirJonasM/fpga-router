@@ -1,29 +1,59 @@
-Project structure.
-- routing-fpga: The PathFinder Algorithm
-- fpga-backend: The backend that calls the PathFinder Algorithm under the hood.
-- fpga-frontend: Vite React frontend to interact with Backend and run some tests.
++ Build & Install
+++ Build
+build with:
+```sh
+cargo build --release
+```
+++ Install
+You can install this onto your system with 
+```sh
+cargo install --path .
+```
 
-For the exercise only routing-fpga is necessary but the other two are nice to have.
++ Usage
+++ Overview
+```sh
+λ router --help
+FPGA Routing Utility
 
-building this project:
-- You need cargo (rust toolchain)
-- go into routing-fpga and run cargo build --release
+Usage: router <COMMAND>
 
-Running the project:
-- go into routing-fpga and run cargo run --release
-This will run the tests for Simple and Steiner Solver that were made in the document.
-You can change tests in the get\_test\_cases function
-The Code is documented.
-A run takes some time and depends mostly on the MAX\_ITERATION in lib.rs as some test cases are not solvable.
+Commands:
+  create-test  Creates a test route_plan
+  route        Starts the router
+  help         Print this message or the help of the given subcommand(s)
 
-Now the Browser version:
-I am not sure if this will work on other machines...
-To run the frontend you need to have installed npm then you can install all dependencies with npm i and run it with npm run dev.
-Then start the backend with `cargo run --release`
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
+```
+++ create-test
+```sh
+λ router create-test --help
+Creates a test route_plan
 
-You will find the frontend at localhost:5173.
+Usage: router create-test [OPTIONS] --output <OUTPUT> --graph <GRAPH> --destinations <DESTINATIONS>
 
-There you can start an arbitrary test.
-When you click on the test you will be redirected to an info site. 
-When it finished successfully you can also visualieze  the result as a graph.
+Options:
+  -o, --output <OUTPUT>
+  -g, --graph <GRAPH>
+  -d, --destinations <DESTINATIONS>
+  -p, --percentage <PERCENTAGE>      [default: 0.2]
+  -h, --help                         Print help
+  ```
+++ route
+```sh
+λ router route --help
+Starts the router
 
+Usage: router route [OPTIONS] --output <OUTPUT> --routing-list <ROUTING_LIST> --graph <GRAPH>
+
+Options:
+  -o, --output <OUTPUT>
+  -r, --routing-list <ROUTING_LIST>
+  -g, --graph <GRAPH>
+  -s, --solver <SOLVER>              [default: simple] [possible values: simple, steiner, simple-steiner]
+  -h, --hist-factor <HIST_FACTOR>    [default: 0.1]
+  -l, --log-file <LOG_FILE>
+  -h, --help                         Print help
+  ```
