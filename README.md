@@ -1,17 +1,17 @@
-+ Build & Install
-++ Build
+# Build & Install
+## Build
 build with:
 ```sh
 cargo build --release
 ```
-++ Install
+## Install
 You can install this onto your system with 
 ```sh
 cargo install --path .
 ```
 
-+ Usage
-++ Overview
+# Usage
+## Overview
 ```sh
 λ router --help
 FPGA Routing Utility
@@ -27,7 +27,7 @@ Options:
   -h, --help     Print help
   -V, --version  Print version
 ```
-++ create-test
+## create-test
 ```sh
 λ router create-test --help
 Creates a test route_plan
@@ -41,7 +41,7 @@ Options:
   -p, --percentage <PERCENTAGE>      [default: 0.2]
   -h, --help                         Print help
   ```
-++ route
+## route
 ```sh
 λ router route --help
 Starts the router
