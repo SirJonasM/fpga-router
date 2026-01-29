@@ -11,6 +11,11 @@ cargo install --path .
 ```
 
 # Usage
+1. Have a routing plan, (can be generated with `router create-test`)
+2. solver the routing plan with `router route`
+    - produces json -> use `router fasm` to generate fasm
+    - produces fasm
+
 ## Overview
 ```sh
 λ router --help
@@ -82,46 +87,7 @@ Options:
           [default: 2000]
   -h, --help
           Print help
-```json
-[
-    {
-        "sinks": [
-            "X3Y3.LE_I2",
-            "X3Y3.LG_I3",
-            "X1Y4.LD_I2",
-            "X3Y4.LD_I1"
-        ],
-        "signal": "X1Y4.LH_O",
-        "result": {
-            "paths": {
-                "X3Y4.LD_I1": [
-                    "X1Y4.LH_O",
-                    ...
-                    "X3Y4.LD_I1"
-                ],
-                "X3Y3.LE_I2": [
-                    "X3Y3.LE_I2"
-                    ...
-                    "X3Y3.LE_I2"
-                ],
-                "X3Y3.LG_I3": [
-                    "X1Y4.LH_O",
-                    ...
-                    "X3Y3.LG_I3"
-                ],
-                "X1Y4.LD_I2": [
-                    "X1Y4.LH_O",
-                    ...
-                    "X1Y4.LD_I2"
-                ]
-          },
-          "nodes": [
-            "X3Y4.J2END_CD_BEG1",
-            ...
-            "X3Y3.N1END2"
-          ]
-    }
-]
+```
 ```
 ## FASM
 ```sh
@@ -134,4 +100,176 @@ Options:
   -o, --output <OUTPUT>
   -r, --routing <ROUTING>
   -h, --help               Print help
+```
+# Example
+Creating a simple route-plan:
+```json
+[
+  {
+    "sinks": [
+      "X1Y2.LA_I0",
+      "X1Y1.LA_I1"
+    ],
+    "signal": "X1Y1.LA_O",
+    "result": null
+  },
+  {
+    "sinks": [
+      "X1Y1.LA_I2",
+      "X1Y1.LA_I3"
+    ],
+    "signal": "X1Y2.LA_O",
+    "result": null
+  }
+]
+```
+
+```sh
+λ router route -o routing.json -r route-plan.json -g pips.txt -s simple -h 0.1 -l log.txt
+0,0,0.1,Simple Solver,0,699,3159,8,0,28,1.071795,228
+Success: 0
+Wrote the routing into routing.json
+```
+=> 
+```json
+
+fpga-router git:main*
+λ cat routing.json
+[
+  {
+    "sinks": [
+      "X1Y1.LA_I1",
+      "X1Y2.LA_I0"
+    ],
+    "signal": "X1Y1.LA_O",
+    "result": {
+      "paths": {
+        "X1Y1.LA_I1": [
+          "X1Y1.LA_O",
+          "X1Y1.JE2BEG3",
+          "X1Y1.JE2END3",
+          "X1Y1.J2MID_ABa_BEG1",
+          "X1Y1.J2MID_ABa_END1",
+          "X1Y1.LA_I1"
+        ],
+        "X1Y2.LA_I0": [
+          "X1Y1.LA_O",
+          "X1Y1.JS2BEG6",
+          "X1Y1.JS2END6",
+          "X1Y1.S2BEG6",
+          "X1Y2.S2MID6",
+          "X1Y2.J2MID_ABa_BEG0",
+          "X1Y2.J2MID_ABa_END0",
+          "X1Y2.LA_I0"
+        ]
+      },
+      "nodes": [
+        "X1Y2.S2MID6",
+        "X1Y1.J2MID_ABa_END1",
+        "X1Y1.LA_I1",
+        "X1Y1.JS2BEG6",
+        "X1Y2.J2MID_ABa_END0",
+        "X1Y1.J2MID_ABa_BEG1",
+        "X1Y1.S2BEG6",
+        "X1Y1.JE2END3",
+        "X1Y2.LA_I0",
+        "X1Y1.JS2END6",
+        "X1Y2.J2MID_ABa_BEG0",
+        "X1Y1.JE2BEG3",
+        "X1Y1.LA_O"
+      ]
+    }
+  },
+  {
+    "sinks": [
+      "X1Y1.LA_I2",
+      "X1Y1.LA_I3"
+    ],
+    "signal": "X1Y2.LA_O",
+    "result": {
+      "paths": {
+        "X1Y1.LA_I3": [
+          "X1Y2.LA_O",
+          "X1Y2.JN2BEG1",
+          "X1Y2.JN2END1",
+          "X1Y2.N2BEG1",
+          "X1Y1.N2MID1",
+          "X1Y1.J2MID_ABb_BEG3",
+          "X1Y1.J2MID_ABb_END3",
+          "X1Y1.LA_I3"
+        ],
+        "X1Y1.LA_I2": [
+          "X1Y2.LA_O",
+          "X1Y2.JN2BEG5",
+          "X1Y2.JN2END5",
+          "X1Y2.N2BEG5",
+          "X1Y1.N2MID5",
+          "X1Y1.J2MID_ABb_BEG2",
+          "X1Y1.J2MID_ABb_END2",
+          "X1Y1.LA_I2"
+        ]
+      },
+      "nodes": [
+        "X1Y1.J2MID_ABb_BEG2",
+        "X1Y2.JN2BEG1",
+        "X1Y1.LA_I3",
+        "X1Y2.N2BEG1",
+        "X1Y2.JN2END5",
+        "X1Y1.J2MID_ABb_BEG3",
+        "X1Y1.N2MID1",
+        "X1Y2.JN2BEG5",
+        "X1Y1.LA_I2",
+        "X1Y2.LA_O",
+        "X1Y1.J2MID_ABb_END3",
+        "X1Y2.JN2END1",
+        "X1Y2.N2BEG5",
+        "X1Y1.J2MID_ABb_END2",
+        "X1Y1.N2MID5"
+      ]
+    }
+  }
+]
+```
+and to produce a fasm either:
+```sh
+λ router fasm -r routing.json -o routing.fasm
+```
+or:
+```sh
+λ router route -o routing.fasm -r route-plan.json -g pips.txt -s simple -h 0.1 -l log.txt
+0,0,0.1,Simple Solver,0,699,3159,8,0,28,1.071795,226
+Success: 0
+Wrote the routing into routing.fasm
+```
+
+Either will produce:
+```sh
+λ cat routing.fasm
+X1Y1.J2MID_ABa_BEG1.J2MID_ABa_END1
+X1Y1.J2MID_ABa_END1.LA_I1
+X1Y1.J2MID_ABb_BEG2.J2MID_ABb_END2
+X1Y1.J2MID_ABb_BEG3.J2MID_ABb_END3
+X1Y1.J2MID_ABb_END2.LA_I2
+X1Y1.J2MID_ABb_END3.LA_I3
+X1Y1.JE2BEG3.JE2END3
+X1Y1.JE2END3.J2MID_ABa_BEG1
+X1Y1.JS2BEG6.JS2END6
+X1Y1.JS2END6.S2BEG6
+X1Y1.LA_O.JE2BEG3
+X1Y1.LA_O.JS2BEG6
+X1Y1.N2MID1.J2MID_ABb_BEG3
+X1Y1.N2MID5.J2MID_ABb_BEG2
+X1Y2.J2MID_ABa_BEG0.J2MID_ABa_END0
+X1Y2.J2MID_ABa_END0.LA_I0
+X1Y2.JN2BEG1.JN2END1
+X1Y2.JN2BEG5.JN2END5
+X1Y2.JN2END1.N2BEG1
+X1Y2.JN2END5.N2BEG5
+X1Y2.LA_O.JN2BEG1
+X1Y2.LA_O.JN2BEG5
+X1Y2.S2MID6.J2MID_ABa_BEG0
+```
+
+```sh
+λ diff routing2.fasm routing.fasm
 ```

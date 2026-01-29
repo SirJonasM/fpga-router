@@ -139,7 +139,6 @@ fn start_routing(
 
 fn create_fasm(expanded_routing: &str, output_path: &str) {
     let route_plan = FabricGraph::route_plan_expanded_form_file(expanded_routing).unwrap();
-    println!("{:#?}", route_plan);
     let fasm = routing_to_fasm(&route_plan);
     fs::write(output_path, fasm).unwrap();
 }
