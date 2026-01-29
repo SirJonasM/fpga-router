@@ -88,7 +88,6 @@ Options:
   -h, --help
           Print help
 ```
-```
 ## FASM
 ```sh
 λ router fasm --help
