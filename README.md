@@ -65,14 +65,23 @@ Usage: router route [OPTIONS] --output <OUTPUT> --routing-list <ROUTING_LIST> --
 
 Options:
   -o, --output <OUTPUT>
+          Can be `json` or `fasm`
   -r, --routing-list <ROUTING_LIST>
+
   -g, --graph <GRAPH>
-  -s, --solver <SOLVER>              [default: simple] [possible values: simple, steiner, simple-steiner]
-  -h, --hist-factor <HIST_FACTOR>    [default: 0.1]
+
+  -s, --solver <SOLVER>
+          [default: simple] [possible values: simple, steiner, simple-steiner]
+  -h, --hist-factor <HIST_FACTOR>
+          [default: 0.1]
+  -L, --logger <LOGGER>
+          [default: terminal] [possible values: no, terminal, file]
   -l, --log-file <LOG_FILE>
-  -h, --help                         Print help
-  ```
-It uses the same output file but this time it is filled with the result:
+
+  -i, --max-iterations <MAX_ITERATIONS>
+          [default: 2000]
+  -h, --help
+          Print help
 ```json
 [
     {

@@ -29,6 +29,7 @@ pub struct CreateTestArgs {
 #[derive(Parser, Debug)]
 pub struct RouteArgs {
     #[arg(short, long)]
+    /// Can be `json` or `fasm`
     pub output: String,
     #[arg(short, long)]
     pub routing_list: String,

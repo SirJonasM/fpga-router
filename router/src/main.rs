@@ -2,7 +2,10 @@ mod cli;
 use clap::Parser;
 use cli::*;
 use rand::seq::SliceRandom;
-use router::{Config, FabricGraph, Logging, Routing, RoutingExpanded, SimpleSolver, SimpleSteinerSolver, Solver, SteinerSolver, routing_to_fasm};
+use router::{
+    Config, FabricGraph, Logging, Routing, RoutingExpanded, SimpleSolver, SimpleSteinerSolver, Solver, SteinerSolver,
+    routing_to_fasm,
+};
 use std::io::Write;
 use std::{
     fs::{self, File},
@@ -120,8 +123,12 @@ fn start_routing(
         Ok(x) => {
             println!("Success: {} ", x.iteration);
             let ex = route_plan.iter().map(|x| x.expand(&graph).unwrap()).collect::<Vec<_>>();
-            let pretty = serde_json::to_string_pretty(&ex).unwrap();
-            fs::write(output_path, pretty).unwrap();
+            let out = if output_path.ends_with("fasm") {
+                routing_to_fasm(&ex)
+            } else {
+                serde_json::to_string_pretty(&ex).unwrap()
+            };
+            fs::write(output_path, out).unwrap();
             println!("Wrote the routing into {}", output_path);
         }
         Err(x) => {
@@ -130,10 +137,10 @@ fn start_routing(
     }
 }
 
-fn create_fasm(expanded_routing: &str , output_path: &str) {
+fn create_fasm(expanded_routing: &str, output_path: &str) {
     let route_plan = FabricGraph::route_plan_expanded_form_file(expanded_routing).unwrap();
     println!("{:#?}", route_plan);
-    let fasm = routing_to_fasm(&route_plan) ;
+    let fasm = routing_to_fasm(&route_plan);
     fs::write(output_path, fasm).unwrap();
 }
 
