@@ -132,9 +132,6 @@ Wrote the routing into routing.json
 ```
 => 
 ```json
-
-fpga-router git:main*
-λ cat routing.json
 [
   {
     "sinks": [
