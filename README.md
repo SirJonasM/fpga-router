@@ -46,12 +46,12 @@ Options:
 [
     {
         "sinks": [
-            "LD_I2/X1Y4",
-            "LD_I1/X3Y4",
-            "LG_I3/X3Y3",
-            "LE_I2/X3Y3"
+            "X1Y4.LD_I2",
+            "X3Y4.LD_I1",
+            "X3Y3.LG_I3",
+            "X3Y3.LE_I2"
         ],
-        "signal": "LH_O/X1Y4",
+        "signal": "X1Y4.LH_O",
         "result": null
     }
 ]
@@ -86,39 +86,39 @@ Options:
 [
     {
         "sinks": [
-            "LE_I2/X3Y3",
-            "LG_I3/X3Y3",
-            "LD_I2/X1Y4",
-            "LD_I1/X3Y4"
+            "X3Y3.LE_I2",
+            "X3Y3.LG_I3",
+            "X1Y4.LD_I2",
+            "X3Y4.LD_I1"
         ],
-        "signal": "LH_O/X1Y4",
+        "signal": "X1Y4.LH_O",
         "result": {
             "paths": {
-                "LD_I1/X3Y4": [
-                    "LH_O/X1Y4",
+                "X3Y4.LD_I1": [
+                    "X1Y4.LH_O",
                     ...
-                    "LD_I1/X3Y4"
+                    "X3Y4.LD_I1"
                 ],
-                "LE_I2/X3Y3": [
-                    "LE_I2/X3Y3"
+                "X3Y3.LE_I2": [
+                    "X3Y3.LE_I2"
                     ...
-                    "LE_I2/X3Y3"
+                    "X3Y3.LE_I2"
                 ],
-                "LG_I3/X3Y3": [
-                    "LH_O/X1Y4",
+                "X3Y3.LG_I3": [
+                    "X1Y4.LH_O",
                     ...
-                    "LG_I3/X3Y3"
+                    "X3Y3.LG_I3"
                 ],
-                "LD_I2/X1Y4": [
-                    "LH_O/X1Y4",
+                "X1Y4.LD_I2": [
+                    "X1Y4.LH_O",
                     ...
-                    "LD_I2/X1Y4"
+                    "X1Y4.LD_I2"
                 ]
           },
           "nodes": [
-            "J2END_CD_BEG1/X3Y4",
+            "X3Y4.J2END_CD_BEG1",
             ...
-            "N1END2/X3Y3"
+            "X3Y3.N1END2"
           ]
     }
 ]
