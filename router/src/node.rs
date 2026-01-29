@@ -3,6 +3,8 @@
 //! This module defines the building blocks of the FPGA fabric graph:
 //! nodes, their types, and associated costs for routing algorithms.
 
+use serde::{Deserialize, Serialize};
+
 /// Edge in the graph with a destination node and cost
 #[derive(Debug, Clone)]
 pub struct Edge {
@@ -13,7 +15,7 @@ pub struct Edge {
 }
 
 /// A node in the FPGA graph with its type and metadata.
-#[derive(Hash, Eq, PartialEq, Clone, Debug)]
+#[derive(Hash, Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct Node {
     /// Unique identifier of the node
     pub id: String,
@@ -23,9 +25,10 @@ pub struct Node {
     pub y: u8,
 }
 
+/// A node in the FPGA graph with its type and metadata.
 impl Node{
     pub fn id(&self) -> String{
-        format!("{}/X{}Y{}", self.id, self.x, self.y)
+        format!("X{}Y{}.{}", self.x, self.y, self.id)
     } 
 }
 

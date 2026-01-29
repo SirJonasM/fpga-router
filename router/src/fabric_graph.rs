@@ -83,7 +83,6 @@ pub struct SteinerTreeCandidate {
 }
 
 /// Routing result for a routing request
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
 pub struct RoutingResult {
     /// Paths from source to each sink
@@ -182,10 +181,14 @@ impl FabricGraph {
             map_reversed: reversed,
         })
     }
-
-    pub fn route_plan_form_file(&self, file: &str) -> Result<Vec<Routing>, Box<dyn Error>> {
+    pub fn route_plan_expanded_form_file( file: &str) -> Result<Vec<RoutingExpanded>, Box<dyn Error>> {
         let data: String = fs::read_to_string(file)?;
         let r: Vec::<RoutingExpanded> = serde_json::de::from_str(&data).unwrap();
+        Ok(r)
+    }
+
+    pub fn route_plan_form_file(&self, file: &str) -> Result<Vec<Routing>, Box<dyn Error>> {
+        let r = Self::route_plan_expanded_form_file(file)?;
         let r = r.into_iter().map(|a| Routing::from_expanded(a, self).unwrap()).collect::<Vec<Routing>>();
         Ok(r)
     }

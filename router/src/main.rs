@@ -2,7 +2,7 @@ mod cli;
 use clap::Parser;
 use cli::*;
 use rand::seq::SliceRandom;
-use router::{Config, FabricGraph, Logging, Routing, RoutingExpanded, SimpleSolver, SimpleSteinerSolver, Solver, SteinerSolver};
+use router::{Config, FabricGraph, Logging, Routing, RoutingExpanded, SimpleSolver, SimpleSteinerSolver, Solver, SteinerSolver, routing_to_fasm};
 use std::io::Write;
 use std::{
     fs::{self, File},
@@ -11,19 +11,26 @@ use std::{
 };
 
 // --- Logic Helpers ---
-
-struct SysOutLog;
-struct SimpleLogger {
-    // We wrap the writer in a Mutex so we can modify it via an immutable &self
-    writer: Mutex<BufWriter<File>>,
+enum Loggers {
+    No,
+    Terminal,
+    File(FileLog),
 }
-impl Logging for SysOutLog {
+impl Logging for Loggers {
     fn log(&self, log_instance: &router::IterationResult) {
-        println!("{:?}", log_instance)
+        match self {
+            Loggers::No => {}
+            Loggers::Terminal => println!("{}", log_instance),
+            Loggers::File(file_log) => file_log.log(log_instance),
+        }
     }
 }
 
-impl SimpleLogger {
+struct FileLog {
+    writer: Mutex<BufWriter<File>>,
+}
+
+impl FileLog {
     pub fn new(path: &str) -> Self {
         let file = fs::OpenOptions::new()
             .create(true)
@@ -35,9 +42,6 @@ impl SimpleLogger {
             writer: Mutex::new(BufWriter::new(file)),
         }
     }
-}
-
-impl Logging for SimpleLogger {
     fn log(&self, log_instance: &router::IterationResult) {
         // Lock the mutex. If another thread is logging, this will wait its turn.
         let mut guard = self.writer.lock().expect("Failed to lock log file mutex");
@@ -70,32 +74,31 @@ fn main() {
 
     match cli.command {
         Commands::CreateTest(args) => create_test(&args.graph, &args.output, args.percentage, args.destinations),
+        Commands::Fasm(args) => create_fasm(&args.routing, &args.output),
         Commands::Route(args) => {
             let solver = match args.solver {
                 SolverType::Simple => Solver::Simple(SimpleSolver),
                 SolverType::Steiner => Solver::Steiner(SteinerSolver),
                 SolverType::SimpleSteiner => Solver::SimpleSteiner(SimpleSteinerSolver),
             };
-            if let Some(log_file) = &args.log_file {
-                let logger = SimpleLogger::new(log_file);
-                start_routing(
-                    &args.graph,
-                    &args.routing_list,
-                    solver,
-                    args.hist_factor,
-                    &args.output,
-                    &logger,
-                )
-            } else {
-                start_routing(
-                    &args.graph,
-                    &args.routing_list,
-                    solver,
-                    args.hist_factor,
-                    &args.output,
-                    &SysOutLog,
-                )
+            let logger = match &args.logger {
+                LoggerType::No => Loggers::No,
+                LoggerType::Terminal => Loggers::Terminal,
+                LoggerType::File => {
+                    let file = args.log_file.unwrap();
+                    Loggers::File(FileLog::new(&file))
+                }
             };
+
+            start_routing(
+                &args.graph,
+                &args.routing_list,
+                solver,
+                args.hist_factor,
+                &args.output,
+                &logger,
+                args.max_iterations,
+            )
         }
     }
 }
@@ -107,19 +110,31 @@ fn start_routing(
     hist_factor: f32,
     output_path: &str,
     logger: &dyn Logging,
+    max_iterations: usize,
 ) {
     let mut graph = FabricGraph::from_file(graph_path).unwrap();
     let mut route_plan = graph.route_plan_form_file(routing_list).unwrap();
     let config = Config::new(hist_factor, solver);
 
-    let result = router::route(logger, config, &mut graph, &mut route_plan).unwrap();
+    match router::route(logger, config, &mut graph, &mut route_plan, max_iterations) {
+        Ok(x) => {
+            println!("Success: {} ", x.iteration);
+            let ex = route_plan.iter().map(|x| x.expand(&graph).unwrap()).collect::<Vec<_>>();
+            let pretty = serde_json::to_string_pretty(&ex).unwrap();
+            fs::write(output_path, pretty).unwrap();
+            println!("Wrote the routing into {}", output_path);
+        }
+        Err(x) => {
+            println!("Failure: {} ", x);
+        }
+    }
+}
 
-    println!("{result:#?}");
-    let ex = route_plan.iter().map(|x| x.expand(&graph).unwrap()).collect::<Vec<_>>();
-
-    let pretty = serde_json::to_string_pretty(&ex).unwrap();
-    fs::write(output_path, pretty).unwrap();
-    
+fn create_fasm(expanded_routing: &str , output_path: &str) {
+    let route_plan = FabricGraph::route_plan_expanded_form_file(expanded_routing).unwrap();
+    println!("{:#?}", route_plan);
+    let fasm = routing_to_fasm(&route_plan) ;
+    fs::write(output_path, fasm).unwrap();
 }
 
 fn create_test(graph_path: &str, output_path: &str, percentage: f32, destinations: usize) {
@@ -138,7 +153,7 @@ fn create_test(graph_path: &str, output_path: &str, percentage: f32, destination
         .iter()
         .take(input_count)
         .cloned()
-        .zip(used_outs.chunks(destinations)) // Use args.destinations instead of hardcoded 4
+        .zip(used_outs.chunks(destinations))
         .map(|(signal, sinks)| {
             Routing {
                 sinks: sinks.to_vec(),

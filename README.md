@@ -114,4 +114,15 @@ It uses the same output file but this time it is filled with the result:
     }
 ]
 ```
-## fasm
+## FASM
+```sh
+λ router fasm --help
+parses the router output to fasm
+
+Usage: router fasm --output <OUTPUT> --routing <ROUTING>
+
+Options:
+  -o, --output <OUTPUT>
+  -r, --routing <ROUTING>
+  -h, --help               Print help
+```

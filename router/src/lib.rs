@@ -14,17 +14,13 @@
 // mod typst_table;
 mod dijkstra;
 mod fabric_graph;
-#[cfg(feature = "serde")]
-mod graph_to_json;
 mod node;
 mod path_finder;
 mod path_finding_algo;
+mod fasm;
 mod solver;
 
 
-/// Default seed value for any randomized aspects of routing.
-/// Ensures reproducibility of results.
-pub(crate) const SEED: u64 = 42;
 
 // Public API
 
@@ -40,7 +36,5 @@ pub use path_finder::{IterationResult, Logging, Config, route, validate_routing}
 /// Solver implementations for routing optimization.
 pub use solver::{SimpleSolver, SimpleSteinerSolver, SolveRouting, Solver, SteinerSolver};
 
-/// Export routing results to JSON format (requires `serde` feature).
-#[cfg(feature = "serde")]
-pub use graph_to_json::export_steiner_to_json;
+pub use fasm::routing_to_fasm;
 

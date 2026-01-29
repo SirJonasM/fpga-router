@@ -14,22 +14,20 @@ struct SteinerCandidate {
     mid_points: HashMap<usize, usize>,
     costs: f32,
 }
-#[derive(Deserialize, Debug, Clone, Serialize)]
+#[derive(Eq, PartialEq, Deserialize, Debug, Clone, Serialize)]
 pub enum Solver {
     Simple(SimpleSolver),
     Steiner(SteinerSolver),
     SimpleSteiner(SimpleSteinerSolver),
 }
 
-#[derive(Default, Deserialize, Debug, Clone, Serialize)]
+#[derive(Eq, PartialEq, Deserialize, Debug, Clone, Serialize)]
 pub struct SimpleSolver;
 pub trait SolveRouting {
-    const MAX_ITERATIONS: usize;
     fn solve(&self, graph: &FabricGraph, routing: &mut Routing) -> Result<(), String>;
     fn identifier(&self) -> &'static str;
 }
 impl SolveRouting for SimpleSolver {
-    const MAX_ITERATIONS: usize = 10_000;
     fn solve(&self, graph: &FabricGraph, routing: &mut Routing) -> Result<(), String> {
         let mut nodes = HashSet::new();
         let mut paths = HashMap::new();
@@ -49,11 +47,10 @@ impl SolveRouting for SimpleSolver {
         "Simple Solver"
     }
 }
-#[derive(Default, Deserialize, Debug, Clone, Serialize)]
+#[derive(Eq, PartialEq, Deserialize, Debug, Clone, Serialize)]
 pub struct SteinerSolver;
 
 impl SolveRouting for SteinerSolver {
-    const MAX_ITERATIONS: usize = 2_000;
     fn identifier(&self) -> &'static str {
         "Steiner Solver"
     }
@@ -155,11 +152,10 @@ impl SolveRouting for SteinerSolver {
     }
 }
 
-#[derive(Default,Deserialize, Debug, Clone, Serialize)]
+#[derive(Eq, PartialEq, Deserialize, Debug, Clone, Serialize)]
 pub struct SimpleSteinerSolver;
 
 impl SolveRouting for SimpleSteinerSolver {
-    const MAX_ITERATIONS: usize = 10_000;
     fn solve(&self, graph: &FabricGraph, routing: &mut Routing) -> Result<(), String> {
         if let Some(steiner_tree) = &routing.steiner_tree {
         let mut paths = HashMap::new();

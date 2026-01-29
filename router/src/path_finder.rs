@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 use crate::fabric_graph::{FabricGraph, SteinerTreeCandidate};
 use crate::fabric_graph::{Routing, SteinerTree};
 use crate::solver::{SolveRouting, Solver};
-use crate::{SimpleSolver, SimpleSteinerSolver, SteinerSolver};
+use crate::{SimpleSolver, SimpleSteinerSolver};
 
 /// Trait for logging pathfinding iterations.
 pub trait Logging {
@@ -77,20 +77,16 @@ pub fn route(
     test_case: Config,
     graph: &mut FabricGraph,
     route_plan: &mut [Routing],
+    max_iterations: usize
 ) -> Result<IterationResult, IterationResult> {
     let hist_fac = test_case.hist_factor;
 
-    let max_iterations = match test_case.solver {
-        Solver::Simple(_) => SimpleSolver::MAX_ITERATIONS,
-        Solver::Steiner(_) => SteinerSolver::MAX_ITERATIONS,
-        Solver::SimpleSteiner(_) => {
-            pre_process(graph, route_plan);
-            SimpleSteinerSolver::MAX_ITERATIONS
-        }
-    };
     let mut i = 0;
     let mut last_conflicts = 0;
     let mut same_conflicts = 0;
+    if test_case.solver == Solver::SimpleSteiner(SimpleSteinerSolver){
+        pre_process(graph, route_plan);
+    }
     loop {
         let mut result = match iteration(graph, route_plan, &test_case.solver, hist_fac) {
             Ok(iteration_result) => iteration_result,
