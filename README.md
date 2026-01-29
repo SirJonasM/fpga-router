@@ -1,4 +1,5 @@
 # Build & Install
+
 ## Build
 build with:
 ```sh
@@ -7,7 +8,7 @@ cargo build --release
 ## Install
 You can install this onto your system with 
 ```sh
-cargo install --path .
+cargo install --path ./router
 ```
 
 # Usage
