@@ -29,19 +29,33 @@ pub trait SolveRouting {
 }
 impl SolveRouting for SimpleSolver {
     fn solve(&self, graph: &FabricGraph, routing: &mut Routing) -> Result<(), String> {
-        let mut nodes = HashSet::new();
-        let mut paths = HashMap::new();
-        for sink in &routing.sinks {
-            let (path, _cost) = match graph.dijkstra(routing.signal, *sink) {
-                Some(res) => res,
-                None => return Err(format!("Could not find a route for sink: {} id: {}, from signal: {}, id: {}",sink, graph.nodes[*sink].id(), routing.signal, graph.nodes[routing.signal].id())),
-            };
-            nodes.extend(&path);
-            paths.insert(*sink, path);
+    let results: Result<Vec<(usize, Vec<usize>)>, String> = routing.sinks
+    .par_iter() // 1. Parallel iterator
+    .map(|sink| {
+        // 2. Perform Dijkstra for each sink in parallel
+        match graph.dijkstra(routing.signal, *sink) {
+            Some((path, _cost)) => Ok((*sink, path)),
+            None => Err(format!(
+                "Could not find a route for sink: {} id: {}, from signal: {}, id: {}",
+                sink, graph.nodes[*sink].id(), routing.signal, graph.nodes[routing.signal].id()
+            )),
         }
-        routing.result = Some(RoutingResult { paths, nodes });
-        Ok(())
-    }
+    })
+    .collect(); // 3. Collect will stop at the first Err it encounters
+
+let paths_vec = results?;
+
+// 4. Combine the results back into your HashMap and HashSet
+let mut nodes = HashSet::new();
+let mut paths = HashMap::new();
+
+for (sink, path) in paths_vec {
+    nodes.extend(&path);
+    paths.insert(sink, path);
+}
+
+routing.result = Some(RoutingResult { paths, nodes });
+Ok(())}
 
     fn identifier(&self) -> &'static str {
         "Simple Solver"
