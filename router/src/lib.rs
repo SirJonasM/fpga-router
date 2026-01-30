@@ -25,7 +25,7 @@ mod solver;
 // Public API
 
 /// The FPGA fabric graph, representing nodes and connections.
-pub use fabric_graph::{FabricGraph, Routing, RoutingExpanded};
+pub use fabric_graph::{FabricGraph, Routing, RoutingExpanded, bucket_luts};
 
 /// Represents a node in the FPGA fabric.
 pub use node::Node;

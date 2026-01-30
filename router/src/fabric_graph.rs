@@ -244,3 +244,18 @@ pub struct RoutingResultExpanded {
     /// All nodes used in the routing
     pub nodes: HashSet<String>,
 }
+
+pub fn bucket_luts(nodes: &[crate::Node]) -> (Vec<usize>, Vec<usize>) {
+    let mut lut_inputs = vec![];
+    let mut lut_outputs = vec![];
+    for (i, node) in nodes.iter().enumerate() {
+        if node.id.starts_with('L') {
+            if node.id.chars().nth(3) == Some('O') {
+                lut_outputs.push(i);
+            } else if node.id.chars().nth(3) == Some('I') {
+                lut_inputs.push(i);
+            }
+        }
+    }
+    (lut_inputs, lut_outputs)
+}
