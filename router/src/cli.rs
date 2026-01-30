@@ -37,7 +37,7 @@ pub struct RouteArgs {
     pub graph: String,
     #[arg(short, long, value_enum, default_value_t = SolverType::Simple)]
     pub solver: SolverType,
-    #[arg(short, long, default_value_t = 0.1)]
+    #[arg(long, default_value_t = 0.1)]
     pub hist_factor: f32,
     #[arg(short='L', long, value_enum, default_value_t=LoggerType::Terminal )]
     pub logger: LoggerType,

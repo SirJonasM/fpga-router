@@ -114,10 +114,10 @@ impl RoutingResult {
 pub struct FabricGraph {
     /// Map from Node to index
     pub index: HashMap<Node, usize>,
-    /// Costs associated with each node
-    pub costs: Vec<Costs>,
     /// List of nodes in the graph
     pub nodes: Vec<Node>,
+    /// Costs associated with each node
+    pub costs: Vec<Costs>,
     /// Forward adjacency list
     pub map: Vec<Vec<Edge>>,
     /// Reversed adjacency list
@@ -233,6 +233,7 @@ pub struct RoutingExpanded {
     /// Source signal node
     pub signal: String,
     /// Optional routing result after computation
+ #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<RoutingResultExpanded>,
 }
 

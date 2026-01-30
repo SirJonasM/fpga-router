@@ -127,11 +127,7 @@ impl Costs {
 
     /// Create a new `Costs` object
     pub(crate) fn new() -> Self {
-        Self {
-            historic_cost: 0.0,
-            capacity: 1.0,
-            usage: 0,
-        }
+        Self::default()
     }
 }
 
