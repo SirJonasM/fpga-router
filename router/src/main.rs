@@ -102,10 +102,10 @@ fn start_routing(
 ) {
     let mut graph = FabricGraph::from_file(graph_path).unwrap();
     let mut route_plan = graph.route_plan_form_file(routing_list).unwrap();
-    let config = Config::new(hist_factor, solver);
+    let config = Config::new(hist_factor, solver, max_iterations);
     println!("Map: {}, Costs: {}", graph.map.iter().fold(0, |a,b| a + b.len()), graph.costs.len());
 
-    match router::route(logger, config, &mut graph, &mut route_plan, max_iterations) {
+    match router::route(&mut route_plan,&mut graph, config, logger) {
         Ok(x) => {
             println!("Success: {} ", x.iteration);
             let ex = route_plan.iter().map(|x| x.expand(&graph).unwrap()).collect::<Vec<_>>();

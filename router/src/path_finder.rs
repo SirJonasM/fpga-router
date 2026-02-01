@@ -32,19 +32,20 @@ pub struct Config {
     pub hist_factor: f32,
     /// Solver to use (Simple or Steiner)
     pub solver: Solver,
+    /// The maximum iterations the path finder algorithm will try to solve the routing
+    pub max_iterations: usize,
 }
-
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 impl Config {
-    pub fn new(hist_factor: f32, solver: Solver) -> Self {
+    pub fn new(hist_factor: f32, solver: Solver, max_iterations: usize) -> Self {
         let id = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        Self { id, hist_factor, solver }
+        Self { id, hist_factor, solver , max_iterations}
     }
 }
 impl Default for Config {
     fn default() -> Self {
-        Self::new(0.1, Solver::Simple(SimpleSolver))
+        Self::new(0.1, Solver::Simple(SimpleSolver), 1000)
     }
 }
 fn pre_process(graph: &mut FabricGraph, route_plan: &mut [Routing]) {
@@ -73,27 +74,27 @@ fn pre_process(graph: &mut FabricGraph, route_plan: &mut [Routing]) {
 /// - `Ok(IterationResult)` if routing succeeds with zero conflicts
 /// - `Err(IterationResult)` if routing reaches `MAX_ITERATION` without resolving all conflicts
 pub fn route(
-    logger: &dyn Logging,
-    test_case: Config,
-    graph: &mut FabricGraph,
     route_plan: &mut [Routing],
-    max_iterations: usize
+    graph: &mut FabricGraph,
+    config: Config,
+    logger: &dyn Logging,
 ) -> Result<IterationResult, IterationResult> {
-    let hist_fac = test_case.hist_factor;
+    let hist_fac = config.hist_factor;
 
     let mut i = 0;
     let mut last_conflicts = 0;
     let mut same_conflicts = 0;
-    if test_case.solver == Solver::SimpleSteiner(SimpleSteinerSolver){
+    if config.solver == Solver::SimpleSteiner(SimpleSteinerSolver) {
         pre_process(graph, route_plan);
     }
+    let max_iterations = config.max_iterations;
     loop {
-        let mut result = match iteration(graph, route_plan, &test_case.solver, hist_fac) {
+        let mut result = match iteration(graph, route_plan, &config.solver, hist_fac) {
             Ok(iteration_result) => iteration_result,
-            Err(err) => panic!("Error in interation {}: {}", i,err),
+            Err(err) => panic!("Error in interation {}: {}", i, err),
         };
         result.iteration = i;
-        result.test_case = test_case.clone();
+        result.test_case = config.clone();
 
         logger.log(&result);
 
@@ -109,7 +110,7 @@ pub fn route(
         }
         last_conflicts = result.conflicts;
         if same_conflicts == 200
-            && let Solver::SimpleSteiner(_) = test_case.solver
+            && let Solver::SimpleSteiner(_) = config.solver
         {
             pre_process(graph, route_plan);
         }
@@ -159,6 +160,7 @@ fn analyze_result(conflicts: usize, duration: Duration, graph: &mut FabricGraph,
             id: 0,
             hist_factor: 0.0,
             solver: Solver::Simple(SimpleSolver),
+            max_iterations: 1000,
         },
         longest_path: (0, 0),
         longest_path_cost: 0.0,
