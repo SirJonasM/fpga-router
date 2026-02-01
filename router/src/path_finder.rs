@@ -14,8 +14,7 @@ use std::time::{Duration, Instant};
 
 use crate::fabric_graph::{FabricGraph, SteinerTreeCandidate};
 use crate::fabric_graph::{Routing, SteinerTree};
-use crate::solver::{SolveRouting, Solver};
-use crate::{SimpleSolver, SimpleSteinerSolver};
+use crate::solver::{SimpleSolver, SimpleSteinerSolver, SolveRouting, Solver};
 
 /// Trait for logging pathfinding iterations.
 pub trait Logging {

@@ -245,7 +245,7 @@ pub struct RoutingResultExpanded {
     pub nodes: HashSet<String>,
 }
 
-pub fn bucket_luts(nodes: &[crate::Node]) -> (Vec<usize>, Vec<usize>) {
+pub fn bucket_luts(nodes: &[Node]) -> (Vec<usize>, Vec<usize>) {
     let mut lut_inputs = vec![];
     let mut lut_outputs = vec![];
     for (i, node) in nodes.iter().enumerate() {

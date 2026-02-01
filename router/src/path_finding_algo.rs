@@ -3,7 +3,8 @@ use std::{
     collections::{BinaryHeap, HashSet, VecDeque},
 };
 
-use crate::{node::Edge, FabricGraph};
+use crate::{fabric_graph::FabricGraph, node::Edge};
+
 
 impl FabricGraph {
     pub fn breadth_first_search(&self, start: usize, end: usize) -> Option<(usize, usize, usize)> {

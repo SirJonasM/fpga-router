@@ -29,33 +29,38 @@ pub trait SolveRouting {
 }
 impl SolveRouting for SimpleSolver {
     fn solve(&self, graph: &FabricGraph, routing: &mut Routing) -> Result<(), String> {
-    let results: Result<Vec<(usize, Vec<usize>)>, String> = routing.sinks
-    .par_iter() // 1. Parallel iterator
-    .map(|sink| {
-        // 2. Perform Dijkstra for each sink in parallel
-        match graph.dijkstra(routing.signal, *sink) {
-            Some((path, _cost)) => Ok((*sink, path)),
-            None => Err(format!(
-                "Could not find a route for sink: {} id: {}, from signal: {}, id: {}",
-                sink, graph.nodes[*sink].id(), routing.signal, graph.nodes[routing.signal].id()
-            )),
+        let results: Result<Vec<(usize, Vec<usize>)>, String> = routing
+            .sinks
+            .par_iter() // 1. Parallel iterator
+            .map(|sink| {
+                // 2. Perform Dijkstra for each sink in parallel
+                match graph.dijkstra(routing.signal, *sink) {
+                    Some((path, _cost)) => Ok((*sink, path)),
+                    None => Err(format!(
+                        "Could not find a route for sink: {} id: {}, from signal: {}, id: {}",
+                        sink,
+                        graph.nodes[*sink].id(),
+                        routing.signal,
+                        graph.nodes[routing.signal].id()
+                    )),
+                }
+            })
+            .collect(); // 3. Collect will stop at the first Err it encounters
+
+        let paths_vec = results?;
+
+        // 4. Combine the results back into your HashMap and HashSet
+        let mut nodes = HashSet::new();
+        let mut paths = HashMap::new();
+
+        for (sink, path) in paths_vec {
+            nodes.extend(&path);
+            paths.insert(sink, path);
         }
-    })
-    .collect(); // 3. Collect will stop at the first Err it encounters
 
-let paths_vec = results?;
-
-// 4. Combine the results back into your HashMap and HashSet
-let mut nodes = HashSet::new();
-let mut paths = HashMap::new();
-
-for (sink, path) in paths_vec {
-    nodes.extend(&path);
-    paths.insert(sink, path);
-}
-
-routing.result = Some(RoutingResult { paths, nodes });
-Ok(())}
+        routing.result = Some(RoutingResult { paths, nodes });
+        Ok(())
+    }
 
     fn identifier(&self) -> &'static str {
         "Simple Solver"
@@ -172,33 +177,30 @@ pub struct SimpleSteinerSolver;
 impl SolveRouting for SimpleSteinerSolver {
     fn solve(&self, graph: &FabricGraph, routing: &mut Routing) -> Result<(), String> {
         if let Some(steiner_tree) = &routing.steiner_tree {
-        let mut paths = HashMap::new();
-        let mut nodes = HashSet::new();
-        for (terminal, route) in &steiner_tree.steiner_nodes {
-            let mut path = Vec::new();
-            for steiner_node in route.windows(2) {
-                let (start, end) = (steiner_node[0], steiner_node[1]);
-                let (a, _b) = match graph.dijkstra(start, end) {
-                    Some(res) => res,
-                    None => return Err(format!("Could not find path between steinere nodes: {start}, {end}")),
-                };
-                nodes.extend(&a);
-                path.extend(&a[..a.len() - 1]);
+            let mut paths = HashMap::new();
+            let mut nodes = HashSet::new();
+            for (terminal, route) in &steiner_tree.steiner_nodes {
+                let mut path = Vec::new();
+                for steiner_node in route.windows(2) {
+                    let (start, end) = (steiner_node[0], steiner_node[1]);
+                    let (a, _b) = match graph.dijkstra(start, end) {
+                        Some(res) => res,
+                        None => return Err(format!("Could not find path between steinere nodes: {start}, {end}")),
+                    };
+                    nodes.extend(&a);
+                    path.extend(&a[..a.len() - 1]);
+                }
+                path.push(*terminal);
+                paths.insert(*terminal, path);
             }
-            path.push(*terminal);
-            paths.insert(*terminal, path);
-        }
-        routing.result = Some(RoutingResult { paths, nodes });
-        Ok(())
-        }
-        else {
+            routing.result = Some(RoutingResult { paths, nodes });
+            Ok(())
+        } else {
             Err("No steiner Tree precalculated.".to_string())
         }
-        
     }
 
     fn identifier(&self) -> &'static str {
         "SimpleSteinerSolver"
     }
 }
-

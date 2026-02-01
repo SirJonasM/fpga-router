@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
-use crate::{RoutingExpanded};
+use crate::fabric_graph::RoutingExpanded;
+
 
  /// Converts Expanded JSON-like structure to a FASM string
 pub fn routing_to_fasm(expanded_nets: &[RoutingExpanded]) -> String {

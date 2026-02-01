@@ -11,30 +11,23 @@
 //! - Validation of routing results
 //! - Optional JSON export for routing data (`graph_to_json` feature)
 
-// mod typst_table;
-mod dijkstra;
-mod fabric_graph;
-mod node;
-mod path_finder;
-mod path_finding_algo;
-mod fasm;
-mod solver;
+pub(crate)mod dijkstra;
+pub(crate)mod fabric_graph;
+pub(crate)mod node;
+pub(crate)mod path_finder;
+pub(crate)mod path_finding_algo;
+pub(crate)mod fasm;
+pub(crate)mod solver;
+pub(crate)mod api;
+pub(crate)mod logger;
 
 
 
 // Public API
+pub use api::*;
+pub use path_finder::Logging;
+pub use path_finder::IterationResult;
 
-/// The FPGA fabric graph, representing nodes and connections.
-pub use fabric_graph::{FabricGraph, Routing, RoutingExpanded, bucket_luts};
-
-/// Represents a node in the FPGA fabric.
-pub use node::Node;
-
-/// Path finding utilities and structures.
-pub use path_finder::{IterationResult, Logging, Config, route, validate_routing};
-
-/// Solver implementations for routing optimization.
-pub use solver::{SimpleSolver, SimpleSteinerSolver, SolveRouting, Solver, SteinerSolver};
-
-pub use fasm::routing_to_fasm;
+pub use solver::{Solver, SimpleSolver, SimpleSteinerSolver, SteinerSolver};
+pub use logger::{Loggers,FileLog};
 
