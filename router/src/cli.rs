@@ -54,6 +54,14 @@ pub struct FasmArgs {
     pub routing: String,
 }
 
+#[derive(Parser, Debug)]
+pub struct ValidateArgs{
+    #[arg(short, long)]
+    pub graph: String,
+    #[arg(short, long)]
+    pub routing: String,
+}
+
 // --- CLI Structure ---
 
 #[derive(Parser, Debug)]
@@ -71,4 +79,6 @@ pub enum Commands {
     Route(RouteArgs),
     /// parses the router output to fasm
     Fasm(FasmArgs),
+
+    Validate(ValidateArgs),
 }

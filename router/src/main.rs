@@ -1,9 +1,7 @@
 mod cli;
 use clap::Parser;
 use cli::*;
-use router::{create_fasm, create_test, start_routing, FileLog, IterationResult, Loggers, Logging, SimpleSolver, SimpleSteinerSolver, Solver, SteinerSolver};
-
-// --- Logic Helpers ---
+use router::{create_fasm, create_test, start_routing, validate_routing, FileLog, Loggers, SimpleSolver, SimpleSteinerSolver, Solver, SteinerSolver};
 
 
 fn main() {
@@ -36,6 +34,12 @@ fn main() {
                 &logger,
                 args.max_iterations,
             )
+        }
+        Commands::Validate(args) => {
+            match validate_routing(&args.routing, &args.graph){
+                Ok(()) => println!("Routing is valid."),
+                Err(err) => println!("Routing is invalid due to: {}", err)
+            }
         }
     }
 }

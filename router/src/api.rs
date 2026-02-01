@@ -2,8 +2,13 @@ use std::fs;
 
 use rand::seq::SliceRandom;
 
-use crate::{fabric_graph::{bucket_luts, FabricGraph, Routing, RoutingExpanded}, fasm::routing_to_fasm, path_finder::{route, Config, Logging}, solver::Solver};
-
+use crate::{
+    fabric_graph::{FabricGraph, Routing, RoutingExpanded, bucket_luts},
+    fasm::routing_to_fasm,
+    path_finder::{Config, Logging, route},
+    solver::Solver,
+    validate,
+};
 
 pub fn start_routing(
     graph_path: &str,
@@ -17,9 +22,13 @@ pub fn start_routing(
     let mut graph = FabricGraph::from_file(graph_path).unwrap();
     let mut route_plan = graph.route_plan_form_file(routing_list).unwrap();
     let config = Config::new(hist_factor, solver, max_iterations);
-    println!("Map: {}, Costs: {}", graph.map.iter().fold(0, |a,b| a + b.len()), graph.costs.len());
+    println!(
+        "Map: {}, Costs: {}",
+        graph.map.iter().fold(0, |a, b| a + b.len()),
+        graph.costs.len()
+    );
 
-    match route(&mut route_plan,&mut graph, config, logger) {
+    match route(&mut route_plan, &mut graph, config, logger) {
         Ok(x) => {
             println!("Success: {} ", x.iteration);
             let ex = route_plan.iter().map(|x| x.expand(&graph).unwrap()).collect::<Vec<_>>();
@@ -75,4 +84,17 @@ pub fn create_test(graph_path: &str, output_path: &str, percentage: f32, destina
     let pretty = serde_json::to_string_pretty(&route_plan).unwrap();
     fs::write(output_path, pretty).unwrap();
     println!("Test route plan written to {}", output_path);
+}
+
+/// Validate SteinerTrees on a FabricGraph.
+///
+/// Conditions:
+/// 1. Each SteinerTree has a result (steiner_nodes, nodes, cost).
+/// 2. From the "signal" node you can reach all sinks, using only `result.nodes`.
+/// 3. No node belongs to more than one signal's Steiner tree.
+/// 4. All node IDs referenced exist inside the FabricGraph.
+pub fn validate_routing(graph_path: &str, routing_list: &str) -> Result<(), String> {
+    let graph = FabricGraph::from_file(graph_path).unwrap();
+    let route_plan = graph.route_plan_form_file(routing_list).unwrap();
+    validate::validate(&route_plan, &graph)
 }

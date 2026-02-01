@@ -112,8 +112,6 @@ impl RoutingResult {
 /// Representation of the FPGA fabric graph
 #[derive(Debug, Clone)]
 pub struct FabricGraph {
-    /// Map from Node to index
-    pub index: HashMap<Node, usize>,
     /// List of nodes in the graph
     pub nodes: Vec<Node>,
     /// Costs associated with each node
@@ -174,7 +172,6 @@ impl FabricGraph {
         let reversed = get_reversed_map(&nodes, &map);
 
         Ok(Self {
-            index,
             nodes,
             costs,
             map,

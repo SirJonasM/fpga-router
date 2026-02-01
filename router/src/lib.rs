@@ -15,11 +15,11 @@ pub(crate)mod dijkstra;
 pub(crate)mod fabric_graph;
 pub(crate)mod node;
 pub(crate)mod path_finder;
-pub(crate)mod path_finding_algo;
 pub(crate)mod fasm;
 pub(crate)mod solver;
 pub(crate)mod api;
 pub(crate)mod logger;
+pub (crate) mod validate;
 
 
 
@@ -30,4 +30,3 @@ pub use path_finder::IterationResult;
 
 pub use solver::{Solver, SimpleSolver, SimpleSteinerSolver, SteinerSolver};
 pub use logger::{Loggers,FileLog};
-
