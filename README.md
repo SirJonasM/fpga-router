@@ -8,8 +8,17 @@ cargo build --release
 ## Install
 You can install this onto your system with 
 ```sh
-cargo install --path ./router
+cargo install --path .
 ```
+
+## Library
+To add this as a library you can add this to dependencies:
+```toml
+[dependencies]
+router = { git = "https://github.com/SirJonasM/fpga-router" }
+```
+
+
 
 
 # Usage
