@@ -23,8 +23,7 @@ pub fn validate(route_plan: &[Routing], graph: &FabricGraph )-> Result<(),String
         for &n in &result.nodes {
             if !used_nodes_global.insert(n) {
                 return Err(format!(
-                    "Node {} is used by more than one signal (conflict at tree {})",
-                    n, tree_idx
+                    "Node {n} is used by more than one signal (conflict at tree {tree_idx})",
                 ));
             }
         }
@@ -37,7 +36,7 @@ pub fn validate(route_plan: &[Routing], graph: &FabricGraph )-> Result<(),String
         // --- Reachability check: signal -> every sink using only result.nodes ---
         for &sink in &tree.sinks {
             if sink >= node_count {
-                return Err(format!("Tree {} has invalid sink {}", tree_idx, sink));
+                return Err(format!("Tree {tree_idx} has invalid sink {sink}"));
             }
 
             if !is_reachable_within_set(graph, tree.signal, sink, &result.nodes) {

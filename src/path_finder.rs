@@ -52,13 +52,11 @@ fn pre_process(graph: &mut FabricGraph, route_plan: &mut [Routing]) {
     for route in route_plan.iter_mut() {
         let x = route.pre_calc_steiner_tree(graph).unwrap();
 
-        if x.nodes.iter().any(|a| nodes.contains(a)) {
-            panic!("Steiner Node is already used.")
-        }
+        assert!(!x.nodes.iter().any(|a| nodes.contains(a)), "Steiner Node is already used.");
         nodes.extend(x.nodes.clone());
         route.steiner_tree = Some(x);
     }
-    graph.reset_usage()
+    graph.reset_usage();
 }
 
 /// Execute routing for a given `TestCase` and `FabricGraph`.

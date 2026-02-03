@@ -48,24 +48,20 @@ pub struct Costs {
 impl Node {
     /// Parse a `Node` from a block string and ID
     ///
-    /// # Arguments
-    /// * `block` - String containing the coordinates (e.g., "X1Y2")
-    /// * `id` - Node identifier (e.g., "LA_I0" or "LB_O")
-    ///
     /// # Returns
     /// A `Node` 
     pub fn parse_from_pips_line(line: &str) -> Result<(Self,Self), String> {
         let parts: Vec<&str> = line.split(',').collect();
         if parts.len() != 6 {
-            return Err(format!("Invalid line: {}", line));
+            return Err(format!("Invalid line: {line}"));
         }
         let (x1, y1) = match from_str_coords(parts[0]) {
             Ok(res) => res,
-            Err(err) => panic!("Error parsing: {}", err),
+            Err(err) => panic!("Error parsing: {err}"),
         };
         let (x2, y2) = match from_str_coords(parts[2]) {
             Ok(res) => res,
-            Err(err) => panic!("Error parsing: {}", err),
+            Err(err) => panic!("Error parsing: {err}"),
         };
 
         Ok((
@@ -85,13 +81,13 @@ impl Node {
 /// Parse coordinates from a string of the form "X<num>Y<num>"
 fn from_str_coords(s: &str) -> std::result::Result<(u8, u8), String> {
     if !s.starts_with('X') {
-        return Err(format!("Invalid BlockID, missing 'X': {}", s));
+        return Err(format!("Invalid BlockID, missing 'X': {s}"));
     }
     let Some((x_part, y_part)) = s.split_once('Y') else {
-        return Err(format!("Invalid BlockID, missing 'Y': {}", s));
+        return Err(format!("Invalid BlockID, missing 'Y': {s}"));
     };
-    let x = x_part[1..].parse::<u8>().map_err(|_| format!("Invalid X number in BlockID: {}", s))?;
-    let y = y_part.parse::<u8>().map_err(|_| format!("Invalid Y number in BlockID: {}", s))?;
+    let x = x_part[1..].parse::<u8>().map_err(|_| format!("Invalid X number in BlockID: {s}"))?;
+    let y = y_part.parse::<u8>().map_err(|_| format!("Invalid Y number in BlockID: {s}"))?;
     Ok((x, y))
 }
 
@@ -110,6 +106,7 @@ impl Costs {
     ///
     /// Returns `true` if the node is congested (usage > capacity)
     pub fn update(&mut self, historic_factor: f32) -> bool {
+        #[allow(clippy::cast_precision_loss)]
         let usage = self.usage as f32;
         let over_use = usage - self.capacity;
 
@@ -122,7 +119,9 @@ impl Costs {
 
     /// Calculate total cost for this node
     pub fn calc_costs(&self, base_cost: f32) -> f32 {
-        (base_cost + self.historic_cost) * (1.0 + self.usage as f32)
+        #[allow(clippy::cast_precision_loss)]
+        let casted_usage = self.usage as f32;
+        (base_cost + self.historic_cost) * (1.0 + casted_usage)
     }
 
     /// Create a new `Costs` object

@@ -18,9 +18,6 @@ To add this as a library you can add this to dependencies:
 router = { git = "https://github.com/SirJonasM/fpga-router" }
 ```
 
-
-
-
 # Usage
 1. Have a routing plan, (can be generated with `router create-test`)
 2. solver the routing plan with `router route`

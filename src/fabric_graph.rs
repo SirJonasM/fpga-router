@@ -27,28 +27,24 @@ pub struct Routing {
 }
 
 impl Routing {
-    pub fn expand(&self, graph: &FabricGraph) -> Result<RoutingExpanded, String> {
+    pub fn expand(&self, graph: &FabricGraph) -> RoutingExpanded {
         let signal = graph.nodes[self.signal].id();
         let sinks = self.sinks.iter().map(|a| graph.nodes[*a].id()).collect();
-        let result = if let Some(r) = &self.result {
-            Some(r.expand(graph)?)
-        } else {
-            None
-        };
+        let result = self.result.as_ref().map(|r| r.expand(graph));
 
-        Ok(RoutingExpanded { sinks, signal, result })
+        RoutingExpanded { sinks, signal, result }
     }
-    pub fn from_expanded(expanded: RoutingExpanded, graph: &FabricGraph) -> Result<Self, String> {
+    pub fn from_expanded(expanded: &RoutingExpanded, graph: &FabricGraph) -> Result<Self, String> {
         let mut signal: Option<usize> = None;
         let mut sinks: Vec<usize> = vec![];
 
         for (i, node) in graph.nodes.iter().enumerate() {
             let id = node.id();
             if id == expanded.signal {
-                signal = Some(i)
+                signal = Some(i);
             }
             if expanded.sinks.contains(&id) {
-                sinks.push(i)
+                sinks.push(i);
             }
         }
 
@@ -92,20 +88,20 @@ pub struct RoutingResult {
 }
 
 impl RoutingResult {
-    pub fn expand(&self, graph: &FabricGraph) -> Result<RoutingResultExpanded, String> {
+    pub fn expand(&self, graph: &FabricGraph) -> RoutingResultExpanded{
         let nodes = self.nodes.iter().map(|a| graph.nodes[*a].id()).collect::<HashSet<String>>();
         let paths = self
             .paths
             .iter()
-            .map(|(a, b)| {
+            .map(|(sink, path)| {
                 (
-                    graph.nodes[*a].id(),
-                    b.iter().map(|c| graph.nodes[*c].id()).collect::<Vec<String>>(),
+                    graph.nodes[*sink].id(),
+                    path.iter().map(|c| graph.nodes[*c].id()).collect::<Vec<String>>(),
                 )
             })
             .collect::<HashMap<String, Vec<String>>>();
 
-        Ok(RoutingResultExpanded { paths, nodes })
+        RoutingResultExpanded { paths, nodes }
     }
 }
 
@@ -123,12 +119,8 @@ pub struct FabricGraph {
 }
 
 impl FabricGraph {
-    /// Build a FabricGraph from `pips.txt` file
     pub fn from_file(path: &str) -> Result<Self, String> {
-        let file = match File::open(path) {
-            Ok(file) => file,
-            Err(_) => return Err(format!("Error loading file: {}.", path)),
-        };
+        let Ok(file) = File::open(path) else { return Err(format!("Error loading file: {path}.")) };
         let reader = BufReader::new(file);
 
         let mut nodes: Vec<Node> = vec![];
@@ -139,7 +131,7 @@ impl FabricGraph {
         for line_result in reader.lines() {
             let line = match line_result {
                 Ok(line) => line,
-                Err(_err) => format!("Error reading line in file {}.", path),
+                Err(_err) => format!("Error reading line in file {path}"),
             };
 
             let line = line.trim();
@@ -186,18 +178,18 @@ impl FabricGraph {
 
     pub fn route_plan_form_file(&self, file: &str) -> Result<Vec<Routing>, Box<dyn Error>> {
         let r = Self::route_plan_expanded_form_file(file)?;
-        let r = r.into_iter().map(|a| Routing::from_expanded(a, self).unwrap()).collect::<Vec<Routing>>();
+        let r = r.into_iter().map(|a| Routing::from_expanded(&a, self).unwrap()).collect::<Vec<Routing>>();
         Ok(r)
     }
 
     /// Distance function between nodes (Manhatten Distance)
     /// Will be our base costs
-    fn distance(a: &Node, b: &Node) -> f32 {
+    const fn distance(a: &Node, b: &Node) -> f32 {
         (1 + a.x.abs_diff(b.x) + a.y.abs_diff(b.y)) as f32
     }
 
     pub fn reset_usage(&mut self) {
-        self.costs.iter_mut().for_each(|a| a.usage = 0)
+        self.costs.iter_mut().for_each(|a| a.usage = 0);
     }
 }
 
@@ -220,7 +212,7 @@ fn get_reversed_map(nodes: &[Node], map: &[Vec<Edge>]) -> Vec<Vec<Edge>> {
     rev_map
 }
 
-/// Represents a entry in the NetList
+/// Represents a entry in the `NetList`
 /// each net has a start point (signal) and endpoints (sinks)
 /// result contains the paths of the signal to each sink
 #[derive(Debug, Clone, Serialize, Deserialize)]
