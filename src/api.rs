@@ -20,7 +20,9 @@ pub fn start_routing(
     max_iterations: usize,
 ) -> Result<(), String> {
     let mut graph = FabricGraph::from_file(graph_path).map_err(|_| format!("Error reading file: {graph_path}"))?;
-    let mut route_plan = graph.route_plan_form_file(routing_list).map_err(|_| format!("Error reading file: {routing_list}"))?;
+    let mut route_plan = graph
+        .route_plan_form_file(routing_list)
+        .map_err(|_| format!("Error reading file: {routing_list}"))?;
     let config = Config::new(hist_factor, solver, max_iterations);
     println!(
         "Map: {}, Costs: {}",
@@ -28,14 +30,14 @@ pub fn start_routing(
         graph.costs.len()
     );
 
-    match route(&mut route_plan, &mut graph, config, logger) {
+    match route(&mut route_plan, &mut graph, &config, logger) {
         Ok(x) => {
             println!("Success: {} ", x.iteration);
             let ex = route_plan.iter().map(|x| x.expand(&graph)).collect::<Vec<_>>();
             let out = if output_path.ends_with("fasm") {
                 routing_to_fasm(&ex)
             } else {
-                serde_json::to_string_pretty(&ex).map_err(|_|"Error serializing route plan")?
+                serde_json::to_string_pretty(&ex).map_err(|_| "Error serializing route plan")?
             };
             fs::write(output_path, out).map_err(|_| format!("Error writing to file: {output_path}"))?;
             println!("Wrote the routing into {output_path}");

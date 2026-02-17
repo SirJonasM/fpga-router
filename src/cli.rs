@@ -73,7 +73,7 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Creates a test route_plan
+    /// Creates a test `route_plan`
     CreateTest(CreateTestArgs),
     /// Starts the router
     Route(RouteArgs),

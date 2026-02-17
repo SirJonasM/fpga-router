@@ -1,15 +1,37 @@
+
 mod cli;
 use clap::Parser;
-use cli::*;
-use router::{create_fasm, create_test, start_routing, validate_routing, FileLog, Loggers, SimpleSolver, SimpleSteinerSolver, Solver, SteinerSolver};
+use router::{
+    FileLog, Loggers, SimpleSolver, SimpleSteinerSolver, Solver, SteinerSolver, create_fasm, create_test, start_routing,
+    validate_routing,
+};
 
+use crate::cli::{Cli, Commands, LoggerType, SolverType};
 
-fn main() {
+fn main() -> Result<(), u32> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::CreateTest(args) => create_test(&args.graph, &args.output, args.percentage, args.destinations),
-        Commands::Fasm(args) => create_fasm(&args.routing, &args.output),
+        Commands::CreateTest(args) => match create_test(&args.graph, &args.output, args.percentage, args.destinations) {
+            Ok(()) => {
+                println!("Created Fasm in: {}", args.output);
+                Ok(())
+            }
+            Err(err) => {
+                println!("Failed to test  File: {err}");
+                Err(1)
+            }
+        },
+        Commands::Fasm(args) => match create_fasm(&args.routing, &args.output) {
+            Ok(()) => {
+                println!("Created Fasm in: {}", args.output);
+                Ok(())
+            }
+            Err(err) => {
+                println!("Failed to create FASM File: {err}");
+                Err(1)
+            }
+        },
         Commands::Route(args) => {
             let solver = match args.solver {
                 SolverType::Simple => Solver::Simple(SimpleSolver),
@@ -25,7 +47,7 @@ fn main() {
                 }
             };
 
-            start_routing(
+            match start_routing(
                 &args.graph,
                 &args.routing_list,
                 solver,
@@ -33,14 +55,26 @@ fn main() {
                 &args.output,
                 &logger,
                 args.max_iterations,
-            )
-        }
-        Commands::Validate(args) => {
-            match validate_routing(&args.routing, &args.graph){
-                Ok(()) => println!("Routing is valid."),
-                Err(err) => println!("Routing is invalid due to: {}", err)
+            ) {
+                Ok(()) => {
+                    println!("Finished routing.");
+                    Ok(())
+                }
+                Err(err) => {
+                    println!("Failed to route: {err}");
+                    Err(1)
+                }
             }
         }
+        Commands::Validate(args) => match validate_routing(&args.routing, &args.graph) {
+            Ok(()) => {
+                println!("Routing is valid.");
+                Ok(())
+            }
+            Err(err) => {
+                println!("Routing is invalid due to: {err}");
+                Err(1)
+            }
+        },
     }
 }
-

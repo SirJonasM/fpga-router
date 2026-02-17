@@ -39,7 +39,12 @@ static COUNTER: AtomicU64 = AtomicU64::new(0);
 impl Config {
     pub fn new(hist_factor: f32, solver: Solver, max_iterations: usize) -> Self {
         let id = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        Self { id, hist_factor, solver , max_iterations}
+        Self {
+            id,
+            hist_factor,
+            solver,
+            max_iterations,
+        }
     }
 }
 impl Default for Config {
@@ -73,7 +78,7 @@ fn pre_process(graph: &mut FabricGraph, route_plan: &mut [Routing]) {
 pub fn route(
     route_plan: &mut [Routing],
     graph: &mut FabricGraph,
-    config: Config,
+    config: &Config,
     logger: &dyn Logging,
 ) -> Result<IterationResult, IterationResult> {
     let hist_fac = config.hist_factor;
@@ -88,7 +93,7 @@ pub fn route(
     loop {
         let mut result = match iteration(graph, route_plan, &config.solver, hist_fac) {
             Ok(iteration_result) => iteration_result,
-            Err(err) => panic!("Error in interation {}: {}", i, err),
+            Err(err) => panic!("Error in interation {i}: {err}"),
         };
         result.iteration = i;
         result.test_case = config.clone();
@@ -100,7 +105,7 @@ pub fn route(
         }
         if result.conflicts == 0 {
             return Ok(result);
-        };
+        }
 
         if i == max_iterations {
             return Err(result);
@@ -134,7 +139,7 @@ pub fn iteration(
         if let Some(result) = &route.result {
             result.nodes.iter().for_each(|index| {
                 graph.costs[*index].usage += 1;
-            })
+            });
         }
     }
     let mut conflicts = 0;
@@ -149,7 +154,7 @@ pub fn iteration(
 }
 
 /// Analyze the routing result for metrics like longest path, total wire usage, and wire reuse.
-fn analyze_result(conflicts: usize, duration: Duration, graph: &mut FabricGraph, steiner: &[Routing]) -> IterationResult {
+fn analyze_result(conflicts: usize, duration: Duration, graph: &FabricGraph, steiner: &[Routing]) -> IterationResult {
     let mut result = IterationResult {
         iteration: 0,
         conflicts,
@@ -177,10 +182,10 @@ fn analyze_result(conflicts: usize, duration: Duration, graph: &mut FabricGraph,
                 assert_eq!(path[path.len() - 1], *sink);
                 for pair in path.windows(2) {
                     let (start, end) = (pair[0], pair[1]);
-                    let edge = match graph.map[start].iter().find(|a| a.node_id == end) {
-                        Some(edge) => edge,
-                        None => panic!("Graph did not contain the edge: a: {}, b: {}", start, end),
-                    };
+                    let edge = graph.map[start]
+                        .iter()
+                        .find(|a| a.node_id == end)
+                        .map_or_else(|| panic!("Graph did not contain the edge: a: {start}, b: {end}"), |edge| edge);
                     cost += edge.cost;
                 }
 
@@ -246,7 +251,6 @@ impl Display for IterationResult {
         )
     }
 }
-
 
 impl Routing {
     pub fn pre_calc_steiner_tree(&self, graph: &mut FabricGraph) -> Result<SteinerTree, String> {
