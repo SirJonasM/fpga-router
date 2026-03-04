@@ -10,12 +10,12 @@ pub fn validate(route_plan: &[Routing], graph: &FabricGraph )-> Result<(),String
         let result = tree
             .result
             .as_ref()
-            .ok_or_else(|| format!("Tree {} has no SteinerTreeResult", tree_idx))?;
+            .ok_or_else(|| format!("Tree {tree_idx} has no SteinerTreeResult"))?;
 
         // --- Check: all nodes exist ---
         for &n in &result.nodes {
             if n >= node_count {
-                return Err(format!("Tree {} contains invalid node index {} (out of range)", tree_idx, n));
+                return Err(format!("Tree {tree_idx} contains invalid node index {n} (out of range)"));
             }
         }
 

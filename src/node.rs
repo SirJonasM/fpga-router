@@ -5,6 +5,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::error::ParseError;
+
 /// Edge in the graph with a destination node and cost
 #[derive(Debug, Clone)]
 pub struct Edge {
@@ -26,12 +28,11 @@ pub struct Node {
 }
 
 /// A node in the FPGA graph with its type and metadata.
-impl Node{
-    pub fn id(&self) -> String{
+impl Node {
+    pub fn id(&self) -> String {
         format!("X{}Y{}.{}", self.x, self.y, self.id)
-    } 
+    }
 }
-
 
 /// Structure representing costs associated with routing through a node
 #[derive(Clone, Debug)]
@@ -44,50 +45,56 @@ pub struct Costs {
     pub usage: u32,
 }
 
-
 impl Node {
-    /// Parse a `Node` from a block string and ID
+    /// Parse two `Node` from a pips line
     ///
     /// # Returns
-    /// A `Node` 
-    pub fn parse_from_pips_line(line: &str) -> Result<(Self,Self), String> {
+    /// A `(Node, Node)`
+    pub fn parse_from_pips_line(line: &str) -> Result<(Self, Self), ParseError> {
         let parts: Vec<&str> = line.split(',').collect();
         if parts.len() != 6 {
-            return Err(format!("Invalid line: {line}"));
+            return Err(ParseError::InvalidLine {parts_found: parts.len(), line: line.to_string()});
         }
-        let (x1, y1) = match from_str_coords(parts[0]) {
-            Ok(res) => res,
-            Err(err) => panic!("Error parsing: {err}"),
-        };
-        let (x2, y2) = match from_str_coords(parts[2]) {
-            Ok(res) => res,
-            Err(err) => panic!("Error parsing: {err}"),
-        };
+        let (x1, y1) = from_str_coords(parts[0])?;
+        let (x2, y2) = from_str_coords(parts[2])?;
 
         Ok((
             Self {
                 x: x1,
                 y: y1,
                 id: parts[1].to_string(),
-        },
+            },
             Self {
                 x: x2,
                 y: y2,
                 id: parts[3].to_string(),
-        }))
+            },
+        ))
     }
 }
 
 /// Parse coordinates from a string of the form "X<num>Y<num>"
-fn from_str_coords(s: &str) -> std::result::Result<(u8, u8), String> {
+fn from_str_coords(s: &str) -> std::result::Result<(u8, u8), ParseError> {
     if !s.starts_with('X') {
-        return Err(format!("Invalid BlockID, missing 'X': {s}"));
+        return Err(ParseError::MissingPrefix {
+            prefix: 'X',
+            token: s.to_string(),
+        });
     }
-    let Some((x_part, y_part)) = s.split_once('Y') else {
-        return Err(format!("Invalid BlockID, missing 'Y': {s}"));
-    };
-    let x = x_part[1..].parse::<u8>().map_err(|_| format!("Invalid X number in BlockID: {s}"))?;
-    let y = y_part.parse::<u8>().map_err(|_| format!("Invalid Y number in BlockID: {s}"))?;
+    let (x_part, y_part) = s.split_once('Y').ok_or_else(|| ParseError::MissingPrefix {
+        prefix: 'Y',
+        token: s.to_string(),
+    })?;
+    let x = x_part[1..].parse::<u8>().map_err(|e| ParseError::InvalidCoordinate {
+        component: "X",
+        token: s.to_string(),
+        source: e,
+    })?;
+    let y = y_part[1..].parse::<u8>().map_err(|e| ParseError::InvalidCoordinate {
+        component: "X",
+        token: s.to_string(),
+        source: e,
+    })?;
     Ok((x, y))
 }
 
@@ -129,4 +136,3 @@ impl Costs {
         Self::default()
     }
 }
-

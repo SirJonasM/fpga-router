@@ -1,4 +1,3 @@
-
 mod cli;
 use clap::Parser;
 use router::{
@@ -9,9 +8,7 @@ use router::{
 use crate::cli::{Cli, Commands, LoggerType, SolverType};
 
 fn main() -> Result<(), u32> {
-    let cli = Cli::parse();
-
-    match cli.command {
+    match Cli::parse().command {
         Commands::CreateTest(args) => match create_test(&args.graph, &args.output, args.percentage, args.destinations) {
             Ok(()) => {
                 println!("Created Fasm in: {}", args.output);
@@ -43,7 +40,11 @@ fn main() -> Result<(), u32> {
                 LoggerType::Terminal => Loggers::Terminal,
                 LoggerType::File => {
                     let file = args.log_file.unwrap();
-                    Loggers::File(FileLog::new(&file))
+                    let file_log = match FileLog::new(&file){
+                        Ok(f) => f,
+                        Err(_) => return Err(1),
+                    };
+                    Loggers::File(file_log)
                 }
             };
 

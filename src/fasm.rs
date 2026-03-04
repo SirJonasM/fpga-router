@@ -23,7 +23,7 @@ pub fn routing_to_fasm(expanded_nets: &[RoutingExpanded]) -> String {
     sorted.sort();
     sorted.join("\n")
 }
-/// Helper: Extracts "TILE.WIRE_IN.WIRE_OUT" from two node IDs
+/// Helper: Extracts ``TILE.WIRE_IN.WIRE_OUT`` from two node IDs
 fn nodes_to_fasm_line(u_id: &str, v_id: &str) -> Option<String> {
     let u_parts: Vec<&str> = u_id.split('.').collect();
     let v_parts: Vec<&str> = v_id.split('.').collect();

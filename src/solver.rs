@@ -88,9 +88,8 @@ impl SolveRouting for SteinerSolver {
             .map(|(start, base_sink)| {
                 // --- Computation to find the MINIMUM COST ---
                 // Calculate the cost of the base path (Dijkstra is still necessary here)
-                let (base_path, mut costs) = match graph.dijkstra(start, base_sink) {
-                    Some(res) => res,
-                    None => return Err(format!("Could not find a base path start: {start}, base sink: {base_sink}")),
+                let Some((base_path, mut costs)) = graph.dijkstra(start, base_sink) else {
+                    return Err(format!("Could not find a base path start: {start}, base sink: {base_sink}"));
                 };
 
                 // Calculate the cost of connecting all other sinks to this base path
@@ -98,9 +97,8 @@ impl SolveRouting for SteinerSolver {
                     .sinks
                     .iter()
                     .map(|sink| {
-                        let terminal_distances = match dists.get(sink) {
-                            Some(dist) => dist,
-                            None => return Err(format!("No precalculated distances for the sink: {sink}")),
+                        let Some(terminal_distances) = dists.get(sink) else {
+                            return Err(format!("No precalculated distances for the sink: {sink}"));
                         };
 
                         // Find the connection node (min_node) on the base_path
@@ -128,7 +126,7 @@ impl SolveRouting for SteinerSolver {
             .reduce(
                 || Err("No minmum".to_string()),
                 |acc, item| match (acc, item) {
-                    (Err(err1), Err(err2)) => Err(format!("err: {}\n err: {}\n", err1, err2)),
+                    (Err(err1), Err(err2)) => Err(format!("err: {err1}\n err: {err2}\n")),
                     (Ok(current_best), Err(_err)) => Ok(current_best),
                     (Err(_err), Ok(item)) => Ok(item),
                     (Ok(current_best), Ok(item)) => {
@@ -149,13 +147,11 @@ impl SolveRouting for SteinerSolver {
             let mut paths = HashMap::new();
 
             for (sink, mid_point) in &best_candidate.mid_points {
-                let (mut path_to_mid, _cost) = match graph.dijkstra(signal, *mid_point) {
-                    Some(res) => res,
-                    None => return Err(format!("Could not find a route for sink: {sink}")),
+                let Some((mut path_to_mid, _cost)) = graph.dijkstra(signal, *mid_point) else {
+                    return Err(format!("Could not find a route for sink: {sink}"));
                 };
-                let (path_from_mid, _cost) = match graph.dijkstra(*mid_point, *sink) {
-                    Some(res) => res,
-                    None => return Err(format!("Could not find a route for sink: {sink}")),
+                let Some((path_from_mid, _cost)) = graph.dijkstra(*mid_point, *sink) else {
+                    return Err(format!("Could not find a route for sink: {sink}"));
                 };
                 nodes.extend(&path_from_mid);
                 path_to_mid.extend(&path_from_mid[1..]);
@@ -183,9 +179,8 @@ impl SolveRouting for SimpleSteinerSolver {
                 let mut path = Vec::new();
                 for steiner_node in route.windows(2) {
                     let (start, end) = (steiner_node[0], steiner_node[1]);
-                    let (a, _b) = match graph.dijkstra(start, end) {
-                        Some(res) => res,
-                        None => return Err(format!("Could not find path between steinere nodes: {start}, {end}")),
+                    let Some((a, _b)) = graph.dijkstra(start, end) else {
+                        return Err(format!("Could not find path between steinere nodes: {start}, {end}"));
                     };
                     nodes.extend(&a);
                     path.extend(&a[..a.len() - 1]);

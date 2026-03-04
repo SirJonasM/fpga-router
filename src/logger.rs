@@ -7,12 +7,13 @@ pub enum Loggers {
     File(FileLog),
 }
 impl crate::Logging for Loggers {
-    fn log(&self, log_instance: &IterationResult) {
+    fn log(&self, log_instance: &IterationResult) -> Result<(), String>{
         match self {
-            Loggers::No => {}
-            Loggers::Terminal => println!("{}", log_instance),
-            Loggers::File(file_log) => file_log.log(log_instance),
+            Self::No => {},
+            Self::Terminal => println!("{log_instance}"),
+            Self::File(file_log) => file_log.log(log_instance)?,
         }
+        Ok(())
     }
 }
 
@@ -21,25 +22,20 @@ pub struct FileLog {
 }
 
 impl FileLog {
-    pub fn new(path: &str) -> Self {
+    pub fn new(path: &str) -> Result<Self, String> {
         let file = fs::OpenOptions::new()
             .create(true)
             .append(true)
             .open(path)
-            .expect("Could not open log file");
+            .map_err(|_| format!("Could not open log file: {path}"))?;
 
-        Self {
+        Ok(Self {
             writer: Mutex::new(BufWriter::new(file)),
-        }
+        })
     }
-    fn log(&self, log_instance: &IterationResult) {
-        // Lock the mutex. If another thread is logging, this will wait its turn.
-        let mut guard = self.writer.lock().expect("Failed to lock log file mutex");
-
-        // Serialize and write
-        if let Ok(json) = serde_json::to_string(log_instance) {
-            // Use writeln! to handle the newline and the buffer
-            let _ = writeln!(guard, "{}", json);
-        }
+    fn log(&self, log_instance: &IterationResult) -> Result<(), String>{
+        let json = serde_json::to_vec(log_instance).map_err(|_| "Failed to serialize iteration result".to_string())?;
+        self.writer.lock().expect("Failed to lock log file mutex").write_all(&json).map_err(|_| "Failed to write to file.")?;
+        Ok(())
     }
 }

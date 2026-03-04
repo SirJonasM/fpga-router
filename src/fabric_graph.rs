@@ -8,12 +8,14 @@ use serde::{Deserialize, Serialize};
 
 use std::{
     collections::{HashMap, HashSet},
-    error::Error,
     fs::{self, File},
     io::{BufRead, BufReader},
 };
 
-use crate::node::{Costs, Edge, Node};
+use crate::{
+    FabricError, FabricResult,
+    node::{Costs, Edge, Node},
+};
 /// Routing request from a source to multiple sinks
 #[derive(Debug, Clone)]
 pub struct Routing {
@@ -34,8 +36,10 @@ impl Routing {
 
         RoutingExpanded { sinks, signal, result }
     }
+
     pub fn from_expanded(expanded: &RoutingExpanded, graph: &FabricGraph) -> Result<Self, String> {
         let mut signal: Option<usize> = None;
+        let mut sinks_cloned = expanded.sinks.iter().cloned().collect::<HashSet<String>>();
         let mut sinks: Vec<usize> = vec![];
 
         for (i, node) in graph.nodes.iter().enumerate() {
@@ -43,22 +47,20 @@ impl Routing {
             if id == expanded.signal {
                 signal = Some(i);
             }
-            if expanded.sinks.contains(&id) {
+            if sinks_cloned.remove(&id) {
                 sinks.push(i);
             }
         }
-
-        if let Some(signal) = signal
-            && !sinks.is_empty()
-        {
-            Ok(Self {
+        match (signal, sinks_cloned.is_empty()) {
+            (Some(signal), true) => Ok(Self {
                 sinks,
                 signal,
                 result: None,
                 steiner_tree: None,
-            })
-        } else {
-            Err("E".to_string())
+            }),
+            (Some(_), false) => Err(format!("Sinks: {sinks_cloned:?} do not exist.")),
+            (None, true) => Err("Signal does not exist in graph".to_string()),
+            (None, false) => Err(format!("Signal does not exist and sinks: {sinks_cloned:?}")),
         }
     }
 }
@@ -88,7 +90,7 @@ pub struct RoutingResult {
 }
 
 impl RoutingResult {
-    pub fn expand(&self, graph: &FabricGraph) -> RoutingResultExpanded{
+    pub fn expand(&self, graph: &FabricGraph) -> RoutingResultExpanded {
         let nodes = self.nodes.iter().map(|a| graph.nodes[*a].id()).collect::<HashSet<String>>();
         let paths = self
             .paths
@@ -119,8 +121,11 @@ pub struct FabricGraph {
 }
 
 impl FabricGraph {
-    pub fn from_file(path: &str) -> Result<Self, String> {
-        let Ok(file) = File::open(path) else { return Err(format!("Error loading file: {path}.")) };
+    pub fn from_file(path: &str) -> FabricResult<Self> {
+        let file = File::open(path).map_err(|e| FabricError::Io {
+            path: path.to_string(),
+            source: e,
+        })?;
         let reader = BufReader::new(file);
 
         let mut nodes: Vec<Node> = vec![];
@@ -128,11 +133,11 @@ impl FabricGraph {
         let mut map: Vec<Vec<Edge>> = Vec::new();
         let mut index: HashMap<Node, usize> = HashMap::new();
 
-        for line_result in reader.lines() {
-            let line = match line_result {
-                Ok(line) => line,
-                Err(_err) => format!("Error reading line in file {path}"),
-            };
+        for (line_number, line_result) in reader.lines().enumerate() {
+            let line = line_result.map_err(|e| FabricError::Io {
+                path: path.to_string(),
+                source: e,
+            })?;
 
             let line = line.trim();
             // skip empty lines and comments
@@ -140,7 +145,11 @@ impl FabricGraph {
                 continue;
             }
 
-            let (start, end) = Node::parse_from_pips_line(line).unwrap();
+            let (start, end) = Node::parse_from_pips_line(line).map_err(|e| FabricError::LineError {
+                line_number,
+                content: line.to_string(),
+                source: e,
+            })?;
 
             // get or insert start
             let sid = *index.entry(start.clone()).or_insert_with(|| {
@@ -170,15 +179,26 @@ impl FabricGraph {
             map_reversed: reversed,
         })
     }
-    pub fn route_plan_expanded_form_file( file: &str) -> Result<Vec<RoutingExpanded>, Box<dyn Error>> {
-        let data: String = fs::read_to_string(file)?;
-        let r: Vec::<RoutingExpanded> = serde_json::de::from_str(&data).unwrap();
+    pub fn route_plan_expanded_form_file(file: &str) -> Result<Vec<RoutingExpanded>, FabricError> {
+        let data: String = fs::read_to_string(file).map_err(|e| FabricError::Io {
+            path: file.to_string(),
+            source: e,
+        })?;
+        let r: Vec<RoutingExpanded> = serde_json::de::from_str(&data)?;
         Ok(r)
     }
 
-    pub fn route_plan_form_file(&self, file: &str) -> Result<Vec<Routing>, Box<dyn Error>> {
+    pub fn route_plan_form_file(&self, file: &str) -> Result<Vec<Routing>, FabricError> {
         let r = Self::route_plan_expanded_form_file(file)?;
-        let r = r.into_iter().map(|a| Routing::from_expanded(&a, self).unwrap()).collect::<Vec<Routing>>();
+        let r = r
+            .into_iter()
+            .map(|a| {
+                Routing::from_expanded(&a, self).map_err(|e| FabricError::MappingExpandedRoutePlan {
+                    signal: a.signal,
+                    reason: e,
+                })
+            })
+            .collect::<Result<Vec<Routing>, FabricError>>()?;
         Ok(r)
     }
 
@@ -222,7 +242,7 @@ pub struct RoutingExpanded {
     /// Source signal node
     pub signal: String,
     /// Optional routing result after computation
- #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<RoutingResultExpanded>,
 }
 

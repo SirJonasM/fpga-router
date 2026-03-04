@@ -19,7 +19,7 @@ use crate::solver::{SimpleSolver, SimpleSteinerSolver, SolveRouting, Solver};
 /// Trait for logging pathfinding iterations.
 pub trait Logging {
     /// Logs the current iteration result.
-    fn log(&self, log_instance: &IterationResult);
+    fn log(&self, log_instance: &IterationResult)-> Result<(), String>;
 }
 
 /// Test case parameters for running a routing algorithm.
@@ -98,7 +98,7 @@ pub fn route(
         result.iteration = i;
         result.test_case = config.clone();
 
-        logger.log(&result);
+        let _ = logger.log(&result);
 
         if result.conflicts == last_conflicts {
             same_conflicts += 1;
@@ -198,11 +198,18 @@ fn analyze_result(conflicts: usize, duration: Duration, graph: &FabricGraph, ste
             for node in steiner_result.paths.values().flatten() {
                 usages.entry(node).and_modify(|x| *x += 1).or_insert(1);
             }
-            result.wire_reuse += usages.values().sum::<i32>() as f32 / usages.len() as f32;
+            #[allow(clippy::cast_precision_loss)]
+            let wire_reuse = usages.values().sum::<i32>() as f32;
+            #[allow(clippy::cast_precision_loss)]
+            let wire_reuse2 = usages.len() as f32;
+
+            result.wire_reuse += wire_reuse / wire_reuse2;
             total_wire_use += steiner_result.nodes.len();
         }
     }
-    result.wire_reuse /= steiner.len() as f32;
+    #[allow(clippy::cast_precision_loss)]
+    let wire_reuse3 = steiner.len() as f32;
+    result.wire_reuse /= wire_reuse3;
     result.total_wire_use = total_wire_use;
     result
 }
@@ -221,9 +228,7 @@ pub struct IterationResult {
 }
 
 impl IterationResult {
-    pub fn csv_header() -> &'static str {
-        "iteration,test_id,percentage,dst,hist_factor,solver,conflicts,longest_path_start,longest_path_end,longest_path_cost,average_path,total_wire_use,wire_reuse,duration"
-    }
+    pub const CSV_HEADER: &'static str = "iteration,test_id,percentage,dst,hist_factor,solver,conflicts,longest_path_start,longest_path_end,longest_path_cost,average_path,total_wire_use,wire_reuse,duration";
 }
 
 impl Display for IterationResult {
@@ -270,14 +275,10 @@ impl Routing {
             .map(|(start, base_sink)| {
                 // --- Computation to find the MINIMUM COST ---
                 // Calculate the cost of the base path (Dijkstra is still necessary here)
-                let (base_path, mut costs) = match graph.dijkstra(start, base_sink) {
-                    Some(result) => result,
-                    None => {
-                        return Err(format!(
-                            "Could not determine a route for the Base bath: start: {}, sink: {}",
-                            start, base_sink
-                        ));
-                    }
+                let Some((base_path, mut costs)) = graph.dijkstra(start, base_sink) else {
+                    return Err(format!(
+                        "Could not determine a route for the Base bath: start: {start}, sink: {base_sink}"
+                    ));
                 };
 
                 let mut nodes = HashSet::new();
@@ -285,11 +286,10 @@ impl Routing {
                 let min_points = self
                     .sinks
                     .iter()
-                    .cloned()
+                    .copied()
                     .map(|sink| {
-                        let terminal_distances = match dists.get(&sink) {
-                            Some(dist) => dist,
-                            None => return Err(format!("No distances pre caclulated for the sink: {}.", sink)),
+                        let Some(terminal_distances) = dists.get(&sink) else {
+                            return Err(format!("No distances pre caclulated for the sink: {sink}."));
                         };
 
                         // Find the connection node (min_node) on the base_path
@@ -317,9 +317,8 @@ impl Routing {
                 let mut steiner_nodes = HashMap::new();
                 for sink in &self.sinks {
                     let mut sink_uses_steiner_nodes = vec![self.signal];
-                    let m = match min_points.get(sink) {
-                        Some(m) => m,
-                        None => return Err(format!("No midpoint calculated for sink {sink}")),
+                    let Some(m) = min_points.get(sink) else {
+                        return Err(format!("No midpoint calculated for sink {sink}"));
                     };
                     for n in &base_path {
                         if n == m {
@@ -328,14 +327,14 @@ impl Routing {
                             break;
                         }
                         if nodes.contains(n) {
-                            sink_uses_steiner_nodes.push(*n)
+                            sink_uses_steiner_nodes.push(*n);
                         }
                     }
                 }
                 // Return only the lightweight candidate struct
                 Ok(SteinerTreeCandidate {
-                    nodes,
                     steiner_nodes,
+                    nodes,
                     costs,
                 })
             })
@@ -356,20 +355,17 @@ impl Routing {
             });
 
         // 3. Final Calculation: Sequentially calculate the full result for the winner.
-        match best_candidate {
-            Some(best) => {
-                for x in &best.nodes {
-                    graph.costs[*x].usage = 1;
-                }
-                Ok(SteinerTree {
-                    nodes: best.nodes,
-                    steiner_nodes: best.steiner_nodes,
-                })
+        if let Some(best) = best_candidate {
+            for x in &best.nodes {
+                graph.costs[*x].usage = 1;
             }
-            None => {
-                println!("{:#?}", errors);
-                Err("No Steiner tree was found".to_string())
-            }
+            Ok(SteinerTree {
+                nodes: best.nodes,
+                steiner_nodes: best.steiner_nodes,
+            })
+        } else {
+            println!("{errors:#?}");
+            Err("No Steiner tree was found".to_string())
         }
     }
 }
