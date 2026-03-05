@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 
 use crate::fabric_graph::FabricGraph;
 use crate::node::NodeId;
-use crate::route_plan::NetInternal;
+use crate::netlist::NetInternal;
 use crate::solver::SolveRouting;
 use crate::{FabricError, FabricResult, Logging, NetListInternal};
 
@@ -54,9 +54,8 @@ impl Default for Config {
 /// * `solver` - Solver that implements `Solve` to solve a `NetInternal` (Router)
 /// * `logger` - Object implementing `Logging` to capture iteration results
 ///
-/// # Returns
-/// - `Ok(IterationResult)` if routing succeeds with zero conflicts
-/// - `Err(IterationResult)` if routing reaches `MAX_ITERATION` without resolving all conflicts
+/// # Errors
+///
 pub fn route<T, L>(
     route_plan: &mut NetListInternal,
     graph: &mut FabricGraph,

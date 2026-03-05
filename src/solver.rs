@@ -7,7 +7,10 @@ use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterato
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    fabric_graph::{FabricGraph, SteinerTreeCandidate}, node::NodeId, route_plan::{NetInternal, NetResultInternal}, FabricError, FabricResult
+    FabricError, FabricResult,
+    fabric_graph::{FabricGraph, SteinerTreeCandidate},
+    netlist::{NetInternal, NetResultInternal},
+    node::NodeId,
 };
 
 #[derive(Debug, Clone)]

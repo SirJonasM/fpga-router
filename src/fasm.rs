@@ -1,9 +1,8 @@
 use std::collections::HashSet;
 
-use crate::route_plan::{NetListExternal};
+use crate::netlist::{NetListExternal};
 
-
- /// Converts Expanded JSON-like structure to a FASM string
+/// Converts Expanded JSON-like structure to a FASM string
 pub fn routing_to_fasm(expanded_nets: &NetListExternal) -> String {
     let mut fasm_lines = HashSet::new();
 
@@ -23,6 +22,7 @@ pub fn routing_to_fasm(expanded_nets: &NetListExternal) -> String {
     sorted.sort();
     sorted.join("\n")
 }
+
 /// Helper: Extracts ``TILE.WIRE_IN.WIRE_OUT`` from two node IDs
 fn nodes_to_fasm_line(u_id: &str, v_id: &str) -> Option<String> {
     let u_parts: Vec<&str> = u_id.split('.').collect();

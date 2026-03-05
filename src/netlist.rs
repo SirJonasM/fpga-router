@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{node::NodeId, FabricError, FabricGraph, FabricResult};
+use crate::{FabricError, FabricGraph, FabricResult, node::NodeId};
 
 pub struct NetListInternal {
     pub plan: Vec<NetInternal>,
@@ -76,7 +76,9 @@ impl NetListInternal {
     #[must_use]
     pub fn to_external(&self, graph: &FabricGraph) -> NetListExternal {
         let ex = self.plan.iter().map(|x| x.to_external(graph)).collect::<Vec<_>>();
-        NetListExternal { graph: Some(graph.filename.clone()), plan: ex }
+        NetListExternal {
+            plan: ex,
+        }
     }
 }
 impl NetInternal {
@@ -127,8 +129,6 @@ impl NetInternal {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetListExternal {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub graph: Option<String>,
     pub plan: Vec<NetExternal>,
 }
 
@@ -155,7 +155,7 @@ pub struct NetResultExternal {
 }
 
 impl NetListExternal {
-    /// Creates a `NetListExternal` from a Jsonfile 
+    /// Creates a `NetListExternal` from a Jsonfile
     ///
     /// # Errors
     /// - Returns `FabricError::Io` in case of failing reading the file
@@ -165,9 +165,7 @@ impl NetListExternal {
             path: file.to_string(),
             source: e,
         })?;
-        Ok(Self {
-            graph: None,
-            plan: serde_json::de::from_str(&data)?,
-        })
+        let x: Self = serde_json::de::from_str(&data)?;
+        Ok(x)
     }
 }
