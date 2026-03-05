@@ -3,9 +3,21 @@ use std::fs;
 use rand::seq::SliceRandom;
 
 use crate::{
-    fabric_graph::{bucket_luts, FabricGraph}, fasm::routing_to_fasm, node::NodeId, path_finder::{route, Config}, route_plan::{Net, NetExternal, NetList, NetListExternal}, solver::SolveRouting, validate, FabricError, FabricResult, Logging 
+    FabricError, FabricResult, Logging,
+    fabric_graph::{FabricGraph, bucket_luts},
+    fasm::routing_to_fasm,
+    node::NodeId,
+    path_finder::{Config, route},
+    route_plan::{NetExternal, NetInternal, NetListExternal, NetListInternal},
+    solver::SolveRouting,
+    validate,
 };
 
+/// Tries to solve a `NetList`
+///
+/// # Errors
+/// Fails if files cannot be read or cannot be parsed or it cannot write to the output file.
+/// Fails if the `max_iterations` are reached
 pub fn start_routing<T, L>(
     graph_path: &str,
     routing_list: &str,
@@ -17,11 +29,11 @@ pub fn start_routing<T, L>(
 ) -> FabricResult<()>
 where
     T: SolveRouting,
-    L: Logging
+    L: Logging,
 {
     let mut graph = FabricGraph::from_file(graph_path)?;
     let route_plan_external = NetListExternal::from_file(routing_list)?;
-    let mut route_plan = NetList::from_external(&graph,&route_plan_external)?;
+    let mut route_plan = NetListInternal::from_external(&graph, &route_plan_external)?;
     let config = Config::new(hist_factor, max_iterations);
 
     match route(&mut route_plan, &mut graph, &config, solver, logger) {
@@ -42,14 +54,23 @@ where
     }
 }
 
-pub fn create_fasm(expanded_routing: &str, output_path: &str) -> Result<(), String> {
-    let route_plan = NetListExternal::from_file(expanded_routing)
-        .map_err(|_| format!("Error reading routeplan: {expanded_routing}"))?;
+/// Can be used to create a `FASM` file from a netlist 
+/// # Errors
+/// Fails if files do not exist or deserialization does not succeed.
+pub fn create_fasm(netlist_external: &str, output_path: &str) -> FabricResult<()> {
+    let route_plan =
+        NetListExternal::from_file(netlist_external).map_err(|_| format!("Error reading routeplan: {netlist_external}"))?;
     let fasm = routing_to_fasm(&route_plan);
     fs::write(output_path, fasm).map_err(|_| format!("Error writing to file: {output_path}"))?;
     Ok(())
 }
 
+/// Creates a Test Netlist by using a `percentage` of all Lut-Outputs and for each `destinations`
+/// Lut-Inputs
+///
+/// # Errors
+/// Can produce File Io erros.
+/// Fails if parameters are bad like trying to use more than 100% of Lut-Outputs
 pub fn create_test(graph_path: &str, output_path: &str, percentage: f32, destinations: usize) -> FabricResult<()> {
     let mut rng = rand::rng();
     let graph = FabricGraph::from_file(graph_path)?;
@@ -61,12 +82,12 @@ pub fn create_test(graph_path: &str, output_path: &str, percentage: f32, destina
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
     let input_count = (percentage * outputs.len() as f32) as usize;
     let output_count = input_count * destinations;
-    
+
     if input_count > outputs.len() {
-        return Err(FabricError::CreatingTestBadParameters)
+        return Err(FabricError::CreatingTestBadParameters);
     }
     if output_count > inputs.len() {
-        return Err(FabricError::CreatingTestBadParameters)
+        return Err(FabricError::CreatingTestBadParameters);
     }
 
     let used_outs = inputs.iter().take(output_count).copied().collect::<Vec<NodeId>>();
@@ -77,7 +98,7 @@ pub fn create_test(graph_path: &str, output_path: &str, percentage: f32, destina
         .copied()
         .zip(used_outs.chunks(destinations))
         .map(|(signal, sinks)| {
-            Net {
+            NetInternal {
                 sinks: sinks.to_vec(),
                 signal,
                 result: None,
@@ -89,15 +110,22 @@ pub fn create_test(graph_path: &str, output_path: &str, percentage: f32, destina
         .collect::<Vec<NetExternal>>();
 
     let pretty = serde_json::to_string_pretty(&route_plan)?;
-    fs::write(output_path, pretty).map_err(|e| FabricError::Io {path: output_path.to_string(), source: e})?;
+    fs::write(output_path, pretty).map_err(|e| FabricError::Io {
+        path: output_path.to_string(),
+        source: e,
+    })?;
     Ok(())
 }
 
+/// Validates a routing for a given `FabricGraph`
+///
+/// # Errors
+/// Fails when bad files or invalid
 pub fn validate_routing(graph_path: &str, routing_list: &str) -> FabricResult<()> {
     let graph = FabricGraph::from_file(graph_path).map_err(|_| format!("Error reading file: {graph_path}"))?;
     let route_plan = NetListExternal::from_file(routing_list)?;
-    let route_plan = NetList::from_external(&graph, &route_plan)
-        .map_err(|_| format!("Error reading file: {routing_list}"))?;
+    let route_plan =
+        NetListInternal::from_external(&graph, &route_plan).map_err(|_| format!("Error reading file: {routing_list}"))?;
     validate::validate(&route_plan, &graph)?;
     Ok(())
 }

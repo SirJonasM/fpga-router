@@ -1,7 +1,7 @@
 mod cli;
 use clap::Parser;
 use router::{
-    create_fasm, create_test, start_routing, validate_routing, FabricGraph, FileLog, Loggers, Net, SimpleSolver, SimpleSteinerSolver, SolveRouting, SteinerSolver
+    create_fasm, create_test, start_routing, validate_routing, FabricGraph, FileLog, Loggers, NetInternal, SimpleSolver, SimpleSteinerSolver, SolveRouting, SteinerSolver
 };
 
 use crate::cli::{Cli, Commands, LoggerType, SolverType};
@@ -86,7 +86,7 @@ enum Solver {
 }
 
 impl SolveRouting for Solver {
-    fn solve(&self, graph: &FabricGraph, routing: &mut Net) -> router::FabricResult<()> {
+    fn solve(&self, graph: &FabricGraph, routing: &mut NetInternal) -> router::FabricResult<()> {
         match self {
             Solver::Simple(simple_solver) => simple_solver.solve(graph, routing),
             Solver::SimpleSteiner(simple_steiner_solver) => simple_steiner_solver.solve(graph, routing),
@@ -94,7 +94,7 @@ impl SolveRouting for Solver {
         }
     }
 
-    fn pre_process(&self, graph: &mut FabricGraph, route_plan: &mut [Net]) -> router::FabricResult<()> {
+    fn pre_process(&self, graph: &mut FabricGraph, route_plan: &mut [NetInternal]) -> router::FabricResult<()> {
         match self {
             Solver::Simple(simple_solver) => simple_solver.pre_process(graph, route_plan),
             Solver::SimpleSteiner(simple_steiner_solver) => simple_steiner_solver.pre_process(graph, route_plan),

@@ -7,33 +7,33 @@ use serde::{Deserialize, Serialize};
 
 use crate::{node::NodeId, FabricError, FabricGraph, FabricResult};
 
-pub struct NetList {
-    pub plan: Vec<Net>,
+pub struct NetListInternal {
+    pub plan: Vec<NetInternal>,
 }
 
 /// Routing request from a source to multiple sinks
 #[derive(Debug, Clone)]
-pub struct Net {
+pub struct NetInternal {
     /// Source signal node
     pub signal: NodeId,
     /// Destination node indices
     pub sinks: Vec<NodeId>,
     /// Optional routing result after computation
-    pub result: Option<NetResult>,
+    pub result: Option<NetResultInternal>,
     pub steiner_tree: Option<HashMap<NodeId, Vec<NodeId>>>,
     pub priority: Option<NodeId>,
 }
 
 /// Routing result for a routing request
 #[derive(Debug, Clone)]
-pub struct NetResult {
+pub struct NetResultInternal {
     /// Paths from source to each sink
     pub paths: HashMap<NodeId, Vec<NodeId>>,
     /// All nodes used in the routing
     pub nodes: HashSet<NodeId>,
 }
 
-impl NetResult {
+impl NetResultInternal {
     pub fn to_external(&self, graph: &FabricGraph) -> NetResultExternal {
         let nodes = self
             .nodes
@@ -55,7 +55,7 @@ impl NetResult {
     }
 }
 
-impl NetList {
+impl NetListInternal {
     /// Transforms a `NetListExternal` to `Self` by mapping the id names to the internal used ids.
     /// # Errors
     /// Fails when a Mapping of a Net is not possible for example when the graph does not contain
@@ -65,12 +65,12 @@ impl NetList {
             .plan
             .iter()
             .map(|externel_routing| {
-                Net::from_external(externel_routing, graph).map_err(|e| FabricError::MappingExternelNet {
+                NetInternal::from_external(externel_routing, graph).map_err(|e| FabricError::MappingExternelNet {
                     signal: externel_routing.signal.clone(),
                     reason: e.to_string(),
                 })
             })
-            .collect::<Result<Vec<Net>, FabricError>>()?;
+            .collect::<Result<Vec<NetInternal>, FabricError>>()?;
         Ok(Self { plan: route_plan })
     }
     #[must_use]
@@ -79,7 +79,7 @@ impl NetList {
         NetListExternal { graph: Some(graph.filename.clone()), plan: ex }
     }
 }
-impl Net {
+impl NetInternal {
     #[must_use]
     pub fn to_external(&self, graph: &FabricGraph) -> NetExternal {
         let signal = graph.get_node(self.signal).id();

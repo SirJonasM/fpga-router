@@ -6,7 +6,6 @@
 
 #![deny(clippy::nursery)]
 #![deny(clippy::pedantic)]
-#![allow(clippy::missing_errors_doc)]
 
 pub(crate) mod dijkstra;
 pub(crate) mod fabric_graph;
@@ -26,7 +25,7 @@ pub use logger::Logging;
 pub use path_finder::IterationResult;
 pub use error::{FabricError, FabricResult};
 pub use fabric_graph::{FabricGraph};
-pub use route_plan::{NetList, Net};
+pub use route_plan::{NetListInternal, NetInternal, NetListExternal, NetExternal, NetResultExternal};
 
 pub use solver::{SolveRouting, SimpleSolver, SimpleSteinerSolver, SteinerSolver};
 pub use logger::{Loggers,FileLog};

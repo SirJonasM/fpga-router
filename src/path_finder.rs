@@ -12,9 +12,9 @@ use std::time::{Duration, Instant};
 
 use crate::fabric_graph::FabricGraph;
 use crate::node::NodeId;
-use crate::route_plan::Net;
+use crate::route_plan::NetInternal;
 use crate::solver::SolveRouting;
-use crate::{FabricError, FabricResult, Logging, NetList};
+use crate::{FabricError, FabricResult, Logging, NetListInternal};
 
 
 /// Test case parameters for running a routing algorithm.
@@ -48,16 +48,17 @@ impl Default for Config {
 /// Execute routing for a given `TestCase` and `FabricGraph`.
 ///
 /// # Arguments
-/// * `logger` - Object implementing `Logging` to capture iteration results
-/// * `test_case` - Parameters for this routing run
-/// * `graph` - FPGA fabric graph
 /// * `route_plan` - Array of routing requests to process
+/// * `graph` - FPGA fabric graph
+/// * `config` - Configuration parameters
+/// * `solver` - Solver that implements `Solve` to solve a `NetInternal` (Router)
+/// * `logger` - Object implementing `Logging` to capture iteration results
 ///
 /// # Returns
 /// - `Ok(IterationResult)` if routing succeeds with zero conflicts
 /// - `Err(IterationResult)` if routing reaches `MAX_ITERATION` without resolving all conflicts
 pub fn route<T, L>(
-    route_plan: &mut NetList,
+    route_plan: &mut NetListInternal,
     graph: &mut FabricGraph,
     config: &Config,
     solver: &T,
@@ -106,7 +107,7 @@ where
 /// Updates node usages, calculates conflicts, and returns iteration statistics.
 pub fn iteration(
     graph: &mut FabricGraph,
-    routing: &mut [Net],
+    routing: &mut [NetInternal],
     solver: &dyn SolveRouting,
     hist_fac: f32,
 ) -> FabricResult<IterationResult> {
@@ -131,7 +132,7 @@ pub fn iteration(
 }
 
 /// Analyze the routing result for metrics like longest path, total wire usage, and wire reuse.
-fn analyze_result(conflicts: usize, duration: Duration, graph: &FabricGraph, steiner: &[Net]) -> IterationResult {
+fn analyze_result(conflicts: usize, duration: Duration, graph: &FabricGraph, steiner: &[NetInternal]) -> IterationResult {
     let mut result = IterationResult {
         iteration: 0,
         conflicts,

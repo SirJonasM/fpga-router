@@ -1,8 +1,8 @@
 use std::collections::{HashSet, VecDeque};
 
-use crate::{fabric_graph::FabricGraph, node::NodeId, NetList};
+use crate::{fabric_graph::FabricGraph, node::NodeId, NetListInternal};
 
-pub fn validate(route_plan: &NetList, graph: &FabricGraph )-> Result<(),String> {
+pub fn validate(route_plan: &NetListInternal, graph: &FabricGraph )-> Result<(),String> {
     let mut used_nodes_global: HashSet<NodeId> = HashSet::new();
     let node_count = graph.nodes.len();
 
