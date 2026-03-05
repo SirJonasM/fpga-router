@@ -3,6 +3,7 @@ use std::fs;
 use rand::seq::SliceRandom;
 
 use crate::{
+    node::NodeId,
     FabricError, FabricResult,
     fabric_graph::{FabricGraph, Routing, RoutingExpanded, bucket_luts},
     fasm::routing_to_fasm,
@@ -65,7 +66,7 @@ pub fn create_test(graph_path: &str, output_path: &str, percentage: f32, destina
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
     let input_count = (percentage * outputs.len() as f32) as usize;
     let output_count = input_count * destinations;
-    let used_outs = inputs.iter().take(output_count).copied().collect::<Vec<usize>>();
+    let used_outs = inputs.iter().take(output_count).copied().collect::<Vec<NodeId>>();
 
     let route_plan = outputs
         .iter()

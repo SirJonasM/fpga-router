@@ -1,6 +1,8 @@
 use thiserror::Error;
 use std::io;
 
+use crate::node::NodeId;
+
 // A shorthand for results in your library
 pub type FabricResult<T> = Result<T, FabricError>;
 
@@ -11,7 +13,8 @@ pub enum FabricError {
         path: String,
         source: io::Error,
     },
-
+    #[error("Cannot give each Node an own id because value space is too small.")]
+    NodeIdValueSpaceTooSmall,
     #[error("Iteration Failed")]
     IterationError{source: Box<FabricError>},
 
@@ -34,18 +37,19 @@ pub enum FabricError {
         signal: String,
         reason: String
     },
-
+    #[error("Edge does not exist in Graph: {start} -> {end}")]
+    EdgeDoesNotExist {start: NodeId, end: NodeId},
     #[error("Parsing Failed: {0}")]
     Parse(#[from] ParseError),
 
     #[error("Failed to preprocess route for signal {signal}: {source}")]
-    RoutePreProcessing{signal: usize, #[source] source: Box<FabricError>},
+    RoutePreProcessing{signal: NodeId, #[source] source: Box<FabricError>},
 
     #[error("Path finding for Start: {start} and Sink: {sink} failed.")]
-    PathfindingFailed {start: usize, sink: usize},
+    PathfindingFailed {start: NodeId, sink: NodeId},
 
     #[error("Steiner tree conflict: Node {node_id} is already in use by another route.")]
-    ResourceConflict { node_id: usize },
+    ResourceConflict { node_id: NodeId },
 
     #[error("No valid Steiner tree could be constructed for the given sinks.")]
     NoSteinerTreeFound,

@@ -4,8 +4,10 @@
 //! It provides tools to model the FPGA fabric, nodes, and routing paths,
 //! as well as algorithms for finding and validating optimal routes.  
 
-// #![deny(clippy::nursery)]
-// #![deny(clippy::pedantic)]
+#![deny(clippy::nursery)]
+#![deny(clippy::pedantic)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::missing_errors_doc)]
 
 pub(crate) mod dijkstra;
 pub(crate) mod fabric_graph;

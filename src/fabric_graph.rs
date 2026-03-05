@@ -15,19 +15,19 @@ use std::{
 use crate::{
     FabricError, FabricResult,
     error::ParseError,
-    node::{Costs, Edge, Node},
+    node::{Costs, Edge, Node, NodeId},
 };
 /// Routing request from a source to multiple sinks
 #[derive(Debug, Clone)]
 pub struct Routing {
     /// Source signal node
-    pub signal: usize,
+    pub signal: NodeId,
     /// Destination node indices
-    pub sinks: Vec<usize>,
+    pub sinks: Vec<NodeId>,
     /// Optional routing result after computation
     pub result: Option<RoutingResult>,
-    pub steiner_tree: Option<HashMap<usize, Vec<usize>>>,
-    pub priority: Option<usize>,
+    pub steiner_tree: Option<HashMap<NodeId, Vec<NodeId>>>,
+    pub priority: Option<NodeId>,
 }
 
 #[derive(Debug)]
@@ -41,25 +41,29 @@ struct PipsLine {
 impl Routing {
     #[must_use]
     pub fn expand(&self, graph: &FabricGraph) -> RoutingExpanded {
-        let signal = graph.nodes[self.signal].id();
-        let sinks = self.sinks.iter().map(|a| graph.nodes[*a].id()).collect();
+        let signal = graph.get_node(self.signal).id();
+        let sinks = self.sinks.iter().map(|a| graph.get_node(*a).id()).collect();
         let result = self.result.as_ref().map(|r| r.expand(graph));
 
         RoutingExpanded { sinks, signal, result }
     }
 
     pub fn from_expanded(expanded: &RoutingExpanded, graph: &FabricGraph) -> Result<Self, String> {
-        let mut signal: Option<usize> = None;
+        let mut signal: Option<NodeId> = None;
         let mut sinks_cloned = expanded.sinks.iter().cloned().collect::<HashSet<String>>();
-        let mut sinks: Vec<usize> = vec![];
+        let mut sinks: Vec<NodeId> = vec![];
 
         for (i, node) in graph.nodes.iter().enumerate() {
             let id = node.id();
             if id == expanded.signal {
-                signal = Some(i);
+                #[allow(clippy::cast_possible_truncation)]
+                let x = i as NodeId;
+                signal = Some(x);
             }
             if sinks_cloned.remove(&id) {
-                sinks.push(i);
+                #[allow(clippy::cast_possible_truncation)]
+                let x = i as NodeId;
+                sinks.push(x);
             }
         }
         match (signal, sinks_cloned.is_empty()) {
@@ -78,8 +82,8 @@ impl Routing {
 }
 
 pub struct SteinerTreeCandidate {
-    pub steiner_nodes: HashMap<usize, Vec<usize>>,
-    pub nodes: HashSet<usize>,
+    pub steiner_nodes: HashMap<NodeId, Vec<NodeId>>,
+    pub nodes: HashSet<NodeId>,
     pub costs: f32,
 }
 
@@ -87,21 +91,25 @@ pub struct SteinerTreeCandidate {
 #[derive(Debug, Clone)]
 pub struct RoutingResult {
     /// Paths from source to each sink
-    pub paths: HashMap<usize, Vec<usize>>,
+    pub paths: HashMap<NodeId, Vec<NodeId>>,
     /// All nodes used in the routing
-    pub nodes: HashSet<usize>,
+    pub nodes: HashSet<NodeId>,
 }
 
 impl RoutingResult {
     pub fn expand(&self, graph: &FabricGraph) -> RoutingResultExpanded {
-        let nodes = self.nodes.iter().map(|a| graph.nodes[*a].id()).collect::<HashSet<String>>();
+        let nodes = self
+            .nodes
+            .iter()
+            .map(|a| graph.nodes[*a as usize].id())
+            .collect::<HashSet<String>>();
         let paths = self
             .paths
             .iter()
             .map(|(sink, path)| {
                 (
-                    graph.nodes[*sink].id(),
-                    path.iter().map(|c| graph.nodes[*c].id()).collect::<Vec<String>>(),
+                    graph.nodes[*sink as usize].id(),
+                    path.iter().map(|c| graph.nodes[*c as usize].id()).collect::<Vec<String>>(),
                 )
             })
             .collect::<HashMap<String, Vec<String>>>();
@@ -125,7 +133,7 @@ pub struct FabricGraph {
 
 struct PipsParser {
     graph: FabricGraph,
-    index: HashMap<Node, usize>,
+    index: HashMap<Node, NodeId>,
 }
 
 impl PipsParser {
@@ -150,26 +158,26 @@ impl PipsParser {
             source: e,
         })?;
 
-        // get or insert start
-        let sid = *self.index.entry(start_node.clone()).or_insert_with(|| {
-            self.graph.nodes.push(start_node.clone());
-            self.graph.costs.push(Costs::new());
-            self.graph.map.push(Vec::new());
-            self.graph.nodes.len() - 1
-        });
-
-        // get or insert end
-        let eid = *self.index.entry(end_node.clone()).or_insert_with(|| {
-            self.graph.nodes.push(end_node.clone());
-            self.graph.costs.push(Costs::new());
-            self.graph.map.push(Vec::new());
-            self.graph.nodes.len() - 1
-        });
-
         let cost = distance(&start_node, &end_node);
-        self.graph.map[sid].push(Edge { node_id: eid, cost });
+        let sid = self.get_or_create_node(&start_node)?;
+        let eid = self.get_or_create_node(&end_node)?;
+
+        self.graph.map[sid as usize].push(Edge { node_id: eid, cost });
         Ok(())
     }
+
+    fn get_or_create_node(&mut self, node: &Node) -> FabricResult<NodeId> {
+        if let Some(sid) = self.index.get(node){
+            return Ok(*sid)
+        }
+        let id = NodeId::try_from(self.graph.nodes.len()).map_err(|_| FabricError::NodeIdValueSpaceTooSmall)?;
+        self.index.insert(node.clone(), id);
+        self.graph.nodes.push(node.clone());
+        self.graph.costs.push(Costs::new());
+        self.graph.map.push(Vec::new());
+        Ok(id)
+    }
+
     fn build_graph(mut self) -> FabricGraph {
         self.graph.map_reversed = get_reversed_map(&self.graph.nodes, &self.graph.map);
         self.graph
@@ -177,6 +185,30 @@ impl PipsParser {
 }
 
 impl FabricGraph {
+    #[must_use]
+    pub fn get_node(&self, node_id: NodeId) -> &Node {
+        &self.nodes[node_id as usize]
+    }
+    #[must_use]
+    pub fn get_costs(&self, node_id: NodeId) -> &Costs {
+        &self.costs[node_id as usize]
+    }
+    pub fn get_costs_mut(&mut self, node_id: NodeId) -> &mut Costs {
+        &mut self.costs[node_id as usize]
+    }
+    #[must_use]
+    pub fn get_edge_panic(&self, start: NodeId, end: NodeId) -> &Edge {
+        self.map[start as usize]
+            .iter()
+            .find(|a| a.node_id == end)
+            .map_or_else(|| panic!("Graph did not contain the edge: a: {start}, b: {end}"), |edge| edge)
+    }
+    pub fn get_edge(&self, start: NodeId, end: NodeId) -> FabricResult<&Edge> {
+        self.map[start as usize]
+            .iter()
+            .find(|a| a.node_id == end)
+            .ok_or(FabricError::EdgeDoesNotExist{start, end})
+    }
     pub fn from_file(path: &str) -> FabricResult<Self> {
         let file = File::open(path).map_err(|e| FabricError::Io {
             path: path.to_string(),
@@ -233,9 +265,13 @@ fn get_reversed_map(nodes: &[Node], map: &[Vec<Edge>]) -> Vec<Vec<Edge>> {
         for edge in edge_list {
             let v = edge.node_id;
 
-            rev_map[v].push(Edge {
-                node_id: u,
-                cost: edge.cost,
+            #[allow(clippy::cast_possible_truncation)]
+            let node_id = u as NodeId;
+            let cost = edge.cost;
+
+            rev_map[v as usize].push(Edge {
+                node_id,
+                cost,
             });
         }
     }
@@ -265,15 +301,17 @@ pub struct RoutingResultExpanded {
     pub nodes: HashSet<String>,
 }
 
-pub fn bucket_luts(nodes: &[Node]) -> (Vec<usize>, Vec<usize>) {
+pub fn bucket_luts(nodes: &[Node]) -> (Vec<NodeId>, Vec<NodeId>) {
     let mut lut_inputs = vec![];
     let mut lut_outputs = vec![];
     for (i, node) in nodes.iter().enumerate() {
         if node.id.starts_with('L') {
+#[allow(clippy::cast_possible_truncation)]
+            let id = i as NodeId;
             if node.id.chars().nth(3) == Some('O') {
-                lut_outputs.push(i);
+                lut_outputs.push(id);
             } else if node.id.chars().nth(3) == Some('I') {
-                lut_inputs.push(i);
+                lut_inputs.push(id);
             }
         }
     }
@@ -313,7 +351,7 @@ mod test {
     use super::*;
     #[test]
     fn test_parse_pips_file() {
-        let test_file = "pips.txt";
+        let test_file = "pips_8x8.txt";
         let graph = FabricGraph::from_file(test_file).unwrap();
         assert_eq!(graph.nodes[0], Node::parse("N1END3", "X1Y0").unwrap());
     }

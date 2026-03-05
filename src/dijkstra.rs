@@ -1,23 +1,23 @@
 use std::{cmp::Ordering, collections::BinaryHeap};
 
-use crate::fabric_graph::FabricGraph;
+use crate::{fabric_graph::FabricGraph, node::NodeId};
 
 impl FabricGraph {
     #[must_use]
-    pub fn dijkstra(&self, start: usize, end: usize) -> Option<(Vec<usize>, f32)> {
+    pub fn dijkstra(&self, start: NodeId, end: NodeId) -> Option<(Vec<NodeId>, f32)> {
         let n = self.nodes.len();
 
         let mut dist: Vec<f32> = vec![f32::MAX; n];
-        let mut prev: Vec<Option<usize>> = vec![None; n]; // <-- store predecessors
+        let mut prev: Vec<Option<NodeId>> = vec![None; n]; // <-- store predecessors
 
         let mut heap = BinaryHeap::new();
 
         let mut max_frontier = 0usize;
 
-        dist[start] = 0.0;
+        dist[start as usize] = 0.0;
         heap.push(State {
             cost: 0.0,
-            position: start,
+            position: start ,
         });
 
         while let Some(State { cost, position }) = heap.pop() {
@@ -27,7 +27,7 @@ impl FabricGraph {
             }
 
             // If popped outdated distance, skip
-            if cost > dist[position] {
+            if cost > dist[position as usize] {
                 continue;
             }
 
@@ -38,7 +38,7 @@ impl FabricGraph {
 
                 while let Some(idx) = current {
                     path_indices.push(idx);
-                    current = prev[idx];
+                    current = prev[idx as usize];
                 }
 
                 path_indices.reverse();
@@ -47,14 +47,14 @@ impl FabricGraph {
             }
 
             // Expand adjacency list
-            for edge in &self.map[position] {
+            for edge in &self.map[position as usize] {
                 let base_cost = edge.cost;
-                let next_cost = cost + self.costs[edge.node_id].calc_costs(base_cost);
+                let next_cost = cost + self.costs[edge.node_id as usize].calc_costs(base_cost);
                 let next_pos = edge.node_id;
 
-                if next_cost < dist[next_pos] {
-                    dist[next_pos] = next_cost;
-                    prev[next_pos] = Some(position); 
+                if next_cost < dist[next_pos as usize] {
+                    dist[next_pos as usize] = next_cost;
+                    prev[next_pos as usize] = Some(position ); 
                     heap.push(State {
                         cost: next_cost,
                         position: next_pos,
@@ -67,31 +67,31 @@ impl FabricGraph {
     }
 
     #[must_use]
-    pub fn dijkstra_all(&self, start: usize) -> Vec<f32>{
+    pub fn dijkstra_all(&self, start: NodeId) -> Vec<f32>{
         let n = self.nodes.len();
 
         let mut dist: Vec<f32> = vec![f32::MAX; n];
         let mut heap = BinaryHeap::new();
 
-        dist[start] = 0.0;
+        dist[start as usize] = 0.0;
         heap.push(State {
             cost: 0.0,
             position: start,
         });
 
         while let Some(State { cost, position }) = heap.pop() {
-            if cost > dist[position] {
+            if cost > dist[position as usize] {
                 continue;
             }
 
-            for edge in &self.map_reversed[position] {
+            for edge in &self.map_reversed[position as usize] {
                 let base_cost = edge.cost;
-                let next_cost = cost + self.costs[edge.node_id].calc_costs(base_cost);
+                let next_cost = cost + self.costs[edge.node_id as usize].calc_costs(base_cost);
 
                 let next_pos = edge.node_id;
 
-                if next_cost < dist[next_pos] {
-                    dist[next_pos] = next_cost;
+                if next_cost < dist[next_pos as usize] {
+                    dist[next_pos as usize] = next_cost;
                     heap.push(State {
                         cost: next_cost,
                         position: next_pos,
@@ -110,7 +110,7 @@ impl FabricGraph {
 #[derive(Clone)]
 struct State {
     cost: f32,
-    position: usize,
+    position: NodeId,
 }
 impl PartialEq for State {
     fn eq(&self, other: &Self) -> bool {

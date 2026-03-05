@@ -12,6 +12,7 @@ use std::time::{Duration, Instant};
 
 use crate::fabric_graph::FabricGraph;
 use crate::fabric_graph::Routing;
+use crate::node::NodeId;
 use crate::solver::SolveRouting;
 use crate::{FabricError, FabricResult};
 
@@ -119,7 +120,7 @@ pub fn iteration(
         solver.solve(graph, route).map_err(|_e| "Test")?;
         if let Some(result) = &route.result {
             result.nodes.iter().for_each(|index| {
-                graph.costs[*index].usage += 1;
+                graph.get_costs_mut(*index).usage += 1;
             });
         }
     }
@@ -162,10 +163,7 @@ fn analyze_result(conflicts: usize, duration: Duration, graph: &FabricGraph, ste
                 assert_eq!(path[path.len() - 1], *sink);
                 for pair in path.windows(2) {
                     let (start, end) = (pair[0], pair[1]);
-                    let edge = graph.map[start]
-                        .iter()
-                        .find(|a| a.node_id == end)
-                        .map_or_else(|| panic!("Graph did not contain the edge: a: {start}, b: {end}"), |edge| edge);
+                    let edge = graph.get_edge_panic(start, end);
                     cost += edge.cost;
                 }
 
@@ -199,7 +197,7 @@ pub struct IterationResult {
     pub iteration: usize,
     pub test_case: Config,
     pub conflicts: usize,
-    pub longest_path: (usize, usize),
+    pub longest_path: (NodeId, NodeId),
     pub longest_path_cost: f32,
     pub average_path: f32,
     pub total_wire_use: usize,

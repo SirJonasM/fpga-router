@@ -7,11 +7,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::ParseError;
 
+pub type NodeId = u16;
+
 /// Edge in the graph with a destination node and cost
 #[derive(Debug, Clone)]
 pub struct Edge {
     /// Destination node index
-    pub node_id: usize,
+    pub node_id: NodeId,
     /// Cost to traverse this edge
     pub cost: f32,
 }
@@ -88,8 +90,9 @@ impl Default for Costs {
 
 impl Costs {
     /// Update the cost of the node based on usage and historic factor
+    /// clears the `usage`
     ///
-    /// Returns `true` if the node is congested (usage > capacity)
+    /// Returns `true` if the node is congested (`usage` > `capacity`)
     pub fn update(&mut self, historic_factor: f32) -> bool {
         #[allow(clippy::cast_precision_loss)]
         let usage = self.usage as f32;
@@ -118,6 +121,47 @@ impl Costs {
 #[cfg(test)]
 mod test {
     use super::*;
+    const TOLERANCE:f32 = 0.001;
+    #[test]
+    fn test_update_costs_uncongested() {
+        let mut costs = Costs {
+            usage: 1,
+            historic_cost: 2.0,
+            ..Default::default()
+        };
+        let c = costs.update(1.0);
+        assert!(!c);
+    }
+
+    #[test]
+    fn test_update_costs_congested() {
+        let mut costs = Costs {
+            usage: 2,
+            historic_cost: 0.0,
+            ..Default::default()
+        };
+        let updated_costs = Costs {
+            usage: 0,
+            historic_cost: 1.0,
+            ..Default::default()
+        };
+        let c = costs.update(1.0);
+        assert!(c);
+        assert!((updated_costs.historic_cost - costs.historic_cost).abs() < TOLERANCE);
+        assert_eq!(updated_costs.usage, costs.usage);
+        assert!((updated_costs.capacity- costs.capacity).abs() < TOLERANCE);
+    }
+
+    #[test]
+    fn test_calculate_costs() {
+        let costs = Costs {
+            usage: 1,
+            historic_cost: 2.0,
+            ..Default::default()
+        };
+        let c = costs.calc_costs(1.0);
+        assert!((c - 6.0).abs() < TOLERANCE);
+    }
 
     #[test]
     fn test_parse_node() {

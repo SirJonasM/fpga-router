@@ -7,14 +7,13 @@ use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterato
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    FabricError, FabricResult,
-    fabric_graph::{FabricGraph, Routing, RoutingResult, SteinerTreeCandidate},
+    fabric_graph::{FabricGraph, Routing, RoutingResult, SteinerTreeCandidate}, node::NodeId, FabricError, FabricResult
 };
 
 #[derive(Debug, Clone)]
 struct SteinerCandidate {
-    base_path: Vec<usize>,
-    mid_points: HashMap<usize, usize>,
+    base_path: Vec<NodeId>,
+    mid_points: HashMap<NodeId, NodeId>,
     costs: f32,
 }
 
@@ -64,7 +63,7 @@ impl SolveRouting for SimpleSolver {
     }
     fn solve(&self, graph: &FabricGraph, routing: &mut Routing) -> FabricResult<()> {
         let signal = routing.signal;
-        let paths: HashMap<usize, Vec<usize>> = routing
+        let paths: HashMap<NodeId, Vec<NodeId>> = routing
             .sinks
             .par_iter()
             .map(|sink| {
@@ -74,9 +73,9 @@ impl SolveRouting for SimpleSolver {
                 })?;
                 Ok((*sink, path))
             })
-            .collect::<Result<HashMap<usize, Vec<usize>>, FabricError>>()?;
+            .collect::<Result<HashMap<NodeId, Vec<NodeId>>, FabricError>>()?;
 
-        let nodes = paths.values().flatten().copied().collect::<HashSet<usize>>();
+        let nodes = paths.values().flatten().copied().collect::<HashSet<NodeId>>();
 
         routing.result = Some(RoutingResult { paths, nodes });
         Ok(())
@@ -99,9 +98,9 @@ impl SolveRouting for SteinerSolver {
             .sinks
             .par_iter()
             .map(|sink| (*sink, graph.dijkstra_all(*sink)))
-            .collect::<HashMap<usize, Vec<f32>>>();
+            .collect::<HashMap<NodeId, Vec<f32>>>();
         let signal = routing.signal;
-        let base_paths: Vec<(usize, usize)> = routing.sinks.iter().map(|&sink| (signal, sink)).collect();
+        let base_paths: Vec<(NodeId, NodeId)> = routing.sinks.iter().map(|&sink| (signal, sink)).collect();
 
         // 1. Parallel reduction to find the single best SteinerCandidate
         let best_candidate: Result<SteinerCandidate, String> = base_paths
@@ -125,7 +124,7 @@ impl SolveRouting for SteinerSolver {
                         // Find the connection node (min_node) on the base_path
                         let (min_node, cost_to_base_path) = base_path
                             .iter()
-                            .map(|&node| (node, terminal_distances[node]))
+                            .map(|&node| (node, terminal_distances[node as usize]))
                             .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Greater))
                             .unwrap();
 
@@ -133,7 +132,7 @@ impl SolveRouting for SteinerSolver {
                         costs += cost_to_base_path;
                         Ok((*sink, min_node))
                     })
-                    .collect::<Result<HashMap<usize, usize>, String>>();
+                    .collect::<Result<HashMap<NodeId, NodeId>, String>>();
                 match mid_points {
                     Ok(mid_points) => Ok(SteinerCandidate {
                         base_path,
@@ -198,7 +197,7 @@ impl SolveRouting for SimpleSteinerSolver {
                 source: e.into(),
             })?;
 
-            for &node_id in &steiner_tree.values().flatten().copied().collect::<HashSet<usize>>() {
+            for &node_id in &steiner_tree.values().flatten().copied().collect::<HashSet<NodeId>>() {
                 if !used_nodes.insert(node_id) {
                     return Err(FabricError::RoutePreProcessing {
                         signal: signal_id,
@@ -240,14 +239,14 @@ impl SolveRouting for SimpleSteinerSolver {
     }
 }
 
-fn pre_calc_steiner_tree(graph: &mut FabricGraph, routing: &Routing) -> FabricResult<HashMap<usize, Vec<usize>>> {
+fn pre_calc_steiner_tree(graph: &mut FabricGraph, routing: &Routing) -> FabricResult<HashMap<NodeId, Vec<NodeId>>> {
     let dists = routing
         .sinks
         .par_iter()
         .map(|sink| (*sink, graph.dijkstra_all(*sink)))
-        .collect::<HashMap<usize, Vec<f32>>>();
+        .collect::<HashMap<NodeId, Vec<f32>>>();
     let signal = routing.signal;
-    let base_paths: Vec<(usize, usize)> = routing.sinks.iter().map(|&sink| (signal, sink)).collect();
+    let base_paths: Vec<(NodeId, NodeId)> = routing.sinks.iter().map(|&sink| (signal, sink)).collect();
 
     // 1. Parallel reduction to find the single best SteinerCandidate
     let best_candidate: Vec<SteinerTreeCandidate> = base_paths
@@ -268,12 +267,12 @@ fn pre_calc_steiner_tree(graph: &mut FabricGraph, routing: &Routing) -> FabricRe
                         .expect("Dists map was built from the same sink list; this is a logic invariant.");
                     let (min_node, cost_to_base_path) = base_path
                         .iter()
-                        .map(|&node| (node, terminal_distances[node]))
+                        .map(|&node| (node, terminal_distances[node as usize]))
                         .min_by(|a, b| {
-                            if graph.costs[a.0].usage > 0 {
+                            if graph.get_costs(a.0).usage > 0 {
                                 return Ordering::Greater;
                             }
-                            if graph.costs[b.0].usage > 0 {
+                            if graph.get_costs(b.0).usage > 0 {
                                 return Ordering::Less;
                             }
                             a.1.partial_cmp(&b.1).unwrap_or(Ordering::Greater)
@@ -285,7 +284,7 @@ fn pre_calc_steiner_tree(graph: &mut FabricGraph, routing: &Routing) -> FabricRe
                     nodes.insert(min_node);
                     (sink, min_node)
                 })
-                .collect::<HashMap<usize, usize>>();
+                .collect::<HashMap<NodeId, NodeId>>();
 
             let mut steiner_nodes = HashMap::new();
             for sink in &routing.sinks {
@@ -318,6 +317,6 @@ fn pre_calc_steiner_tree(graph: &mut FabricGraph, routing: &Routing) -> FabricRe
         .ok_or(FabricError::NoSteinerTreeFound)?;
 
     // 3. Final Calculation: Sequentially calculate the full result for the winner.
-    best_candidate.nodes.iter().for_each(|x| graph.costs[*x].usage = 1);
+    best_candidate.nodes.iter().for_each(|x| graph.costs[*x as usize].usage = 1);
     Ok(best_candidate.steiner_nodes)
 }

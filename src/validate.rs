@@ -1,9 +1,9 @@
 use std::collections::{HashSet, VecDeque};
 
-use crate::fabric_graph::{FabricGraph, Routing};
+use crate::{fabric_graph::{FabricGraph, Routing}, node::NodeId};
 
 pub fn validate(route_plan: &[Routing], graph: &FabricGraph )-> Result<(),String> {
-    let mut used_nodes_global: HashSet<usize> = HashSet::new();
+    let mut used_nodes_global: HashSet<NodeId> = HashSet::new();
     let node_count = graph.nodes.len();
 
     for (tree_idx, tree) in route_plan.iter().enumerate() {
@@ -14,7 +14,7 @@ pub fn validate(route_plan: &[Routing], graph: &FabricGraph )-> Result<(),String
 
         // --- Check: all nodes exist ---
         for &n in &result.nodes {
-            if n >= node_count {
+            if n as usize >= node_count {
                 return Err(format!("Tree {tree_idx} contains invalid node index {n} (out of range)"));
             }
         }
@@ -29,13 +29,13 @@ pub fn validate(route_plan: &[Routing], graph: &FabricGraph )-> Result<(),String
         }
 
         // --- Check: signal exists ---
-        if tree.signal >= node_count {
+        if tree.signal as usize >= node_count {
             return Err(format!("Tree {} uses invalid signal node {}", tree_idx, tree.signal));
         }
 
         // --- Reachability check: signal -> every sink using only result.nodes ---
         for &sink in &tree.sinks {
-            if sink >= node_count {
+            if sink as usize >= node_count {
                 return Err(format!("Tree {tree_idx} has invalid sink {sink}"));
             }
 
@@ -53,7 +53,7 @@ pub fn validate(route_plan: &[Routing], graph: &FabricGraph )-> Result<(),String
 }
 
 /// BFS restricted to `allowed` node set.
-fn is_reachable_within_set(graph: &FabricGraph, start: usize, target: usize, allowed: &HashSet<usize>) -> bool {
+fn is_reachable_within_set(graph: &FabricGraph, start: NodeId, target: NodeId, allowed: &HashSet<NodeId>) -> bool {
     if start == target {
         return true;
     }
@@ -68,7 +68,7 @@ fn is_reachable_within_set(graph: &FabricGraph, start: usize, target: usize, all
     queue.push_back(start);
 
     while let Some(u) = queue.pop_front() {
-        for edge in &graph.map[u] {
+        for edge in &graph.map[u as usize] {
             let v = edge.node_id;
 
             if !allowed.contains(&v) {
