@@ -131,11 +131,11 @@ struct PipsParser {
 impl PipsParser {
     fn new() -> Self {
         Self {
-            graph: Default::default(),
-            index: Default::default(),
+            graph: FabricGraph::default(),
+            index: HashMap::default(),
         }
     }
-    fn parse_line(&mut self, line: String, line_number: usize) -> FabricResult<()> {
+    fn parse_line(&mut self, line: &str, line_number: usize) -> FabricResult<()> {
         let line = line.trim();
         // skip empty lines and comments
         if line.is_empty() || line.starts_with('#') {
@@ -191,7 +191,7 @@ impl FabricGraph {
                 path: path.to_string(),
                 source: e,
             })?;
-            pips_parser.parse_line(line, line_number)?;
+            pips_parser.parse_line(&line, line_number)?;
         }
         Ok(pips_parser.build_graph())
     }
@@ -283,20 +283,20 @@ pub fn bucket_luts(nodes: &[Node]) -> (Vec<usize>, Vec<usize>) {
 fn parse_pips_line(line: &str) -> Result<PipsLine, ParseError> {
     if let [node1_cords, node1_id, node2_cords, node2_id, _, _] = line.split(',').collect::<Vec<&str>>().as_slice() {
         let start_node = Node::parse(node1_id, node1_cords).map_err(|e| ParseError::InvalidStartNode {
-            id: node1_id.to_string(),
-            cords: node1_cords.to_string(),
+            id: (*node1_id).to_string(),
+            cords: (*node1_cords).to_string(),
             source: e.into(),
         })?;
         let end_node = Node::parse(node2_id, node2_cords).map_err(|e| ParseError::InvalidEndNode {
-            id: node2_id.to_string(),
-            cords: node2_cords.to_string(),
+            id: (*node2_id).to_string(),
+            cords: (*node2_cords).to_string(),
             source: e.into(),
         })?;
         Ok(PipsLine {
             start_node,
             end_node,
-            _p1: Default::default(),
-            _p2: Default::default(),
+            _p1: String::default(),
+            _p2: String::default(),
         })
     } else {
         Err(ParseError::InvalidLineFormat)

@@ -39,12 +39,12 @@ pub struct Costs {
 }
 
 impl Node {
-    pub fn new(id: String, x: u8, y: u8) -> Self {
+    pub const fn new(id: String, x: u8, y: u8) -> Self {
         Self { id, x, y }
     }
     pub fn parse(id: &str, coords: &str) -> Result<Self, ParseError> {
         let (x, y) = from_str_coords(coords)?;
-        Ok(Node::new(id.to_string(), x, y))
+        Ok(Self::new(id.to_string(), x, y))
     }
     pub fn id(&self) -> String {
         format!("X{}Y{}.{}", self.x, self.y, self.id)
