@@ -11,16 +11,11 @@ use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 
 use crate::fabric_graph::FabricGraph;
-use crate::fabric_graph::Routing;
 use crate::node::NodeId;
+use crate::route_plan::Net;
 use crate::solver::SolveRouting;
-use crate::{FabricError, FabricResult};
+use crate::{FabricError, FabricResult, Logging, NetList};
 
-/// Trait for logging pathfinding iterations.
-pub trait Logging {
-    /// Logs the current iteration result.
-    fn log(&self, log_instance: &IterationResult) -> Result<(), String>;
-}
 
 /// Test case parameters for running a routing algorithm.
 #[derive(Deserialize, Debug, Clone, Serialize)]
@@ -62,7 +57,7 @@ impl Default for Config {
 /// - `Ok(IterationResult)` if routing succeeds with zero conflicts
 /// - `Err(IterationResult)` if routing reaches `MAX_ITERATION` without resolving all conflicts
 pub fn route<T, L>(
-    route_plan: &mut [Routing],
+    route_plan: &mut NetList,
     graph: &mut FabricGraph,
     config: &Config,
     solver: &T,
@@ -77,11 +72,11 @@ where
     let mut i = 0;
     let mut last_conflicts = 0;
     let mut same_conflicts = 0;
-    solver.pre_process(graph, route_plan)?;
+    solver.pre_process(graph, &mut route_plan.plan)?;
     let max_iterations = config.max_iterations;
     loop {
         let mut result =
-            iteration(graph, route_plan, solver, hist_fac).map_err(|e| FabricError::IterationError { source: e.into() })?;
+            iteration(graph, &mut route_plan.plan, solver, hist_fac).map_err(|e| FabricError::IterationError { source: e.into() })?;
         result.iteration = i;
         result.test_case = config.clone();
 
@@ -100,7 +95,7 @@ where
 
         last_conflicts = result.conflicts;
         if same_conflicts == 200 {
-            solver.pre_process(graph, route_plan)?;
+            solver.pre_process(graph, &mut route_plan.plan)?;
         }
         i += 1;
     }
@@ -111,7 +106,7 @@ where
 /// Updates node usages, calculates conflicts, and returns iteration statistics.
 pub fn iteration(
     graph: &mut FabricGraph,
-    routing: &mut [Routing],
+    routing: &mut [Net],
     solver: &dyn SolveRouting,
     hist_fac: f32,
 ) -> FabricResult<IterationResult> {
@@ -136,7 +131,7 @@ pub fn iteration(
 }
 
 /// Analyze the routing result for metrics like longest path, total wire usage, and wire reuse.
-fn analyze_result(conflicts: usize, duration: Duration, graph: &FabricGraph, steiner: &[Routing]) -> IterationResult {
+fn analyze_result(conflicts: usize, duration: Duration, graph: &FabricGraph, steiner: &[Net]) -> IterationResult {
     let mut result = IterationResult {
         iteration: 0,
         conflicts,

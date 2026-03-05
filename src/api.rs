@@ -3,13 +3,7 @@ use std::fs;
 use rand::seq::SliceRandom;
 
 use crate::{
-    node::NodeId,
-    FabricError, FabricResult,
-    fabric_graph::{FabricGraph, Routing, RoutingExpanded, bucket_luts},
-    fasm::routing_to_fasm,
-    path_finder::{Config, Logging, route},
-    solver::SolveRouting,
-    validate,
+    fabric_graph::{bucket_luts, FabricGraph}, fasm::routing_to_fasm, node::NodeId, path_finder::{route, Config}, route_plan::{Net, NetExternal, NetList, NetListExternal}, solver::SolveRouting, validate, FabricError, FabricResult, Logging 
 };
 
 pub fn start_routing<T, L>(
@@ -26,16 +20,17 @@ where
     L: Logging
 {
     let mut graph = FabricGraph::from_file(graph_path)?;
-    let mut route_plan = graph.route_plan_form_file(routing_list)?;
+    let route_plan_external = NetListExternal::from_file(routing_list)?;
+    let mut route_plan = NetList::from_external(&graph,&route_plan_external)?;
     let config = Config::new(hist_factor, max_iterations);
 
     match route(&mut route_plan, &mut graph, &config, solver, logger) {
         Ok(_x) => {
-            let ex = route_plan.iter().map(|x| x.expand(&graph)).collect::<Vec<_>>();
+            let ex = route_plan.to_external(&graph);
             let out = if output_path.ends_with("fasm") {
                 routing_to_fasm(&ex)
             } else {
-                serde_json::to_string_pretty(&ex)?
+                serde_json::to_string_pretty(&ex.plan)?
             };
             fs::write(output_path, out).map_err(|e| FabricError::Io {
                 path: output_path.to_string(),
@@ -48,7 +43,7 @@ where
 }
 
 pub fn create_fasm(expanded_routing: &str, output_path: &str) -> Result<(), String> {
-    let route_plan = FabricGraph::route_plan_expanded_form_file(expanded_routing)
+    let route_plan = NetListExternal::from_file(expanded_routing)
         .map_err(|_| format!("Error reading routeplan: {expanded_routing}"))?;
     let fasm = routing_to_fasm(&route_plan);
     fs::write(output_path, fasm).map_err(|_| format!("Error writing to file: {output_path}"))?;
@@ -66,6 +61,14 @@ pub fn create_test(graph_path: &str, output_path: &str, percentage: f32, destina
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
     let input_count = (percentage * outputs.len() as f32) as usize;
     let output_count = input_count * destinations;
+    
+    if input_count > outputs.len() {
+        return Err(FabricError::CreatingTestBadParameters)
+    }
+    if output_count > inputs.len() {
+        return Err(FabricError::CreatingTestBadParameters)
+    }
+
     let used_outs = inputs.iter().take(output_count).copied().collect::<Vec<NodeId>>();
 
     let route_plan = outputs
@@ -74,27 +77,27 @@ pub fn create_test(graph_path: &str, output_path: &str, percentage: f32, destina
         .copied()
         .zip(used_outs.chunks(destinations))
         .map(|(signal, sinks)| {
-            Routing {
+            Net {
                 sinks: sinks.to_vec(),
                 signal,
                 result: None,
                 steiner_tree: None,
                 priority: None,
             }
-            .expand(&graph)
+            .to_external(&graph)
         })
-        .collect::<Vec<RoutingExpanded>>();
+        .collect::<Vec<NetExternal>>();
 
-    let pretty = serde_json::to_string_pretty(&route_plan).map_err(|_| "Error in serializing route-plan to json".to_string())?;
-    fs::write(output_path, pretty).map_err(|_| format!("Error writing route plan to file: {output_path}"))?;
-    println!("Test route plan written to {output_path}");
+    let pretty = serde_json::to_string_pretty(&route_plan)?;
+    fs::write(output_path, pretty).map_err(|e| FabricError::Io {path: output_path.to_string(), source: e})?;
     Ok(())
 }
 
-pub fn validate_routing(graph_path: &str, routing_list: &str) -> Result<(), String> {
+pub fn validate_routing(graph_path: &str, routing_list: &str) -> FabricResult<()> {
     let graph = FabricGraph::from_file(graph_path).map_err(|_| format!("Error reading file: {graph_path}"))?;
-    let route_plan = graph
-        .route_plan_form_file(routing_list)
+    let route_plan = NetListExternal::from_file(routing_list)?;
+    let route_plan = NetList::from_external(&graph, &route_plan)
         .map_err(|_| format!("Error reading file: {routing_list}"))?;
-    validate::validate(&route_plan, &graph)
+    validate::validate(&route_plan, &graph)?;
+    Ok(())
 }

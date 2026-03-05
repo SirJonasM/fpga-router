@@ -15,6 +15,10 @@ pub enum FabricError {
     },
     #[error("Cannot give each Node an own id because value space is too small.")]
     NodeIdValueSpaceTooSmall,
+
+    #[error("Creating test failed because of bad parameters.")]
+    CreatingTestBadParameters,
+
     #[error("Iteration Failed")]
     IterationError{source: Box<FabricError>},
 
@@ -30,17 +34,22 @@ pub enum FabricError {
     },
 
     #[error("Serialization error: {0}")]
-    Serialization(#[from] serde_json::Error),
+    Json(#[from] serde_json::Error),
 
     #[error("Mapping expanded Node {signal} of Routeplan to a internal graph node id failed.\n Reason: {reason}")]
-    MappingExpandedRoutePlan {
+    MappingExternelNet {
         signal: String,
         reason: String
     },
+
     #[error("Edge does not exist in Graph: {start} -> {end}")]
     EdgeDoesNotExist {start: NodeId, end: NodeId},
+
     #[error("Parsing Failed: {0}")]
     Parse(#[from] ParseError),
+
+    #[error("Failed to log: {0}")]
+    LoggingError(String),
 
     #[error("Failed to preprocess route for signal {signal}: {source}")]
     RoutePreProcessing{signal: NodeId, #[source] source: Box<FabricError>},

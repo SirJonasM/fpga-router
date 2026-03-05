@@ -1,12 +1,12 @@
 use std::collections::{HashSet, VecDeque};
 
-use crate::{fabric_graph::{FabricGraph, Routing}, node::NodeId};
+use crate::{fabric_graph::FabricGraph, node::NodeId, NetList};
 
-pub fn validate(route_plan: &[Routing], graph: &FabricGraph )-> Result<(),String> {
+pub fn validate(route_plan: &NetList, graph: &FabricGraph )-> Result<(),String> {
     let mut used_nodes_global: HashSet<NodeId> = HashSet::new();
     let node_count = graph.nodes.len();
 
-    for (tree_idx, tree) in route_plan.iter().enumerate() {
+    for (tree_idx, tree) in route_plan.plan.iter().enumerate() {
         let result = tree
             .result
             .as_ref()

@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 
-use crate::fabric_graph::RoutingExpanded;
+use crate::route_plan::{NetListExternal};
 
 
  /// Converts Expanded JSON-like structure to a FASM string
-pub fn routing_to_fasm(expanded_nets: &[RoutingExpanded]) -> String {
+pub fn routing_to_fasm(expanded_nets: &NetListExternal) -> String {
     let mut fasm_lines = HashSet::new();
 
-    for net in expanded_nets {
+    for net in &expanded_nets.plan {
         if let Some(ref res) = net.result {
             for path in res.paths.values() {
                 for pair in path.windows(2) {

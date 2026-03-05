@@ -7,7 +7,7 @@ use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterato
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    fabric_graph::{FabricGraph, Routing, RoutingResult, SteinerTreeCandidate}, node::NodeId, FabricError, FabricResult
+    fabric_graph::{FabricGraph, SteinerTreeCandidate}, node::NodeId, route_plan::{Net, NetResult}, FabricError, FabricResult
 };
 
 #[derive(Debug, Clone)]
@@ -38,7 +38,7 @@ pub trait SolveRouting {
     ///
     /// Returns [`FabricError::PathfindingFailed`] if a valid route cannot be found
     /// given the current graph constraints.
-    fn solve(&self, graph: &FabricGraph, routing: &mut Routing) -> FabricResult<()>;
+    fn solve(&self, graph: &FabricGraph, routing: &mut Net) -> FabricResult<()>;
 
     /// Prepares the graph or the route plan before the main solving phase.
     ///
@@ -49,7 +49,7 @@ pub trait SolveRouting {
     ///
     /// Returns [`FabricError::ResourceConflict`] if the pre-processing logic
     /// detects overlapping requirements that cannot be resolved.
-    fn pre_process(&self, graph: &mut FabricGraph, route_plan: &mut [Routing]) -> FabricResult<()>;
+    fn pre_process(&self, graph: &mut FabricGraph, route_plan: &mut [Net]) -> FabricResult<()>;
 
     /// Returns a unique string constant identifying the solver implementation.
     ///
@@ -58,10 +58,10 @@ pub trait SolveRouting {
 }
 
 impl SolveRouting for SimpleSolver {
-    fn pre_process(&self, _graph: &mut FabricGraph, _route_plan: &mut [Routing]) -> FabricResult<()> {
+    fn pre_process(&self, _graph: &mut FabricGraph, _route_plan: &mut [Net]) -> FabricResult<()> {
         Ok(())
     }
-    fn solve(&self, graph: &FabricGraph, routing: &mut Routing) -> FabricResult<()> {
+    fn solve(&self, graph: &FabricGraph, routing: &mut Net) -> FabricResult<()> {
         let signal = routing.signal;
         let paths: HashMap<NodeId, Vec<NodeId>> = routing
             .sinks
@@ -77,7 +77,7 @@ impl SolveRouting for SimpleSolver {
 
         let nodes = paths.values().flatten().copied().collect::<HashSet<NodeId>>();
 
-        routing.result = Some(RoutingResult { paths, nodes });
+        routing.result = Some(NetResult { paths, nodes });
         Ok(())
     }
 
@@ -90,10 +90,10 @@ impl SolveRouting for SteinerSolver {
     fn identifier(&self) -> &'static str {
         "Steiner Solver"
     }
-    fn pre_process(&self, _graph: &mut FabricGraph, _route_plan: &mut [Routing]) -> FabricResult<()> {
+    fn pre_process(&self, _graph: &mut FabricGraph, _route_plan: &mut [Net]) -> FabricResult<()> {
         Ok(())
     }
-    fn solve(&self, graph: &FabricGraph, routing: &mut Routing) -> FabricResult<()> {
+    fn solve(&self, graph: &FabricGraph, routing: &mut Net) -> FabricResult<()> {
         let dists = routing
             .sinks
             .par_iter()
@@ -178,7 +178,7 @@ impl SolveRouting for SteinerSolver {
                 paths.insert(*sink, path_to_mid);
             }
 
-            routing.result = Some(RoutingResult { paths, nodes });
+            routing.result = Some(NetResult { paths, nodes });
             Ok(())
         } else {
             routing.result = None; // No sinks found
@@ -188,7 +188,7 @@ impl SolveRouting for SteinerSolver {
 }
 
 impl SolveRouting for SimpleSteinerSolver {
-    fn pre_process(&self, graph: &mut FabricGraph, route_plan: &mut [Routing]) -> FabricResult<()> {
+    fn pre_process(&self, graph: &mut FabricGraph, route_plan: &mut [Net]) -> FabricResult<()> {
         let mut used_nodes = HashSet::new();
         for route in route_plan.iter_mut() {
             let signal_id = route.signal;
@@ -210,7 +210,7 @@ impl SolveRouting for SimpleSteinerSolver {
         graph.reset_usage();
         Ok(())
     }
-    fn solve(&self, graph: &FabricGraph, routing: &mut Routing) -> FabricResult<()> {
+    fn solve(&self, graph: &FabricGraph, routing: &mut Net) -> FabricResult<()> {
         if let Some(steiner_tree) = &routing.steiner_tree {
             let mut paths = HashMap::new();
             let mut nodes = HashSet::new();
@@ -227,7 +227,7 @@ impl SolveRouting for SimpleSteinerSolver {
                 path.push(*terminal);
                 paths.insert(*terminal, path);
             }
-            routing.result = Some(RoutingResult { paths, nodes });
+            routing.result = Some(NetResult { paths, nodes });
             Ok(())
         } else {
             Err("No steiner Tree precalculated.".into())
@@ -239,7 +239,7 @@ impl SolveRouting for SimpleSteinerSolver {
     }
 }
 
-fn pre_calc_steiner_tree(graph: &mut FabricGraph, routing: &Routing) -> FabricResult<HashMap<NodeId, Vec<NodeId>>> {
+fn pre_calc_steiner_tree(graph: &mut FabricGraph, routing: &Net) -> FabricResult<HashMap<NodeId, Vec<NodeId>>> {
     let dists = routing
         .sinks
         .par_iter()

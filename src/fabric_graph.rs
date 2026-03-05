@@ -4,11 +4,9 @@
 //! operations including reading from a file, generating routing plans,
 //! and computing distances and reversed maps.
 
-use serde::{Deserialize, Serialize};
-
 use std::{
     collections::{HashMap, HashSet},
-    fs::{self, File},
+    fs::File,
     io::{BufRead, BufReader},
 };
 
@@ -17,69 +15,6 @@ use crate::{
     error::ParseError,
     node::{Costs, Edge, Node, NodeId},
 };
-/// Routing request from a source to multiple sinks
-#[derive(Debug, Clone)]
-pub struct Routing {
-    /// Source signal node
-    pub signal: NodeId,
-    /// Destination node indices
-    pub sinks: Vec<NodeId>,
-    /// Optional routing result after computation
-    pub result: Option<RoutingResult>,
-    pub steiner_tree: Option<HashMap<NodeId, Vec<NodeId>>>,
-    pub priority: Option<NodeId>,
-}
-
-#[derive(Debug)]
-struct PipsLine {
-    start_node: Node,
-    end_node: Node,
-    _p1: String,
-    _p2: String,
-}
-
-impl Routing {
-    #[must_use]
-    pub fn expand(&self, graph: &FabricGraph) -> RoutingExpanded {
-        let signal = graph.get_node(self.signal).id();
-        let sinks = self.sinks.iter().map(|a| graph.get_node(*a).id()).collect();
-        let result = self.result.as_ref().map(|r| r.expand(graph));
-
-        RoutingExpanded { sinks, signal, result }
-    }
-
-    pub fn from_expanded(expanded: &RoutingExpanded, graph: &FabricGraph) -> Result<Self, String> {
-        let mut signal: Option<NodeId> = None;
-        let mut sinks_cloned = expanded.sinks.iter().cloned().collect::<HashSet<String>>();
-        let mut sinks: Vec<NodeId> = vec![];
-
-        for (i, node) in graph.nodes.iter().enumerate() {
-            let id = node.id();
-            if id == expanded.signal {
-                #[allow(clippy::cast_possible_truncation)]
-                let x = i as NodeId;
-                signal = Some(x);
-            }
-            if sinks_cloned.remove(&id) {
-                #[allow(clippy::cast_possible_truncation)]
-                let x = i as NodeId;
-                sinks.push(x);
-            }
-        }
-        match (signal, sinks_cloned.is_empty()) {
-            (Some(signal), true) => Ok(Self {
-                sinks,
-                signal,
-                result: None,
-                steiner_tree: None,
-                priority: None,
-            }),
-            (Some(_), false) => Err(format!("Sinks: {sinks_cloned:?} do not exist.")),
-            (None, true) => Err("Signal does not exist in graph".to_string()),
-            (None, false) => Err(format!("Signal does not exist and sinks: {sinks_cloned:?}")),
-        }
-    }
-}
 
 pub struct SteinerTreeCandidate {
     pub steiner_nodes: HashMap<NodeId, Vec<NodeId>>,
@@ -87,40 +22,10 @@ pub struct SteinerTreeCandidate {
     pub costs: f32,
 }
 
-/// Routing result for a routing request
-#[derive(Debug, Clone)]
-pub struct RoutingResult {
-    /// Paths from source to each sink
-    pub paths: HashMap<NodeId, Vec<NodeId>>,
-    /// All nodes used in the routing
-    pub nodes: HashSet<NodeId>,
-}
-
-impl RoutingResult {
-    pub fn expand(&self, graph: &FabricGraph) -> RoutingResultExpanded {
-        let nodes = self
-            .nodes
-            .iter()
-            .map(|a| graph.nodes[*a as usize].id())
-            .collect::<HashSet<String>>();
-        let paths = self
-            .paths
-            .iter()
-            .map(|(sink, path)| {
-                (
-                    graph.nodes[*sink as usize].id(),
-                    path.iter().map(|c| graph.nodes[*c as usize].id()).collect::<Vec<String>>(),
-                )
-            })
-            .collect::<HashMap<String, Vec<String>>>();
-
-        RoutingResultExpanded { paths, nodes }
-    }
-}
-
 /// Representation of the FPGA fabric graph
 #[derive(Debug, Clone, Default)]
 pub struct FabricGraph {
+    pub filename: String,
     /// List of nodes in the graph
     pub nodes: Vec<Node>,
     /// Costs associated with each node
@@ -134,6 +39,12 @@ pub struct FabricGraph {
 struct PipsParser {
     graph: FabricGraph,
     index: HashMap<Node, NodeId>,
+}
+struct PipsLine {
+    start_node: Node,
+    end_node: Node,
+    _p1: String,
+    _p2: String,
 }
 
 impl PipsParser {
@@ -167,8 +78,8 @@ impl PipsParser {
     }
 
     fn get_or_create_node(&mut self, node: &Node) -> FabricResult<NodeId> {
-        if let Some(sid) = self.index.get(node){
-            return Ok(*sid)
+        if let Some(sid) = self.index.get(node) {
+            return Ok(*sid);
         }
         let id = NodeId::try_from(self.graph.nodes.len()).map_err(|_| FabricError::NodeIdValueSpaceTooSmall)?;
         self.index.insert(node.clone(), id);
@@ -197,18 +108,40 @@ impl FabricGraph {
         &mut self.costs[node_id as usize]
     }
     #[must_use]
+    /// Returns the edge that connects `start` to `end`
+    ///
+    /// # Panics
+    /// This panics when the graph does not contain that edge 
     pub fn get_edge_panic(&self, start: NodeId, end: NodeId) -> &Edge {
         self.map[start as usize]
             .iter()
             .find(|a| a.node_id == end)
             .map_or_else(|| panic!("Graph did not contain the edge: a: {start}, b: {end}"), |edge| edge)
     }
+    /// Returns the edge that connects `start` to `end`
+    ///
+    /// # Errors
+    /// This fails when the graph does not contain that edge 
     pub fn get_edge(&self, start: NodeId, end: NodeId) -> FabricResult<&Edge> {
         self.map[start as usize]
             .iter()
             .find(|a| a.node_id == end)
-            .ok_or(FabricError::EdgeDoesNotExist{start, end})
+            .ok_or(FabricError::EdgeDoesNotExist { start, end })
     }
+
+    /// Parses a `pips.txt` file to a `FabricGraph`
+    ///
+    /// # Errors
+    /// This function fails when the provided file is invalid.
+    ///
+    /// # Example
+    /// ```
+    /// use router::FabricGraph;
+    ///
+    /// let test_file = "pips_8x8.txt";
+    /// let graph = FabricGraph::from_file(test_file).unwrap();
+    ///
+    /// ```
     pub fn from_file(path: &str) -> FabricResult<Self> {
         let file = File::open(path).map_err(|e| FabricError::Io {
             path: path.to_string(),
@@ -226,29 +159,6 @@ impl FabricGraph {
             pips_parser.parse_line(&line, line_number)?;
         }
         Ok(pips_parser.build_graph())
-    }
-
-    pub fn route_plan_expanded_form_file(file: &str) -> Result<Vec<RoutingExpanded>, FabricError> {
-        let data: String = fs::read_to_string(file).map_err(|e| FabricError::Io {
-            path: file.to_string(),
-            source: e,
-        })?;
-        let r: Vec<RoutingExpanded> = serde_json::de::from_str(&data)?;
-        Ok(r)
-    }
-
-    pub fn route_plan_form_file(&self, file: &str) -> Result<Vec<Routing>, FabricError> {
-        let r = Self::route_plan_expanded_form_file(file)?;
-        let r = r
-            .into_iter()
-            .map(|a| {
-                Routing::from_expanded(&a, self).map_err(|e| FabricError::MappingExpandedRoutePlan {
-                    signal: a.signal,
-                    reason: e,
-                })
-            })
-            .collect::<Result<Vec<Routing>, FabricError>>()?;
-        Ok(r)
     }
 
     pub fn reset_usage(&mut self) {
@@ -269,36 +179,11 @@ fn get_reversed_map(nodes: &[Node], map: &[Vec<Edge>]) -> Vec<Vec<Edge>> {
             let node_id = u as NodeId;
             let cost = edge.cost;
 
-            rev_map[v as usize].push(Edge {
-                node_id,
-                cost,
-            });
+            rev_map[v as usize].push(Edge { node_id, cost });
         }
     }
 
     rev_map
-}
-
-/// Represents a entry in the `NetList`
-/// each net has a start point (signal) and endpoints (sinks)
-/// result contains the paths of the signal to each sink
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RoutingExpanded {
-    /// Destination node indices
-    pub sinks: Vec<String>,
-    /// Source signal node
-    pub signal: String,
-    /// Optional routing result after computation
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub result: Option<RoutingResultExpanded>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RoutingResultExpanded {
-    /// Paths from source to each sink
-    pub paths: HashMap<String, Vec<String>>,
-    /// All nodes used in the routing
-    pub nodes: HashSet<String>,
 }
 
 pub fn bucket_luts(nodes: &[Node]) -> (Vec<NodeId>, Vec<NodeId>) {
@@ -306,7 +191,7 @@ pub fn bucket_luts(nodes: &[Node]) -> (Vec<NodeId>, Vec<NodeId>) {
     let mut lut_outputs = vec![];
     for (i, node) in nodes.iter().enumerate() {
         if node.id.starts_with('L') {
-#[allow(clippy::cast_possible_truncation)]
+            #[allow(clippy::cast_possible_truncation)]
             let id = i as NodeId;
             if node.id.chars().nth(3) == Some('O') {
                 lut_outputs.push(id);
@@ -388,21 +273,30 @@ mod test {
     fn test_parse_from_pips_line_failure_line_format() {
         let test_case = "X1Y0,,N1END3,X1Y0,S1BEG0,8,N1END3.S1BEG0".to_string();
         let error_message = "Wrong Pips line format. Expecting 6 parts.".to_string();
-        let result = parse_pips_line(&test_case).unwrap_err().to_string();
-        assert_eq!(error_message, result);
+        if let Err(result) = parse_pips_line(&test_case) {
+            assert_eq!(error_message, result.to_string());
+        } else {
+            panic!("This should return an error!");
+        }
     }
     #[test]
     fn test_parse_from_pips_line_failure_start_node() {
         let test_case = "X1Yp,N1END3,X1Y0,S1BEG0,8,N1END3.S1BEG0".to_string();
         let error_message = "Failed to parse start node id: N1END3 cords: X1Yp".to_string();
-        let result = parse_pips_line(&test_case).unwrap_err().to_string();
-        assert_eq!(error_message, result);
+        if let Err(result) = parse_pips_line(&test_case) {
+            assert_eq!(error_message, result.to_string());
+        } else {
+            panic!("This should return an error!");
+        }
     }
     #[test]
     fn test_parse_from_pips_line_failure_end_node() {
         let test_case = "X1Y1,N1END3,X1Yp,S1BEG0,8,N1END3.S1BEG0".to_string();
         let error_message = "Failed to parse end node id: S1BEG0 cords: X1Yp".to_string();
-        let result = parse_pips_line(&test_case).unwrap_err().to_string();
-        assert_eq!(error_message, result);
+        if let Err(result) = parse_pips_line(&test_case) {
+            assert_eq!(error_message, result.to_string());
+        } else {
+            panic!("This should return an error!");
+        }
     }
 }
