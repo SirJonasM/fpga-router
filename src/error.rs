@@ -1,5 +1,6 @@
 use thiserror::Error;
 use std::io;
+
 // A shorthand for results in your library
 pub type FabricResult<T> = Result<T, FabricError>;
 
@@ -11,9 +12,11 @@ pub enum FabricError {
         source: io::Error,
     },
 
+    #[error("Iteration Failed")]
+    IterationError{source: Box<FabricError>},
 
-    #[error("Routing failure: {0}")]
-    RoutingFailed(String),
+    #[error("Routing has reached its maximum iterations.")]
+    RoutingMaxIterationsReached,
 
     // This variant wraps the ParseError with line-specific context
     #[error("Parsing failed on line {line_number}: {source}\n  Line: \"{content}\"")]
@@ -34,12 +37,40 @@ pub enum FabricError {
 
     #[error("Parsing Failed: {0}")]
     Parse(#[from] ParseError),
+
+    #[error("Failed to preprocess route for signal {signal}: {source}")]
+    RoutePreProcessing{signal: usize, #[source] source: Box<FabricError>},
+
+    #[error("Path finding for Start: {start} and Sink: {sink} failed.")]
+    PathfindingFailed {start: usize, sink: usize},
+
+    #[error("Steiner tree conflict: Node {node_id} is already in use by another route.")]
+    ResourceConflict { node_id: usize },
+
+    #[error("No valid Steiner tree could be constructed for the given sinks.")]
+    NoSteinerTreeFound,
+
+    #[error("Some Error: {0}")]
+    Other(String)
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum ParseError {
-    #[error("Invalid line format: expected 6 parts, found {parts_found}")]
-    InvalidLine { parts_found: usize, line: String },
+    #[error("Wrong Pips line format. Expecting 6 parts.")]
+    InvalidLineFormat,
+
+    #[error("Failed to parse {part}")]
+    InvalidCoordinates {
+        token: String,
+        part: String,
+        #[source] source: Box<ParseError>,
+    },
+
+    #[error("Failed to parse start node id: {id} cords: {cords}")]
+    InvalidStartNode {id: String, cords: String, source: Box<ParseError>},
+
+    #[error("Failed to parse end node id: {id} cords: {cords}")]
+    InvalidEndNode {id: String, cords: String, source: Box<ParseError>},
 
     #[error("Missing coordinate prefix '{prefix}' in token: {token}")]
     MissingPrefix { prefix: char, token: String },
@@ -52,3 +83,16 @@ pub enum ParseError {
     },
 }
 
+// ADD this manual implementation
+impl From<String> for FabricError {
+    fn from(s: String) -> Self {
+        Self::Other(s)
+    }
+}
+
+// Highly recommended: adds support for ? on string literals ("error message".into())
+impl From<&str> for FabricError {
+    fn from(s: &str) -> Self {
+        Self::Other(s.to_string())
+    }
+}

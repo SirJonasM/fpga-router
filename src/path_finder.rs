@@ -4,22 +4,21 @@
 //! conflict-driven optimization. This module contains functions to execute
 //! routing iterations, log results, and validate routing correctness.
 #![macro_use]
-use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 
-use crate::fabric_graph::{FabricGraph, SteinerTreeCandidate};
-use crate::fabric_graph::{Routing, SteinerTree};
-use crate::solver::{SimpleSolver, SimpleSteinerSolver, SolveRouting, Solver};
+use crate::fabric_graph::FabricGraph;
+use crate::fabric_graph::Routing;
+use crate::solver::SolveRouting;
+use crate::{FabricError, FabricResult};
 
 /// Trait for logging pathfinding iterations.
 pub trait Logging {
     /// Logs the current iteration result.
-    fn log(&self, log_instance: &IterationResult)-> Result<(), String>;
+    fn log(&self, log_instance: &IterationResult) -> Result<(), String>;
 }
 
 /// Test case parameters for running a routing algorithm.
@@ -29,39 +28,25 @@ pub struct Config {
     pub id: u64,
     /// Historical cost factor for congestion handling
     pub hist_factor: f32,
-    /// Solver to use (Simple or Steiner)
-    pub solver: Solver,
     /// The maximum iterations the path finder algorithm will try to solve the routing
     pub max_iterations: usize,
 }
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 impl Config {
-    pub fn new(hist_factor: f32, solver: Solver, max_iterations: usize) -> Self {
+    pub fn new(hist_factor: f32, max_iterations: usize) -> Self {
         let id = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         Self {
             id,
             hist_factor,
-            solver,
             max_iterations,
         }
     }
 }
 impl Default for Config {
     fn default() -> Self {
-        Self::new(0.1, Solver::Simple(SimpleSolver), 1000)
+        Self::new(0.1, 1000)
     }
-}
-fn pre_process(graph: &mut FabricGraph, route_plan: &mut [Routing]) {
-    let mut nodes = HashSet::new();
-    for route in route_plan.iter_mut() {
-        let x = route.pre_calc_steiner_tree(graph).unwrap();
-
-        assert!(!x.nodes.iter().any(|a| nodes.contains(a)), "Steiner Node is already used.");
-        nodes.extend(x.nodes.clone());
-        route.steiner_tree = Some(x);
-    }
-    graph.reset_usage();
 }
 
 /// Execute routing for a given `TestCase` and `FabricGraph`.
@@ -75,46 +60,46 @@ fn pre_process(graph: &mut FabricGraph, route_plan: &mut [Routing]) {
 /// # Returns
 /// - `Ok(IterationResult)` if routing succeeds with zero conflicts
 /// - `Err(IterationResult)` if routing reaches `MAX_ITERATION` without resolving all conflicts
-pub fn route(
+pub fn route<T, L>(
     route_plan: &mut [Routing],
     graph: &mut FabricGraph,
     config: &Config,
-    logger: &dyn Logging,
-) -> Result<IterationResult, IterationResult> {
+    solver: &T,
+    logger: &L,
+) -> FabricResult<()>
+where
+    T: SolveRouting,
+    L: Logging,
+{
     let hist_fac = config.hist_factor;
 
     let mut i = 0;
     let mut last_conflicts = 0;
     let mut same_conflicts = 0;
-    if config.solver == Solver::SimpleSteiner(SimpleSteinerSolver) {
-        pre_process(graph, route_plan);
-    }
+    solver.pre_process(graph, route_plan)?;
     let max_iterations = config.max_iterations;
     loop {
-        let mut result = match iteration(graph, route_plan, &config.solver, hist_fac) {
-            Ok(iteration_result) => iteration_result,
-            Err(err) => panic!("Error in interation {i}: {err}"),
-        };
+        let mut result =
+            iteration(graph, route_plan, solver, hist_fac).map_err(|e| FabricError::IterationError { source: e.into() })?;
         result.iteration = i;
         result.test_case = config.clone();
 
-        let _ = logger.log(&result);
+        logger.log(&result)?;
 
         if result.conflicts == last_conflicts {
             same_conflicts += 1;
         }
         if result.conflicts == 0 {
-            return Ok(result);
+            return Ok(());
         }
 
         if i == max_iterations {
-            return Err(result);
+            return Err(FabricError::RoutingMaxIterationsReached);
         }
+
         last_conflicts = result.conflicts;
-        if same_conflicts == 200
-            && let Solver::SimpleSteiner(_) = config.solver
-        {
-            pre_process(graph, route_plan);
+        if same_conflicts == 200 {
+            solver.pre_process(graph, route_plan)?;
         }
         i += 1;
     }
@@ -126,16 +111,12 @@ pub fn route(
 pub fn iteration(
     graph: &mut FabricGraph,
     routing: &mut [Routing],
-    solver: &Solver,
+    solver: &dyn SolveRouting,
     hist_fac: f32,
-) -> Result<IterationResult, String> {
+) -> FabricResult<IterationResult> {
     let time1 = Instant::now();
     for route in &mut *routing {
-        match solver {
-            Solver::Simple(simple_solver) => simple_solver.solve(graph, route),
-            Solver::Steiner(steiner_solver) => steiner_solver.solve(graph, route),
-            Solver::SimpleSteiner(simple_steiner_solver) => simple_steiner_solver.solve(graph, route),
-        }?;
+        solver.solve(graph, route).map_err(|_e| "Test")?;
         if let Some(result) = &route.result {
             result.nodes.iter().for_each(|index| {
                 graph.costs[*index].usage += 1;
@@ -161,7 +142,6 @@ fn analyze_result(conflicts: usize, duration: Duration, graph: &FabricGraph, ste
         test_case: Config {
             id: 0,
             hist_factor: 0.0,
-            solver: Solver::Simple(SimpleSolver),
             max_iterations: 1000,
         },
         longest_path: (0, 0),
@@ -233,18 +213,12 @@ impl IterationResult {
 
 impl Display for IterationResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let solver = match &self.test_case.solver {
-            Solver::Simple(simple_solver) => simple_solver.identifier().to_string(),
-            Solver::Steiner(steiner_solver) => steiner_solver.identifier().to_string(),
-            Solver::SimpleSteiner(simple_steiner_solver) => simple_steiner_solver.identifier().to_string(),
-        };
         write!(
             f,
-            "{},{},{},{},{},{},{},{},{},{},{},{}",
+            "{},{},{},{},{},{},{},{},{},{},{}",
             self.iteration,
             self.test_case.id,
             self.test_case.hist_factor,
-            solver,
             self.conflicts,
             self.longest_path.0,
             self.longest_path.1,
@@ -254,118 +228,5 @@ impl Display for IterationResult {
             self.wire_reuse,
             self.duration
         )
-    }
-}
-
-impl Routing {
-    pub fn pre_calc_steiner_tree(&self, graph: &mut FabricGraph) -> Result<SteinerTree, String> {
-        let dists = self
-            .sinks
-            .par_iter()
-            .map(|sink| (*sink, graph.dijkstra_all(*sink)))
-            .collect::<HashMap<usize, Vec<f32>>>();
-        let signal = self.signal;
-        let base_paths: Vec<(usize, usize)> = self.sinks.iter().map(|&sink| (signal, sink)).collect();
-
-        let mut errors = Vec::new();
-
-        // 1. Parallel reduction to find the single best SteinerCandidate
-        let best_candidate = base_paths
-            .into_par_iter()
-            .map(|(start, base_sink)| {
-                // --- Computation to find the MINIMUM COST ---
-                // Calculate the cost of the base path (Dijkstra is still necessary here)
-                let Some((base_path, mut costs)) = graph.dijkstra(start, base_sink) else {
-                    return Err(format!(
-                        "Could not determine a route for the Base bath: start: {start}, sink: {base_sink}"
-                    ));
-                };
-
-                let mut nodes = HashSet::new();
-                // Calculate the cost of connecting all other sinks to this base path
-                let min_points = self
-                    .sinks
-                    .iter()
-                    .copied()
-                    .map(|sink| {
-                        let Some(terminal_distances) = dists.get(&sink) else {
-                            return Err(format!("No distances pre caclulated for the sink: {sink}."));
-                        };
-
-                        // Find the connection node (min_node) on the base_path
-                        let (min_node, cost_to_base_path) = base_path
-                            .iter()
-                            .map(|&node| (node, terminal_distances[node]))
-                            .min_by(|a, b| {
-                                if graph.costs[a.0].usage > 0 {
-                                    return Ordering::Greater;
-                                }
-                                if graph.costs[b.0].usage > 0 {
-                                    return Ordering::Less;
-                                }
-                                a.1.partial_cmp(&b.1).unwrap_or(Ordering::Greater)
-                            })
-                            .unwrap();
-
-                        // This cost is the *shortest path cost* from the base path to the sink.
-                        costs += cost_to_base_path;
-                        nodes.insert(min_node);
-                        Ok((sink, min_node))
-                    })
-                    .collect::<Result<HashMap<usize, usize>, String>>()?;
-
-                let mut steiner_nodes = HashMap::new();
-                for sink in &self.sinks {
-                    let mut sink_uses_steiner_nodes = vec![self.signal];
-                    let Some(m) = min_points.get(sink) else {
-                        return Err(format!("No midpoint calculated for sink {sink}"));
-                    };
-                    for n in &base_path {
-                        if n == m {
-                            sink_uses_steiner_nodes.push(*sink);
-                            steiner_nodes.insert(*sink, sink_uses_steiner_nodes);
-                            break;
-                        }
-                        if nodes.contains(n) {
-                            sink_uses_steiner_nodes.push(*n);
-                        }
-                    }
-                }
-                // Return only the lightweight candidate struct
-                Ok(SteinerTreeCandidate {
-                    steiner_nodes,
-                    nodes,
-                    costs,
-                })
-            })
-            .collect::<Vec<Result<SteinerTreeCandidate, String>>>();
-
-        let best_candidate = best_candidate
-            .into_iter()
-            .filter_map(|a| a.map_err(|e| errors.push(e)).ok())
-            // 2. Reduce the candidates to find the one with the minimum cost.
-            .min_by(|a, b| {
-                if a.costs < b.costs {
-                    Ordering::Less
-                } else if a.costs > b.costs {
-                    Ordering::Greater
-                } else {
-                    Ordering::Equal
-                }
-            });
-
-        // 3. Final Calculation: Sequentially calculate the full result for the winner.
-        if let Some(best) = best_candidate {
-            for x in &best.nodes {
-                graph.costs[*x].usage = 1;
-            }
-            Ok(SteinerTree {
-                nodes: best.nodes,
-                steiner_nodes: best.steiner_nodes,
-            })
-        } else {
-            println!("{errors:#?}");
-            Err("No Steiner tree was found".to_string())
-        }
     }
 }

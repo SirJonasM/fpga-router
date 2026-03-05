@@ -3,6 +3,7 @@ use std::{cmp::Ordering, collections::BinaryHeap};
 use crate::fabric_graph::FabricGraph;
 
 impl FabricGraph {
+    #[must_use]
     pub fn dijkstra(&self, start: usize, end: usize) -> Option<(Vec<usize>, f32)> {
         let n = self.nodes.len();
 
@@ -65,6 +66,7 @@ impl FabricGraph {
         None
     }
 
+    #[must_use]
     pub fn dijkstra_all(&self, start: usize) -> Vec<f32>{
         let n = self.nodes.len();
 

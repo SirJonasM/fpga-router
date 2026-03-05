@@ -27,13 +27,6 @@ pub struct Node {
     pub y: u8,
 }
 
-/// A node in the FPGA graph with its type and metadata.
-impl Node {
-    pub fn id(&self) -> String {
-        format!("X{}Y{}.{}", self.x, self.y, self.id)
-    }
-}
-
 /// Structure representing costs associated with routing through a node
 #[derive(Clone, Debug)]
 pub struct Costs {
@@ -46,30 +39,15 @@ pub struct Costs {
 }
 
 impl Node {
-    /// Parse two `Node` from a pips line
-    ///
-    /// # Returns
-    /// A `(Node, Node)`
-    pub fn parse_from_pips_line(line: &str) -> Result<(Self, Self), ParseError> {
-        let parts: Vec<&str> = line.split(',').collect();
-        if parts.len() != 6 {
-            return Err(ParseError::InvalidLine {parts_found: parts.len(), line: line.to_string()});
-        }
-        let (x1, y1) = from_str_coords(parts[0])?;
-        let (x2, y2) = from_str_coords(parts[2])?;
-
-        Ok((
-            Self {
-                x: x1,
-                y: y1,
-                id: parts[1].to_string(),
-            },
-            Self {
-                x: x2,
-                y: y2,
-                id: parts[3].to_string(),
-            },
-        ))
+    pub fn new(id: String, x: u8, y: u8) -> Self {
+        Self { id, x, y }
+    }
+    pub fn parse(id: &str, coords: &str) -> Result<Self, ParseError> {
+        let (x, y) = from_str_coords(coords)?;
+        Ok(Node::new(id.to_string(), x, y))
+    }
+    pub fn id(&self) -> String {
+        format!("X{}Y{}.{}", self.x, self.y, self.id)
     }
 }
 
@@ -87,12 +65,12 @@ fn from_str_coords(s: &str) -> std::result::Result<(u8, u8), ParseError> {
     })?;
     let x = x_part[1..].parse::<u8>().map_err(|e| ParseError::InvalidCoordinate {
         component: "X",
-        token: s.to_string(),
+        token: x_part[1..].to_string(),
         source: e,
     })?;
-    let y = y_part[1..].parse::<u8>().map_err(|e| ParseError::InvalidCoordinate {
-        component: "X",
-        token: s.to_string(),
+    let y = y_part.parse::<u8>().map_err(|e| ParseError::InvalidCoordinate {
+        component: "Y",
+        token: y_part.to_string(),
         source: e,
     })?;
     Ok((x, y))
@@ -134,5 +112,39 @@ impl Costs {
     /// Create a new `Costs` object
     pub(crate) fn new() -> Self {
         Self::default()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_parse_node() {
+        let node_id = "Test";
+        let node_cords = "X1Y2";
+        let node_expected = Node {
+            id: "Test".to_string(),
+            x: 1,
+            y: 2,
+        };
+        let node = Node::parse(node_id, node_cords).unwrap();
+        assert_eq!(node, node_expected);
+    }
+    #[test]
+    fn test_from_str_coords_fail_x() {
+        let node_id = "Test";
+        let node_cords = "XpY2";
+        let error_message = "Failed to parse 'X' coordinate: p".to_string();
+        let result = Node::parse(node_id, node_cords).unwrap_err().to_string();
+        assert_eq!(error_message, result);
+    }
+    #[test]
+    fn test_from_str_coords_fail_y() {
+        let node_id = "Test";
+        let node_cords = "X1Yp";
+        let error_message = "Failed to parse 'Y' coordinate: p".to_string();
+        let result = Node::parse(node_id, node_cords).unwrap_err().to_string();
+        assert_eq!(error_message, result);
     }
 }

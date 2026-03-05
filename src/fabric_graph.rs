@@ -14,21 +14,32 @@ use std::{
 
 use crate::{
     FabricError, FabricResult,
+    error::ParseError,
     node::{Costs, Edge, Node},
 };
 /// Routing request from a source to multiple sinks
 #[derive(Debug, Clone)]
 pub struct Routing {
-    /// Destination node indices
-    pub sinks: Vec<usize>,
     /// Source signal node
     pub signal: usize,
+    /// Destination node indices
+    pub sinks: Vec<usize>,
     /// Optional routing result after computation
     pub result: Option<RoutingResult>,
-    pub steiner_tree: Option<SteinerTree>,
+    pub steiner_tree: Option<HashMap<usize, Vec<usize>>>,
+    pub priority: Option<usize>,
+}
+
+#[derive(Debug)]
+struct PipsLine {
+    start_node: Node,
+    end_node: Node,
+    _p1: String,
+    _p2: String,
 }
 
 impl Routing {
+    #[must_use]
     pub fn expand(&self, graph: &FabricGraph) -> RoutingExpanded {
         let signal = graph.nodes[self.signal].id();
         let sinks = self.sinks.iter().map(|a| graph.nodes[*a].id()).collect();
@@ -57,21 +68,13 @@ impl Routing {
                 signal,
                 result: None,
                 steiner_tree: None,
+                priority: None,
             }),
             (Some(_), false) => Err(format!("Sinks: {sinks_cloned:?} do not exist.")),
             (None, true) => Err("Signal does not exist in graph".to_string()),
             (None, false) => Err(format!("Signal does not exist and sinks: {sinks_cloned:?}")),
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct SteinerTree {
-    /// This defines a Steiner Tree.
-    /// It maps a terminal to the steiner nodes it needs to go to
-    /// aswell as at the end the sink.
-    pub steiner_nodes: HashMap<usize, Vec<usize>>,
-    pub nodes: HashSet<usize>,
 }
 
 pub struct SteinerTreeCandidate {
@@ -108,7 +111,7 @@ impl RoutingResult {
 }
 
 /// Representation of the FPGA fabric graph
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct FabricGraph {
     /// List of nodes in the graph
     pub nodes: Vec<Node>,
@@ -120,65 +123,79 @@ pub struct FabricGraph {
     pub map_reversed: Vec<Vec<Edge>>,
 }
 
+struct PipsParser {
+    graph: FabricGraph,
+    index: HashMap<Node, usize>,
+}
+
+impl PipsParser {
+    fn new() -> Self {
+        Self {
+            graph: Default::default(),
+            index: Default::default(),
+        }
+    }
+    fn parse_line(&mut self, line: String, line_number: usize) -> FabricResult<()> {
+        let line = line.trim();
+        // skip empty lines and comments
+        if line.is_empty() || line.starts_with('#') {
+            return Ok(());
+        }
+
+        let PipsLine {
+            start_node, end_node, ..
+        } = parse_pips_line(line).map_err(|e| FabricError::LineError {
+            line_number,
+            content: line.to_string(),
+            source: e,
+        })?;
+
+        // get or insert start
+        let sid = *self.index.entry(start_node.clone()).or_insert_with(|| {
+            self.graph.nodes.push(start_node.clone());
+            self.graph.costs.push(Costs::new());
+            self.graph.map.push(Vec::new());
+            self.graph.nodes.len() - 1
+        });
+
+        // get or insert end
+        let eid = *self.index.entry(end_node.clone()).or_insert_with(|| {
+            self.graph.nodes.push(end_node.clone());
+            self.graph.costs.push(Costs::new());
+            self.graph.map.push(Vec::new());
+            self.graph.nodes.len() - 1
+        });
+
+        let cost = distance(&start_node, &end_node);
+        self.graph.map[sid].push(Edge { node_id: eid, cost });
+        Ok(())
+    }
+    fn build_graph(mut self) -> FabricGraph {
+        self.graph.map_reversed = get_reversed_map(&self.graph.nodes, &self.graph.map);
+        self.graph
+    }
+}
+
 impl FabricGraph {
     pub fn from_file(path: &str) -> FabricResult<Self> {
         let file = File::open(path).map_err(|e| FabricError::Io {
             path: path.to_string(),
             source: e,
         })?;
+        let mut pips_parser = PipsParser::new();
         let reader = BufReader::new(file);
 
-        let mut nodes: Vec<Node> = vec![];
-        let mut costs: Vec<Costs> = vec![];
-        let mut map: Vec<Vec<Edge>> = Vec::new();
-        let mut index: HashMap<Node, usize> = HashMap::new();
-
-        for (line_number, line_result) in reader.lines().enumerate() {
-            let line = line_result.map_err(|e| FabricError::Io {
+        let reader = reader.lines().enumerate();
+        for (line_number, line) in reader {
+            let line = line.map_err(|e| FabricError::Io {
                 path: path.to_string(),
                 source: e,
             })?;
-
-            let line = line.trim();
-            // skip empty lines and comments
-            if line.is_empty() || line.starts_with('#') {
-                continue;
-            }
-
-            let (start, end) = Node::parse_from_pips_line(line).map_err(|e| FabricError::LineError {
-                line_number,
-                content: line.to_string(),
-                source: e,
-            })?;
-
-            // get or insert start
-            let sid = *index.entry(start.clone()).or_insert_with(|| {
-                nodes.push(start.clone());
-                costs.push(Costs::new());
-                map.push(Vec::new());
-                nodes.len() - 1
-            });
-
-            // get or insert end
-            let eid = *index.entry(end.clone()).or_insert_with(|| {
-                nodes.push(end.clone());
-                costs.push(Costs::new());
-                map.push(Vec::new());
-                nodes.len() - 1
-            });
-
-            let cost = Self::distance(&start, &end);
-            map[sid].push(Edge { node_id: eid, cost });
+            pips_parser.parse_line(line, line_number)?;
         }
-        let reversed = get_reversed_map(&nodes, &map);
-
-        Ok(Self {
-            nodes,
-            costs,
-            map,
-            map_reversed: reversed,
-        })
+        Ok(pips_parser.build_graph())
     }
+
     pub fn route_plan_expanded_form_file(file: &str) -> Result<Vec<RoutingExpanded>, FabricError> {
         let data: String = fs::read_to_string(file).map_err(|e| FabricError::Io {
             path: file.to_string(),
@@ -200,12 +217,6 @@ impl FabricGraph {
             })
             .collect::<Result<Vec<Routing>, FabricError>>()?;
         Ok(r)
-    }
-
-    /// Distance function between nodes (Manhatten Distance)
-    /// Will be our base costs
-    const fn distance(a: &Node, b: &Node) -> f32 {
-        (1 + a.x.abs_diff(b.x) + a.y.abs_diff(b.y)) as f32
     }
 
     pub fn reset_usage(&mut self) {
@@ -267,4 +278,93 @@ pub fn bucket_luts(nodes: &[Node]) -> (Vec<usize>, Vec<usize>) {
         }
     }
     (lut_inputs, lut_outputs)
+}
+
+fn parse_pips_line(line: &str) -> Result<PipsLine, ParseError> {
+    if let [node1_cords, node1_id, node2_cords, node2_id, _, _] = line.split(',').collect::<Vec<&str>>().as_slice() {
+        let start_node = Node::parse(node1_id, node1_cords).map_err(|e| ParseError::InvalidStartNode {
+            id: node1_id.to_string(),
+            cords: node1_cords.to_string(),
+            source: e.into(),
+        })?;
+        let end_node = Node::parse(node2_id, node2_cords).map_err(|e| ParseError::InvalidEndNode {
+            id: node2_id.to_string(),
+            cords: node2_cords.to_string(),
+            source: e.into(),
+        })?;
+        Ok(PipsLine {
+            start_node,
+            end_node,
+            _p1: Default::default(),
+            _p2: Default::default(),
+        })
+    } else {
+        Err(ParseError::InvalidLineFormat)
+    }
+}
+/// Distance function between nodes (Manhatten Distance)
+/// Will be our base costs
+const fn distance(a: &Node, b: &Node) -> f32 {
+    (1 + a.x.abs_diff(b.x) + a.y.abs_diff(b.y)) as f32
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_parse_pips_file() {
+        let test_file = "pips.txt";
+        let graph = FabricGraph::from_file(test_file).unwrap();
+        assert_eq!(graph.nodes[0], Node::parse("N1END3", "X1Y0").unwrap());
+    }
+    #[test]
+    fn test_parse_pips_file_error_accessing_file() {
+        let test_file = "some_file_that_does_not_exist.txt";
+        let error = FabricGraph::from_file(test_file).unwrap_err().to_string();
+        assert_eq!(
+            "IO error while accessing 'some_file_that_does_not_exist.txt': No such file or directory (os error 2)",
+            error
+        );
+    }
+
+    #[test]
+    fn test_parse_from_pips_line_success() {
+        let test_case = "X1Y0,N1END3,X1Y0,S1BEG0,8,N1END3.S1BEG0".to_string();
+        let node1_expected = Node {
+            id: "N1END3".to_string(),
+            x: 1,
+            y: 0,
+        };
+        let node2_expected = Node {
+            id: "S1BEG0".to_string(),
+            x: 1,
+            y: 0,
+        };
+        let PipsLine {
+            start_node, end_node, ..
+        } = parse_pips_line(&test_case).unwrap();
+        assert_eq!(start_node, node1_expected);
+        assert_eq!(end_node, node2_expected);
+    }
+    #[test]
+    fn test_parse_from_pips_line_failure_line_format() {
+        let test_case = "X1Y0,,N1END3,X1Y0,S1BEG0,8,N1END3.S1BEG0".to_string();
+        let error_message = "Wrong Pips line format. Expecting 6 parts.".to_string();
+        let result = parse_pips_line(&test_case).unwrap_err().to_string();
+        assert_eq!(error_message, result);
+    }
+    #[test]
+    fn test_parse_from_pips_line_failure_start_node() {
+        let test_case = "X1Yp,N1END3,X1Y0,S1BEG0,8,N1END3.S1BEG0".to_string();
+        let error_message = "Failed to parse start node id: N1END3 cords: X1Yp".to_string();
+        let result = parse_pips_line(&test_case).unwrap_err().to_string();
+        assert_eq!(error_message, result);
+    }
+    #[test]
+    fn test_parse_from_pips_line_failure_end_node() {
+        let test_case = "X1Y1,N1END3,X1Yp,S1BEG0,8,N1END3.S1BEG0".to_string();
+        let error_message = "Failed to parse end node id: S1BEG0 cords: X1Yp".to_string();
+        let result = parse_pips_line(&test_case).unwrap_err().to_string();
+        assert_eq!(error_message, result);
+    }
 }

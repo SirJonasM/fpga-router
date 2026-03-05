@@ -23,6 +23,7 @@ pub use api::*;
 pub use path_finder::Logging;
 pub use path_finder::IterationResult;
 pub use error::{FabricError, FabricResult};
+pub use fabric_graph::{FabricGraph, Routing};
 
-pub use solver::{Solver, SimpleSolver, SimpleSteinerSolver, SteinerSolver};
+pub use solver::{SolveRouting, SimpleSolver, SimpleSteinerSolver, SteinerSolver};
 pub use logger::{Loggers,FileLog};

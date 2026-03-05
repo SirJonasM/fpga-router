@@ -3,47 +3,46 @@ use std::fs;
 use rand::seq::SliceRandom;
 
 use crate::{
+    FabricError, FabricResult,
     fabric_graph::{FabricGraph, Routing, RoutingExpanded, bucket_luts},
     fasm::routing_to_fasm,
     path_finder::{Config, Logging, route},
-    solver::Solver,
+    solver::SolveRouting,
     validate,
 };
 
-pub fn start_routing(
+pub fn start_routing<T, L>(
     graph_path: &str,
     routing_list: &str,
-    solver: Solver,
+    solver: &T,
     hist_factor: f32,
     output_path: &str,
-    logger: &dyn Logging,
+    logger: &L,
     max_iterations: usize,
-) -> Result<(), String> {
-    let mut graph = FabricGraph::from_file(graph_path).map_err(|_| format!("Error reading file: {graph_path}"))?;
-    let mut route_plan = graph
-        .route_plan_form_file(routing_list)
-        .map_err(|_| format!("Error reading file: {routing_list}"))?;
-    let config = Config::new(hist_factor, solver, max_iterations);
-    println!(
-        "Map: {}, Costs: {}",
-        graph.map.iter().fold(0, |a, b| a + b.len()),
-        graph.costs.len()
-    );
+) -> FabricResult<()>
+where
+    T: SolveRouting,
+    L: Logging
+{
+    let mut graph = FabricGraph::from_file(graph_path)?;
+    let mut route_plan = graph.route_plan_form_file(routing_list)?;
+    let config = Config::new(hist_factor, max_iterations);
 
-    match route(&mut route_plan, &mut graph, &config, logger) {
-        Ok(x) => {
-            println!("Success: {} ", x.iteration);
+    match route(&mut route_plan, &mut graph, &config, solver, logger) {
+        Ok(_x) => {
             let ex = route_plan.iter().map(|x| x.expand(&graph)).collect::<Vec<_>>();
             let out = if output_path.ends_with("fasm") {
                 routing_to_fasm(&ex)
             } else {
-                serde_json::to_string_pretty(&ex).map_err(|_| "Error serializing route plan")?
+                serde_json::to_string_pretty(&ex)?
             };
-            fs::write(output_path, out).map_err(|_| format!("Error writing to file: {output_path}"))?;
-            println!("Wrote the routing into {output_path}");
+            fs::write(output_path, out).map_err(|e| FabricError::Io {
+                path: output_path.to_string(),
+                source: e,
+            })?;
             Ok(())
         }
-        Err(x) => Err(format!("Failure: {x} ")),
+        Err(_) => Err("Test".into()),
     }
 }
 
@@ -55,9 +54,9 @@ pub fn create_fasm(expanded_routing: &str, output_path: &str) -> Result<(), Stri
     Ok(())
 }
 
-pub fn create_test(graph_path: &str, output_path: &str, percentage: f32, destinations: usize) -> Result<(), String> {
+pub fn create_test(graph_path: &str, output_path: &str, percentage: f32, destinations: usize) -> FabricResult<()> {
     let mut rng = rand::rng();
-    let graph = FabricGraph::from_file(graph_path).map_err(|_| format!("Error reading file: {graph_path}"))?;
+    let graph = FabricGraph::from_file(graph_path)?;
     let (mut inputs, mut outputs) = bucket_luts(&graph.nodes);
 
     inputs.shuffle(&mut rng);
@@ -79,6 +78,7 @@ pub fn create_test(graph_path: &str, output_path: &str, percentage: f32, destina
                 signal,
                 result: None,
                 steiner_tree: None,
+                priority: None,
             }
             .expand(&graph)
         })
