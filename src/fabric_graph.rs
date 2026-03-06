@@ -5,7 +5,7 @@
 //! and computing distances and reversed maps.
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fs::File,
     io::{BufRead, BufReader},
 };
@@ -15,12 +15,6 @@ use crate::{
     error::ParseError,
     node::{Costs, Edge, Node, NodeId},
 };
-
-pub struct SteinerTreeCandidate {
-    pub steiner_nodes: HashMap<NodeId, Vec<NodeId>>,
-    pub nodes: HashSet<NodeId>,
-    pub costs: f32,
-}
 
 /// Representation of the FPGA fabric graph
 #[derive(Debug, Clone, Default)]
@@ -111,7 +105,7 @@ impl FabricGraph {
     /// Returns the edge that connects `start` to `end`
     ///
     /// # Panics
-    /// This panics when the graph does not contain that edge 
+    /// This panics when the graph does not contain that edge
     pub fn get_edge_panic(&self, start: NodeId, end: NodeId) -> &Edge {
         self.map[start as usize]
             .iter()
@@ -121,7 +115,7 @@ impl FabricGraph {
     /// Returns the edge that connects `start` to `end`
     ///
     /// # Errors
-    /// This fails when the graph does not contain that edge 
+    /// This fails when the graph does not contain that edge
     pub fn get_edge(&self, start: NodeId, end: NodeId) -> FabricResult<&Edge> {
         self.map[start as usize]
             .iter()
