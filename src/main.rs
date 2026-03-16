@@ -1,7 +1,8 @@
 mod cli;
 use clap::Parser;
 use router::{
-    create_fasm, create_test, start_routing, validate_routing, FabricGraph, FileLog, Loggers, NetInternal, SimpleSolver, SimpleSteinerSolver, SolveRouting, SteinerSolver
+    FabricGraph, FileLog, Loggers, NetInternal, SimpleSolver, SimpleSteinerSolver, SolveRouting, SteinerSolver, create_fasm,
+    create_test, start_routing, validate_routing,
 };
 
 use crate::cli::{Cli, Commands, LoggerType, SolverType};
@@ -39,7 +40,7 @@ fn main() -> Result<(), u32> {
                 LoggerType::Terminal => Loggers::Terminal,
                 LoggerType::File => {
                     let file = args.log_file.unwrap();
-                    let file_log = match FileLog::new(&file){
+                    let file_log = match FileLog::new(&file) {
                         Ok(f) => f,
                         Err(_) => return Err(1),
                     };
