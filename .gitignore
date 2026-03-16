@@ -4,6 +4,7 @@
 **.json
 **.txt
 **.fasm
+**.csv
 shell.nix
 .direnv
 .envrc

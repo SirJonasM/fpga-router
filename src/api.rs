@@ -7,9 +7,9 @@ use crate::{
     FabricError, FabricResult, Logging,
     fabric_graph::{FabricGraph, bucket_luts},
     fasm::routing_to_fasm,
+    netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal},
     node::NodeId,
     path_finder::{Config, route},
-    netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal},
     solver::SolveRouting,
     validate,
 };
@@ -42,7 +42,6 @@ where
     let mut route_plan = NetListInternal::from_external(&graph, &route_plan_external)?;
     let config = Config::new(hist_factor, max_iterations);
 
-
     match route(&mut route_plan, &mut graph, &config, solver, logger) {
         Ok(_x) => {
             let ex = route_plan.to_external(&graph);
@@ -65,8 +64,7 @@ where
 /// # Errors
 /// Fails if files do not exist or deserialization does not succeed.
 pub fn create_fasm(netlist_file: &str, output_file: &str) -> FabricResult<()> {
-    let route_plan =
-        NetListExternal::from_file(netlist_file).map_err(|_| format!("Error reading routeplan: {netlist_file}"))?;
+    let route_plan = NetListExternal::from_file(netlist_file).map_err(|_| format!("Error reading routeplan: {netlist_file}"))?;
     let fasm = routing_to_fasm(&route_plan);
     fs::write(output_file, fasm).map_err(|_| format!("Error writing to file: {output_file}"))?;
     Ok(())
@@ -116,9 +114,7 @@ pub fn create_test(graph_file: &str, output_file: &str, percentage: f32, destina
             .to_external(&graph)
         })
         .collect::<Vec<NetExternal>>();
-    let route_plan = NetListExternal {
-        plan: route_plan,
-    };
+    let route_plan = NetListExternal { plan: route_plan };
 
     let pretty = serde_json::to_string_pretty(&route_plan)?;
     fs::write(output_file, pretty).map_err(|e| FabricError::Io {
@@ -175,5 +171,33 @@ impl SlackReport {
             .values()
             .cloned()
             .fold(0.0, |min, val| if val < min { val } else { min })
+    }
+    /// Returns a criticality value between 0.0 and 1.0 for a given wire.
+    /// 1.0 = This is the most critical net in the design (worst slack).
+    /// 0.0 = This net meets timing or is not in the report.
+    pub fn calculate_criticality(&self, source_wire: &str) -> Option<f32> {
+        let worst_slack = self.get_worst_slack();
+
+        // If worst_slack is 0 or positive, the whole design meets timing.
+        // Everyone gets 0.0 criticality.
+        if worst_slack >= 0.0 {
+            return None
+        }
+
+        if let Some(&slack) = self.slacks.get(source_wire) {
+            if slack < 0.0 {
+                // Formula: (current_slack / worst_negative_slack)
+                // Example: (-500 / -1000) = 0.5 criticality
+                // We use .min(1.0) just in case of rounding errors
+                let base_crit = (slack / worst_slack).min(1.0);
+
+                // Optional: Sharpening exponent.
+                // Using crit^3 is common in FPGA tools to make the router
+                // focus HARD on the top 10% of failing nets.
+                return Some(base_crit.powf(3.0));
+            }
+        }
+
+        None
     }
 }

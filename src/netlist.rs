@@ -177,7 +177,7 @@ impl NetListExternal {
 
     pub(crate) fn add_slack(&mut self, slack_report: SlackReport) {
         for x in &mut self.plan {
-            x.criticallity = slack_report.slacks.get(&x.signal).copied();
+            x.criticallity = slack_report.calculate_criticality(&x.signal);
         }
     }
 }
