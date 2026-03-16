@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{FabricError, FabricGraph, FabricResult, SlackReport, node::NodeId};
+use crate::{FabricError, FabricGraph, FabricResult, slack::SlackReport, node::NodeId};
 
 pub struct NetListInternal {
     pub plan: Vec<NetInternal>,
@@ -149,6 +149,7 @@ pub struct NetExternal {
     /// Optional routing result after computation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<NetResultExternal>,
+    #[serde(skip)]
     pub criticallity: Option<f32>,
 }
 

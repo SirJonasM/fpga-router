@@ -1,7 +1,7 @@
-use std::{collections::HashMap, fs, path::Path};
+use std::fs;
+use std::process::Command;
 
 use rand::seq::SliceRandom;
-use serde::Deserialize;
 
 use crate::{
     FabricError, FabricResult, Logging,
@@ -10,6 +10,7 @@ use crate::{
     netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal},
     node::NodeId,
     path_finder::{Config, route},
+    slack::SlackReport,
     solver::SolveRouting,
     validate,
 };
@@ -124,6 +125,68 @@ pub fn create_test(graph_file: &str, output_file: &str, percentage: f32, destina
     Ok(())
 }
 
+pub fn route_sta<T, L>(
+    graph_file: &str,
+    netlist_file: &str,
+    solver: &T,
+    hist_factor: f32,
+    net_list_file_solved: &str,
+    logger: &L,
+    max_iterations: usize,
+    max_sta_cycles: usize,
+    target_ps: u32,
+) -> FabricResult<()>
+where
+    T: SolveRouting,
+    L: Logging,
+{
+    let mut graph = FabricGraph::from_file(graph_file)?;
+    let net_list = NetListExternal::from_file(netlist_file)?;
+    let mut net_list = NetListInternal::from_external(&graph, &net_list)?;
+    let config = Config::new(hist_factor, max_iterations);
+
+    let slack_file = "current_slack.csv";
+
+    for current_cycle in 0..max_sta_cycles {
+        println!("\n=== STA Routing Cycle {} ===", current_cycle);
+
+        // 2. ROUTE: Run the actual Pathfinder iterations
+        // You might need to expose a function that takes objects, not paths
+        let mut net_list = match route(&mut net_list, &mut graph, &config, solver, logger) {
+            Ok(_x) => {
+                let net_list = net_list.to_external(&graph);
+                fs::write(net_list_file_solved, routing_to_fasm(&net_list)).map_err(|e| FabricError::Io {
+                    path: net_list_file_solved.to_string(),
+                    source: e,
+                })?;
+                net_list
+            }
+            Err(_err) => {
+                panic!("Test")
+            }
+        };
+
+        // 4. ANALYZE: Call Python Mock STA
+        println!("Running STA Analysis...");
+        match run_mock_sta(&net_list_file_solved, slack_file, target_ps){
+            Ok(()) => return Ok(()),
+            Err(err) => {},
+        };
+
+        // 5. EVALUATE: Load report and check bounds
+        let report = SlackReport::from_file(slack_file)?;
+
+        if report.get_worst_slack() > 0.0 {
+            println!("Success: Timing met and congestion resolved.");
+            break;
+        }
+
+        graph.reset();
+        net_list.add_slack(report)
+    }
+    Err(FabricError::TimingNotMet)
+}
+
 /// Validates a routing for a given `FabricGraph`
 ///
 /// # Errors
@@ -137,67 +200,21 @@ pub fn validate_routing(graph_file: &str, netlist_file: &str) -> FabricResult<()
     Ok(())
 }
 
-/// The raw record format expected from the Timing Team's CSV
-#[derive(Debug, Deserialize)]
-struct SlackRecord {
-    #[serde(rename = "source_wire")]
-    source_wire: String,
-    #[serde(rename = "slack_ps")]
-    slack_ps: f32,
-}
+fn run_mock_sta(fasm_in: &str, csv_out: &str, target: u32) -> Result<(), String> {
+    let output = Command::new("python3")
+        .arg("mock_slack.py") // Name of your python script
+        .arg(fasm_in)
+        .arg(csv_out)
+        .arg("--target")
+        .arg(target.to_string())
+        .output()
+        .map_err(|e| format!("Failed to start STA script: {}", e))?;
 
-pub struct SlackReport {
-    /// Mapping of Wire Name -> Slack in picoseconds
-    pub slacks: HashMap<String, f32>,
-}
-
-impl SlackReport {
-    /// Parses the CSV file from the timing team
-    pub fn from_file<P: AsRef<Path>>(path: P) -> FabricResult<Self> {
-        let mut rdr = csv::Reader::from_path(path)?;
-        let mut slacks = HashMap::new();
-
-        for result in rdr.deserialize() {
-            let record: SlackRecord = result?;
-            slacks.insert(record.source_wire, record.slack_ps);
-        }
-
-        Ok(SlackReport { slacks })
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    println!("{}", stdout);
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("STA Script Error: {}", err));
     }
-
-    /// Helper to find the worst (most negative) slack for normalization
-    pub fn get_worst_slack(&self) -> f32 {
-        self.slacks
-            .values()
-            .cloned()
-            .fold(0.0, |min, val| if val < min { val } else { min })
-    }
-    /// Returns a criticality value between 0.0 and 1.0 for a given wire.
-    /// 1.0 = This is the most critical net in the design (worst slack).
-    /// 0.0 = This net meets timing or is not in the report.
-    pub fn calculate_criticality(&self, source_wire: &str) -> Option<f32> {
-        let worst_slack = self.get_worst_slack();
-
-        // If worst_slack is 0 or positive, the whole design meets timing.
-        // Everyone gets 0.0 criticality.
-        if worst_slack >= 0.0 {
-            return None
-        }
-
-        if let Some(&slack) = self.slacks.get(source_wire) {
-            if slack < 0.0 {
-                // Formula: (current_slack / worst_negative_slack)
-                // Example: (-500 / -1000) = 0.5 criticality
-                // We use .min(1.0) just in case of rounding errors
-                let base_crit = (slack / worst_slack).min(1.0);
-
-                // Optional: Sharpening exponent.
-                // Using crit^3 is common in FPGA tools to make the router
-                // focus HARD on the top 10% of failing nets.
-                return Some(base_crit.powf(3.0));
-            }
-        }
-
-        None
-    }
+    Ok(())
 }

@@ -64,6 +64,31 @@ pub struct ValidateArgs{
     pub routing: String,
 }
 
+#[derive(Parser, Debug)]
+pub struct RouteStaArgs {
+    #[arg(short, long)]
+    pub graph: String,
+    #[arg(short, long)]
+    pub routing_list: String,
+    #[arg(short, long)]
+    pub output: String, // This will be the final FASM output
+    #[arg(short = 'S', long, value_enum, default_value_t = SolverType::Simple)]
+    pub solver: SolverType,
+    #[arg(long, default_value_t = 0.1)]
+    pub hist_factor: f32,
+    #[arg(short='L', long, value_enum, default_value_t=LoggerType::Terminal )]
+    pub logger: LoggerType,
+    #[arg(short='l', long, value_enum, default_value=None )]
+    pub log_file: Option<String>,
+    #[arg(short = 'i', long, default_value_t = 2000)]
+    pub max_iterations: usize,
+
+    #[arg(long, default_value = "5000")]
+    pub target_ps: u32,
+    #[arg(long, default_value = "10")]
+    pub max_sta_cycles: usize,
+}
+
 // --- CLI Structure ---
 
 #[derive(Parser, Debug)]
@@ -83,4 +108,6 @@ pub enum Commands {
     Fasm(FasmArgs),
 
     Validate(ValidateArgs),
+
+    RouteSta(RouteStaArgs),
 }

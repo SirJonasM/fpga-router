@@ -158,6 +158,13 @@ impl FabricGraph {
     pub fn reset_usage(&mut self) {
         self.costs.iter_mut().for_each(|a| a.usage = 0);
     }
+
+    pub(crate) fn reset(&mut self){
+        self.costs.iter_mut().for_each(|cost| {
+            cost.historic_cost = 0.0;
+            cost.usage = 0;
+        })
+    }
 }
 
 /// Generate reversed adjacency list from forward map

@@ -47,7 +47,7 @@ fn main() -> Result<(), u32> {
                     Loggers::File(file_log)
                 }
             };
-            
+
             match start_routing(
                 &args.graph,
                 &args.routing_list,
@@ -66,6 +66,46 @@ fn main() -> Result<(), u32> {
                     println!("Failed to route: {err}");
                     Err(1)
                 }
+            }
+        }
+        Commands::RouteSta(args) => {
+            let solver = match args.solver {
+                SolverType::Simple => Solver::Simple(SimpleSolver),
+                SolverType::Steiner => Solver::Steiner(SteinerSolver),
+                SolverType::SimpleSteiner => Solver::SimpleSteiner(SimpleSteinerSolver),
+            };
+            let logger = match &args.logger {
+                LoggerType::No => Loggers::No,
+                LoggerType::Terminal => Loggers::Terminal,
+                LoggerType::File => {
+                    let file = args.log_file.unwrap();
+                    let file_log = match FileLog::new(&file) {
+                        Ok(f) => f,
+                        Err(_) => return Err(1),
+                    };
+                    Loggers::File(file_log)
+                }
+            };
+
+            match router::route_sta(
+                &args.graph,
+                &args.routing_list,
+                &solver,
+                args.hist_factor,
+                &args.output,
+                &logger,
+                args.max_iterations,
+                args.max_sta_cycles,
+                args.target_ps,
+            ) {
+            Ok(()) => {
+                println!("Routing is valid and in timing bounds.");
+                Ok(())
+            }
+            Err(err) => {
+                println!("Routing is invalid due to: {err}");
+                Err(1)
+            }
             }
         }
         Commands::Validate(args) => match validate_routing(&args.routing, &args.graph) {

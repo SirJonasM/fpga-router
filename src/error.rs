@@ -66,6 +66,8 @@ pub enum FabricError {
     #[error("No valid Steiner tree could be constructed for the given sinks.")]
     NoSteinerTreeFound,
 
+    #[error("Timing could not be met in given maximum sta cycles.")]
+    TimingNotMet,
 
     #[error("Some Error: {0}")]
     Other(String)

@@ -18,6 +18,7 @@ pub(crate) mod node;
 pub(crate) mod path_finder;
 pub(crate) mod solver;
 pub(crate) mod validate;
+pub(crate) mod slack;
 
 // Error handling
 pub use error::{FabricError, FabricResult};
