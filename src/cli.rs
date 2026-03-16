@@ -35,7 +35,7 @@ pub struct RouteArgs {
     pub routing_list: String,
     #[arg(short, long)]
     pub graph: String,
-    #[arg(short, long, value_enum, default_value_t = SolverType::Simple)]
+    #[arg(short = 'S', long, value_enum, default_value_t = SolverType::Simple)]
     pub solver: SolverType,
     #[arg(long, default_value_t = 0.1)]
     pub hist_factor: f32,
@@ -45,6 +45,8 @@ pub struct RouteArgs {
     pub log_file: Option<String>,
     #[arg(short = 'i', long, default_value_t = 2000)]
     pub max_iterations: usize,
+    #[arg(short = 's', long)]
+    pub slack_report: Option<String>,
 }
 #[derive(Parser, Debug)]
 pub struct FasmArgs {

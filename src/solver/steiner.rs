@@ -21,14 +21,15 @@ impl SolveRouting for SteinerSolver {
     fn pre_process(&self, _graph: &mut FabricGraph, _route_plan: &mut [NetInternal]) -> FabricResult<()> {
         Ok(())
     }
-    fn solve(&self, graph: &FabricGraph, routing: &mut NetInternal) -> FabricResult<()> {
-        let dists = routing
+    fn solve(&self, graph: &FabricGraph, net: &mut NetInternal) -> FabricResult<()> {
+        let criticallity = net.criticallity;
+        let dists = net
             .sinks
             .par_iter()
-            .map(|sink| (*sink, graph.dijkstra_all(*sink)))
+            .map(|sink| (*sink, graph.dijkstra_all(*sink, criticallity)))
             .collect::<HashMap<NodeId, Vec<f32>>>();
-        let signal = routing.signal;
-        let base_paths: Vec<(NodeId, NodeId)> = routing.sinks.iter().map(|&sink| (signal, sink)).collect();
+        let signal = net.signal;
+        let base_paths: Vec<(NodeId, NodeId)> = net.sinks.iter().map(|&sink| (signal, sink)).collect();
 
         // 1. Parallel reduction to find the single best SteinerCandidate
         let best_candidate: Result<SteinerCandidate, String> = base_paths
@@ -36,12 +37,12 @@ impl SolveRouting for SteinerSolver {
             .map(|(start, base_sink)| {
                 // --- Computation to find the MINIMUM COST ---
                 // Calculate the cost of the base path (Dijkstra is still necessary here)
-                let Some((base_path, mut costs)) = graph.dijkstra(start, base_sink) else {
+                let Some((base_path, mut costs)) = graph.dijkstra(start, base_sink, criticallity) else {
                     return Err(format!("Could not find a base path start: {start}, base sink: {base_sink}"));
                 };
 
                 // Calculate the cost of connecting all other sinks to this base path
-                let mid_points = routing
+                let mid_points = net
                     .sinks
                     .iter()
                     .map(|sink| {
@@ -95,10 +96,10 @@ impl SolveRouting for SteinerSolver {
             let mut paths = HashMap::new();
 
             for (sink, mid_point) in &best_candidate.mid_points {
-                let Some((mut path_to_mid, _cost)) = graph.dijkstra(signal, *mid_point) else {
+                let Some((mut path_to_mid, _cost)) = graph.dijkstra(signal, *mid_point, criticallity) else {
                     return Err(format!("Could not find a route for sink: {sink}").into());
                 };
-                let Some((path_from_mid, _cost)) = graph.dijkstra(*mid_point, *sink) else {
+                let Some((path_from_mid, _cost)) = graph.dijkstra(*mid_point, *sink, criticallity) else {
                     return Err(format!("Could not find a route for sink: {sink}").into());
                 };
                 nodes.extend(&path_from_mid);
@@ -106,10 +107,10 @@ impl SolveRouting for SteinerSolver {
                 paths.insert(*sink, path_to_mid);
             }
 
-            routing.result = Some(NetResultInternal { paths, nodes });
+            net.result = Some(NetResultInternal { paths, nodes });
             Ok(())
         } else {
-            routing.result = None; // No sinks found
+            net.result = None; // No sinks found
             Err("Error".into())
         }
     }

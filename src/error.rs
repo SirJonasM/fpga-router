@@ -36,6 +36,9 @@ pub enum FabricError {
     #[error("Serialization error: {0}")]
     Json(#[from] serde_json::Error),
 
+    #[error("Serialization error: {0}")]
+    Csv(#[from] csv::Error),
+
     #[error("Mapping expanded Node {signal} of Routeplan to a internal graph node id failed.\n Reason: {reason}")]
     MappingExternelNet {
         signal: String,
@@ -62,6 +65,7 @@ pub enum FabricError {
 
     #[error("No valid Steiner tree could be constructed for the given sinks.")]
     NoSteinerTreeFound,
+
 
     #[error("Some Error: {0}")]
     Other(String)

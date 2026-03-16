@@ -47,7 +47,7 @@ fn main() -> Result<(), u32> {
                     Loggers::File(file_log)
                 }
             };
-
+            
             match start_routing(
                 &args.graph,
                 &args.routing_list,
@@ -56,6 +56,7 @@ fn main() -> Result<(), u32> {
                 &args.output,
                 &logger,
                 args.max_iterations,
+                args.slack_report,
             ) {
                 Ok(()) => {
                     println!("Finished routing.");

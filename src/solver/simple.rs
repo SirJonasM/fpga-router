@@ -11,13 +11,14 @@ impl SolveRouting for SimpleSolver {
     fn pre_process(&self, _graph: &mut FabricGraph, _route_plan: &mut [NetInternal]) -> FabricResult<()> {
         Ok(())
     }
-    fn solve(&self, graph: &FabricGraph, routing: &mut NetInternal) -> FabricResult<()> {
-        let signal = routing.signal;
-        let paths: HashMap<NodeId, Vec<NodeId>> = routing
+    fn solve(&self, graph: &FabricGraph, net: &mut NetInternal) -> FabricResult<()> {
+        let signal = net.signal;
+        let criticallity = net.criticallity;
+        let paths: HashMap<NodeId, Vec<NodeId>> = net
             .sinks
             .par_iter()
             .map(|sink| {
-                let (path, _cost) = graph.dijkstra(signal, *sink).ok_or(FabricError::PathfindingFailed {
+                let (path, _cost) = graph.dijkstra(signal, *sink, criticallity).ok_or(FabricError::PathfindingFailed {
                     start: signal,
                     sink: *sink,
                 })?;
@@ -27,7 +28,7 @@ impl SolveRouting for SimpleSolver {
 
         let nodes = paths.values().flatten().copied().collect::<HashSet<NodeId>>();
 
-        routing.result = Some(NetResultInternal { paths, nodes });
+        net.result = Some(NetResultInternal { paths, nodes });
         Ok(())
     }
 

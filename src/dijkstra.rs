@@ -4,7 +4,7 @@ use crate::{fabric_graph::FabricGraph, node::NodeId};
 
 impl FabricGraph {
     #[must_use]
-    pub fn dijkstra(&self, start: NodeId, end: NodeId) -> Option<(Vec<NodeId>, f32)> {
+    pub fn dijkstra(&self, start: NodeId, end: NodeId, criticallity: f32) -> Option<(Vec<NodeId>, f32)> {
         let n = self.nodes.len();
 
         let mut dist: Vec<f32> = vec![f32::MAX; n];
@@ -49,7 +49,7 @@ impl FabricGraph {
             // Expand adjacency list
             for edge in &self.map[position as usize] {
                 let base_cost = edge.cost;
-                let next_cost = cost + self.costs[edge.node_id as usize].calc_costs(base_cost);
+                let next_cost = cost + self.costs[edge.node_id as usize].calc_costs(base_cost, criticallity);
                 let next_pos = edge.node_id;
 
                 if next_cost < dist[next_pos as usize] {
@@ -67,7 +67,7 @@ impl FabricGraph {
     }
 
     #[must_use]
-    pub fn dijkstra_all(&self, start: NodeId) -> Vec<f32>{
+    pub fn dijkstra_all(&self, start: NodeId, criticallity: f32) -> Vec<f32>{
         let n = self.nodes.len();
 
         let mut dist: Vec<f32> = vec![f32::MAX; n];
@@ -86,7 +86,7 @@ impl FabricGraph {
 
             for edge in &self.map_reversed[position as usize] {
                 let base_cost = edge.cost;
-                let next_cost = cost + self.costs[edge.node_id as usize].calc_costs(base_cost);
+                let next_cost = cost + self.costs[edge.node_id as usize].calc_costs(base_cost, criticallity);
 
                 let next_pos = edge.node_id;
 

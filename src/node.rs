@@ -3,7 +3,6 @@
 //! This module defines the building blocks of the FPGA fabric graph:
 //! nodes, their types, and associated costs for routing algorithms.
 
-use serde::{Deserialize, Serialize};
 
 use crate::error::ParseError;
 
@@ -19,7 +18,7 @@ pub struct Edge {
 }
 
 /// A node in the FPGA graph with its type and metadata.
-#[derive(Hash, Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
+#[derive(Hash, Eq, PartialEq, Clone, Debug)]
 pub struct Node {
     /// Unique identifier of the node
     pub id: String,
@@ -106,10 +105,12 @@ impl Costs {
     }
 
     /// Calculate total cost for this node
-    pub fn calc_costs(&self, base_cost: f32) -> f32 {
+    pub fn calc_costs(&self, base_cost: f32, criticallity: f32) -> f32 {
         #[allow(clippy::cast_precision_loss)]
         let casted_usage = self.usage as f32;
-        (base_cost + self.historic_cost) * (1.0 + casted_usage)
+        let congestion_cost = (1.0 + self.historic_cost) * (1.0 + casted_usage);
+
+        (criticallity * base_cost) + ((1.0 - criticallity) * congestion_cost)
     }
 
     /// Create a new `Costs` object
@@ -159,7 +160,7 @@ mod test {
             historic_cost: 2.0,
             ..Default::default()
         };
-        let c = costs.calc_costs(1.0);
+        let c = costs.calc_costs(1.0, 0.0);
         assert!((c - 6.0).abs() < TOLERANCE);
     }
 

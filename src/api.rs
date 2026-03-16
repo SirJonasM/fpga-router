@@ -1,6 +1,7 @@
-use std::fs;
+use std::{collections::HashMap, fs, path::Path};
 
 use rand::seq::SliceRandom;
+use serde::Deserialize;
 
 use crate::{
     FabricError, FabricResult, Logging,
@@ -26,15 +27,21 @@ pub fn start_routing<T, L>(
     output_file: &str,
     logger: &L,
     max_iterations: usize,
+    slack_report: Option<String>,
 ) -> FabricResult<()>
 where
     T: SolveRouting,
     L: Logging,
 {
     let mut graph = FabricGraph::from_file(graph_file)?;
-    let route_plan_external = NetListExternal::from_file(netlist_file)?;
+    let mut route_plan_external = NetListExternal::from_file(netlist_file)?;
+    if let Some(slack_report) = slack_report {
+        let slack_report = SlackReport::from_file(slack_report)?;
+        route_plan_external.add_slack(slack_report)
+    };
     let mut route_plan = NetListInternal::from_external(&graph, &route_plan_external)?;
     let config = Config::new(hist_factor, max_iterations);
+
 
     match route(&mut route_plan, &mut graph, &config, solver, logger) {
         Ok(_x) => {
@@ -102,8 +109,9 @@ pub fn create_test(graph_file: &str, output_file: &str, percentage: f32, destina
                 sinks: sinks.to_vec(),
                 signal,
                 result: None,
-                steiner_tree: None,
+                intermediate_nodes: None,
                 priority: None,
+                criticallity: 0.0,
             }
             .to_external(&graph)
         })
@@ -131,4 +139,41 @@ pub fn validate_routing(graph_file: &str, netlist_file: &str) -> FabricResult<()
         NetListInternal::from_external(&graph, &route_plan).map_err(|_| format!("Error reading file: {netlist_file}"))?;
     validate::validate(&route_plan, &graph)?;
     Ok(())
+}
+
+/// The raw record format expected from the Timing Team's CSV
+#[derive(Debug, Deserialize)]
+struct SlackRecord {
+    #[serde(rename = "source_wire")]
+    source_wire: String,
+    #[serde(rename = "slack_ps")]
+    slack_ps: f32,
+}
+
+pub struct SlackReport {
+    /// Mapping of Wire Name -> Slack in picoseconds
+    pub slacks: HashMap<String, f32>,
+}
+
+impl SlackReport {
+    /// Parses the CSV file from the timing team
+    pub fn from_file<P: AsRef<Path>>(path: P) -> FabricResult<Self> {
+        let mut rdr = csv::Reader::from_path(path)?;
+        let mut slacks = HashMap::new();
+
+        for result in rdr.deserialize() {
+            let record: SlackRecord = result?;
+            slacks.insert(record.source_wire, record.slack_ps);
+        }
+
+        Ok(SlackReport { slacks })
+    }
+
+    /// Helper to find the worst (most negative) slack for normalization
+    pub fn get_worst_slack(&self) -> f32 {
+        self.slacks
+            .values()
+            .cloned()
+            .fold(0.0, |min, val| if val < min { val } else { min })
+    }
 }

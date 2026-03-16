@@ -31,20 +31,21 @@ impl SolveRouting for SimpleSteinerSolver {
                     });
                 }
             }
-            route.steiner_tree = Some(steiner_tree);
+            route.intermediate_nodes = Some(steiner_tree);
         }
         graph.reset_usage();
         Ok(())
     }
-    fn solve(&self, graph: &FabricGraph, routing: &mut NetInternal) -> FabricResult<()> {
-        if let Some(steiner_tree) = &routing.steiner_tree {
+    fn solve(&self, graph: &FabricGraph, net: &mut NetInternal) -> FabricResult<()> {
+        let criticallity= net.criticallity;
+        if let Some(steiner_tree) = &net.intermediate_nodes {
             let mut paths = HashMap::new();
             let mut nodes = HashSet::new();
             for (terminal, route) in steiner_tree {
                 let mut path = Vec::new();
                 for steiner_node in route.windows(2) {
                     let (start, end) = (steiner_node[0], steiner_node[1]);
-                    let Some((a, _b)) = graph.dijkstra(start, end) else {
+                    let Some((a, _b)) = graph.dijkstra(start, end, criticallity) else {
                         return Err(format!("Could not find path between steinere nodes: {start}, {end}").into());
                     };
                     nodes.extend(&a);
@@ -53,7 +54,7 @@ impl SolveRouting for SimpleSteinerSolver {
                 path.push(*terminal);
                 paths.insert(*terminal, path);
             }
-            routing.result = Some(NetResultInternal { paths, nodes });
+            net.result = Some(NetResultInternal { paths, nodes });
             Ok(())
         } else {
             Err("No steiner Tree precalculated.".into())
@@ -65,25 +66,26 @@ impl SolveRouting for SimpleSteinerSolver {
     }
 }
 
-fn pre_calc_steiner_tree(graph: &mut FabricGraph, routing: &NetInternal) -> FabricResult<HashMap<NodeId, Vec<NodeId>>> {
-    let dists = routing
+fn pre_calc_steiner_tree(graph: &mut FabricGraph, net: &NetInternal) -> FabricResult<HashMap<NodeId, Vec<NodeId>>> {
+    let criticallity = net.criticallity;
+    let dists = net
         .sinks
         .par_iter()
-        .map(|sink| (*sink, graph.dijkstra_all(*sink)))
+        .map(|sink| (*sink, graph.dijkstra_all(*sink, criticallity)))
         .collect::<HashMap<NodeId, Vec<f32>>>();
-    let signal = routing.signal;
-    let base_paths: Vec<(NodeId, NodeId)> = routing.sinks.iter().map(|&sink| (signal, sink)).collect();
+    let signal = net.signal;
+    let base_paths: Vec<(NodeId, NodeId)> = net.sinks.iter().map(|&sink| (signal, sink)).collect();
 
     // 1. Parallel reduction to find the single best SteinerCandidate
     let best_candidate: Vec<SteinerTreeCandidate> = base_paths
         .into_par_iter()
         .map(|(start, base_sink)| {
             let (base_path, mut costs) = graph
-                .dijkstra(start, base_sink)
+                .dijkstra(start, base_sink, criticallity)
                 .ok_or(FabricError::PathfindingFailed { start, sink: base_sink })?;
 
             let mut nodes = HashSet::new();
-            let min_points = routing
+            let min_points = net
                 .sinks
                 .iter()
                 .copied()
@@ -113,8 +115,8 @@ fn pre_calc_steiner_tree(graph: &mut FabricGraph, routing: &NetInternal) -> Fabr
                 .collect::<HashMap<NodeId, NodeId>>();
 
             let mut steiner_nodes = HashMap::new();
-            for sink in &routing.sinks {
-                let mut sink_uses_steiner_nodes = vec![routing.signal];
+            for sink in &net.sinks {
+                let mut sink_uses_steiner_nodes = vec![net.signal];
                 let m = min_points
                     .get(sink)
                     .ok_or_else(|| format!("No midpoint calculated for sink {sink}"))?;

@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{FabricError, FabricGraph, FabricResult, node::NodeId};
+use crate::{FabricError, FabricGraph, FabricResult, SlackReport, node::NodeId};
 
 pub struct NetListInternal {
     pub plan: Vec<NetInternal>,
@@ -20,8 +20,9 @@ pub struct NetInternal {
     pub sinks: Vec<NodeId>,
     /// Optional routing result after computation
     pub result: Option<NetResultInternal>,
-    pub steiner_tree: Option<HashMap<NodeId, Vec<NodeId>>>,
+    pub intermediate_nodes: Option<HashMap<NodeId, Vec<NodeId>>>,
     pub priority: Option<NodeId>,
+    pub criticallity: f32,
 }
 
 /// Routing result for a routing request
@@ -76,9 +77,7 @@ impl NetListInternal {
     #[must_use]
     pub fn to_external(&self, graph: &FabricGraph) -> NetListExternal {
         let ex = self.plan.iter().map(|x| x.to_external(graph)).collect::<Vec<_>>();
-        NetListExternal {
-            plan: ex,
-        }
+        NetListExternal { plan: ex }
     }
 }
 impl NetInternal {
@@ -88,7 +87,12 @@ impl NetInternal {
         let sinks = self.sinks.iter().map(|a| graph.get_node(*a).id()).collect();
         let result = self.result.as_ref().map(|r| r.to_external(graph));
 
-        NetExternal { sinks, signal, result }
+        NetExternal {
+            sinks,
+            signal,
+            result,
+            criticallity: Some(self.criticallity),
+        }
     }
 
     /// Transforms a `NetExternal` to a `Self` by mapping the name ids to internal used ids
@@ -117,8 +121,9 @@ impl NetInternal {
                 sinks,
                 signal,
                 result: None,
-                steiner_tree: None,
+                intermediate_nodes: None,
                 priority: None,
+                criticallity: external.criticallity.unwrap_or(0.0),
             }),
             (Some(_), false) => Err(format!("Sinks: {sinks_cloned:?} do not exist.").into()),
             (None, true) => Err("Signal does not exist in graph".into()),
@@ -144,6 +149,7 @@ pub struct NetExternal {
     /// Optional routing result after computation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<NetResultExternal>,
+    pub criticallity: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -167,5 +173,11 @@ impl NetListExternal {
         })?;
         let x: Self = serde_json::de::from_str(&data)?;
         Ok(x)
+    }
+
+    pub(crate) fn add_slack(&mut self, slack_report: SlackReport) {
+        for x in &mut self.plan {
+            x.criticallity = slack_report.slacks.get(&x.signal).copied();
+        }
     }
 }
