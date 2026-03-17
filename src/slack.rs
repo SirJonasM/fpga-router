@@ -29,15 +29,12 @@ impl SlackReport {
             slacks.insert(record.source_wire, record.slack_ps);
         }
 
-        Ok(SlackReport { slacks })
+        Ok(Self { slacks })
     }
 
     /// Helper to find the worst (most negative) slack for normalization
     pub fn get_worst_slack(&self) -> f32 {
-        self.slacks
-            .values()
-            .cloned()
-            .fold(0.0, |min, val| if val < min { val } else { min })
+        self.slacks.values().fold(0.0, |min, val| if *val < min { *val } else { min })
     }
     /// Returns a criticality value between 0.0 and 1.0 for a given wire.
     /// 1.0 = This is the most critical net in the design (worst slack).
@@ -48,21 +45,21 @@ impl SlackReport {
         // If worst_slack is 0 or positive, the whole design meets timing.
         // Everyone gets 0.0 criticality.
         if worst_slack >= 0.0 {
-            return None
+            return None;
         }
 
-        if let Some(&slack) = self.slacks.get(source_wire) {
-            if slack < 0.0 {
-                // Formula: (current_slack / worst_negative_slack)
-                // Example: (-500 / -1000) = 0.5 criticality
-                // We use .min(1.0) just in case of rounding errors
-                let base_crit = (slack / worst_slack).min(1.0);
+        if let Some(&slack) = self.slacks.get(source_wire)
+            && slack < 0.0
+        {
+            // Formula: (current_slack / worst_negative_slack)
+            // Example: (-500 / -1000) = 0.5 criticality
+            // We use .min(1.0) just in case of rounding errors
+            let base_crit = (slack / worst_slack).min(1.0);
 
-                // Optional: Sharpening exponent.
-                // Using crit^3 is common in FPGA tools to make the router
-                // focus HARD on the top 10% of failing nets.
-                return Some(base_crit.powf(3.0));
-            }
+            // Optional: Sharpening exponent.
+            // Using crit^3 is common in FPGA tools to make the router
+            // focus HARD on the top 10% of failing nets.
+            return Some(base_crit.powi(3));
         }
 
         None

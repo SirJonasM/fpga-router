@@ -19,6 +19,7 @@
             cargo
             rust-analyzer
             rustfmt
+			clippy
           ];
 
           # buildInputs are for libraries your code links against

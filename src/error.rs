@@ -1,5 +1,5 @@
+use std::{io, path::PathBuf};
 use thiserror::Error;
-use std::io;
 
 use crate::node::NodeId;
 
@@ -9,10 +9,7 @@ pub type FabricResult<T> = Result<T, FabricError>;
 #[derive(Error, Debug)]
 pub enum FabricError {
     #[error("IO error while accessing '{path}': {source}")]
-    Io {
-        path: String,
-        source: io::Error,
-    },
+    Io { path: PathBuf, source: io::Error },
     #[error("Cannot give each Node an own id because value space is too small.")]
     NodeIdValueSpaceTooSmall,
 
@@ -20,7 +17,7 @@ pub enum FabricError {
     CreatingTestBadParameters,
 
     #[error("Iteration Failed")]
-    IterationError{source: Box<FabricError>},
+    IterationError { source: Box<Self> },
 
     #[error("Routing has reached its maximum iterations.")]
     RoutingMaxIterationsReached,
@@ -30,8 +27,11 @@ pub enum FabricError {
     LineError {
         line_number: usize,
         content: String,
-        source: ParseError, 
+        source: ParseError,
     },
+
+    #[error("Runnning the STA script failed due to: {0}")]
+    StaFailed(String),
 
     #[error("Serialization error: {0}")]
     Json(#[from] serde_json::Error),
@@ -40,13 +40,10 @@ pub enum FabricError {
     Csv(#[from] csv::Error),
 
     #[error("Mapping expanded Node {signal} of Routeplan to a internal graph node id failed.\n Reason: {reason}")]
-    MappingExternelNet {
-        signal: String,
-        reason: String
-    },
+    MappingExternelNet { signal: String, reason: String },
 
     #[error("Edge does not exist in Graph: {start} -> {end}")]
-    EdgeDoesNotExist {start: NodeId, end: NodeId},
+    EdgeDoesNotExist { start: NodeId, end: NodeId },
 
     #[error("Parsing Failed: {0}")]
     Parse(#[from] ParseError),
@@ -55,10 +52,14 @@ pub enum FabricError {
     LoggingError(String),
 
     #[error("Failed to preprocess route for signal {signal}: {source}")]
-    RoutePreProcessing{signal: NodeId, #[source] source: Box<FabricError>},
+    RoutePreProcessing {
+        signal: NodeId,
+        #[source]
+        source: Box<Self>,
+    },
 
     #[error("Path finding for Start: {start} and Sink: {sink} failed.")]
-    PathfindingFailed {start: NodeId, sink: NodeId},
+    PathfindingFailed { start: NodeId, sink: NodeId },
 
     #[error("Steiner tree conflict: Node {node_id} is already in use by another route.")]
     ResourceConflict { node_id: NodeId },
@@ -70,7 +71,7 @@ pub enum FabricError {
     TimingNotMet,
 
     #[error("Some Error: {0}")]
-    Other(String)
+    Other(String),
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -82,23 +83,33 @@ pub enum ParseError {
     InvalidCoordinates {
         token: String,
         part: String,
-        #[source] source: Box<ParseError>,
+        #[source]
+        source: Box<Self>,
     },
 
     #[error("Failed to parse start node id: {id} cords: {cords}")]
-    InvalidStartNode {id: String, cords: String, source: Box<ParseError>},
+    InvalidStartNode {
+        id: String,
+        cords: String,
+        source: Box<Self>,
+    },
 
     #[error("Failed to parse end node id: {id} cords: {cords}")]
-    InvalidEndNode {id: String, cords: String, source: Box<ParseError>},
+    InvalidEndNode {
+        id: String,
+        cords: String,
+        source: Box<Self>,
+    },
 
     #[error("Missing coordinate prefix '{prefix}' in token: {token}")]
     MissingPrefix { prefix: char, token: String },
 
     #[error("Failed to parse '{component}' coordinate: {token}")]
-    InvalidCoordinate { 
-        component: &'static str, 
-        token: String, 
-        #[source] source: std::num::ParseIntError 
+    InvalidCoordinate {
+        component: &'static str,
+        token: String,
+        #[source]
+        source: std::num::ParseIntError,
     },
 }
 

@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
-    fs,
+    fs, path::Path,
 };
 
 use serde::{Deserialize, Serialize};
@@ -167,16 +167,17 @@ impl NetListExternal {
     /// # Errors
     /// - Returns `FabricError::Io` in case of failing reading the file
     /// - Returns `FabricError::Json` when the deserialization fails
-    pub fn from_file(file: &str) -> FabricResult<Self> {
-        let data: String = fs::read_to_string(file).map_err(|e| FabricError::Io {
-            path: file.to_string(),
+    pub fn from_file<P: AsRef<Path>>(file: P) -> FabricResult<Self> {
+        let path_ref = file.as_ref();
+        let data: String = fs::read_to_string(path_ref).map_err(|e| FabricError::Io {
+            path: path_ref.to_path_buf(), 
             source: e,
         })?;
         let x: Self = serde_json::de::from_str(&data)?;
         Ok(x)
     }
 
-    pub(crate) fn add_slack(&mut self, slack_report: SlackReport) {
+    pub(crate) fn add_slack(&mut self, slack_report: &SlackReport) {
         for x in &mut self.plan {
             x.criticallity = slack_report.calculate_criticality(&x.signal);
         }

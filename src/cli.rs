@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand, ValueEnum};
+use router::{FabricGraph, NetInternal, SimpleSolver, SimpleSteinerSolver, SolveRouting, SteinerSolver};
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum SolverType {
@@ -110,4 +111,37 @@ pub enum Commands {
     Validate(ValidateArgs),
 
     RouteSta(RouteStaArgs),
+}
+
+
+pub enum Solver {
+    Simple(SimpleSolver),
+    SimpleSteiner(SimpleSteinerSolver),
+    Steiner(SteinerSolver),
+}
+
+impl SolveRouting for Solver {
+    fn solve(&self, graph: &FabricGraph, routing: &mut NetInternal) -> router::FabricResult<()> {
+        match self {
+            Self::Simple(simple_solver) => simple_solver.solve(graph, routing),
+            Self::SimpleSteiner(simple_steiner_solver) => simple_steiner_solver.solve(graph, routing),
+            Self::Steiner(steiner_solver) => steiner_solver.solve(graph, routing),
+        }
+    }
+
+    fn pre_process(&self, graph: &mut FabricGraph, route_plan: &mut [NetInternal]) -> router::FabricResult<()> {
+        match self {
+            Self::Simple(simple_solver) => simple_solver.pre_process(graph, route_plan),
+            Self::SimpleSteiner(simple_steiner_solver) => simple_steiner_solver.pre_process(graph, route_plan),
+            Self::Steiner(steiner_solver) => steiner_solver.pre_process(graph, route_plan),
+        }
+    }
+
+    fn identifier(&self) -> &'static str {
+        match self {
+            Self::Simple(simple_solver) => simple_solver.identifier(),
+            Self::SimpleSteiner(simple_steiner_solver) => simple_steiner_solver.identifier(),
+            Self::Steiner(steiner_solver) => steiner_solver.identifier(),
+        }
+    }
 }

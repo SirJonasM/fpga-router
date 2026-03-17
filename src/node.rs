@@ -110,7 +110,7 @@ impl Costs {
         let casted_usage = self.usage as f32;
         let congestion_cost = (1.0 + self.historic_cost) * (1.0 + casted_usage);
 
-        (criticallity * base_cost) + ((1.0 - criticallity) * congestion_cost)
+        criticallity.mul_add(base_cost, (1.0 - criticallity) * congestion_cost)
     }
 
     /// Create a new `Costs` object

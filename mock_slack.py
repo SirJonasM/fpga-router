@@ -4,7 +4,6 @@ import argparse
 import sys
 
 def generate_mock_slack(fasm_path, output_path, target_ps):
-    print("TIMING STATUS: PASSED")
     sources = set()
     try:
         with open(fasm_path, 'r') as f:
@@ -41,7 +40,6 @@ def generate_mock_slack(fasm_path, output_path, target_ps):
                 violation_count += 1
 
     print("-" * 30)
-    print(f"Mock slack report generated: {output_path}")
     print(f"Worst Slack: {worst_slack} ps")
     
     if violation_count == 0:
@@ -60,8 +58,6 @@ if __name__ == "__main__":
     
     # sys.exit(0) if passed, sys.exit(1) if failed
     if generate_mock_slack(args.fasm, args.output, args.target):
-        print("Sys exit 0")
         sys.exit(0)
     else:
-        print("Sys exit 1")
         sys.exit(1)

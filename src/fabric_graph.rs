@@ -8,6 +8,7 @@ use std::{
     collections::HashMap,
     fs::File,
     io::{BufRead, BufReader},
+    path::Path,
 };
 
 use crate::{
@@ -110,7 +111,7 @@ impl FabricGraph {
         self.map[start as usize]
             .iter()
             .find(|a| a.node_id == end)
-            .map_or_else(|| panic!("Graph did not contain the edge: a: {start}, b: {end}"), |edge| edge)
+            .unwrap_or_else(|| panic!("Graph did not contain the edge: a: {start}, b: {end}"))
     }
     /// Returns the edge that connects `start` to `end`
     ///
@@ -136,9 +137,10 @@ impl FabricGraph {
     /// let graph = FabricGraph::from_file(test_file).unwrap();
     ///
     /// ```
-    pub fn from_file(path: &str) -> FabricResult<Self> {
-        let file = File::open(path).map_err(|e| FabricError::Io {
-            path: path.to_string(),
+    pub fn from_file<P: AsRef<Path>>(path: P) -> FabricResult<Self> {
+        let path_ref = path.as_ref();
+        let file = File::open(path_ref).map_err(|e| FabricError::Io {
+            path: path_ref.to_path_buf(),
             source: e,
         })?;
         let mut pips_parser = PipsParser::new();
@@ -147,7 +149,7 @@ impl FabricGraph {
         let reader = reader.lines().enumerate();
         for (line_number, line) in reader {
             let line = line.map_err(|e| FabricError::Io {
-                path: path.to_string(),
+                path: path_ref.to_path_buf(),
                 source: e,
             })?;
             pips_parser.parse_line(&line, line_number)?;
@@ -159,12 +161,12 @@ impl FabricGraph {
         self.costs.iter_mut().for_each(|a| a.usage = 0);
     }
 
-    pub(crate) fn reset(&mut self){
-        self.costs.iter_mut().for_each(|cost| {
-            cost.historic_cost = 0.0;
-            cost.usage = 0;
-        })
-    }
+    // pub(crate) fn reset(&mut self){
+    //     self.costs.iter_mut().for_each(|cost| {
+    //         cost.historic_cost = 0.0;
+    //         cost.usage = 0;
+    //     });
+    // }
 }
 
 /// Generate reversed adjacency list from forward map

@@ -4,9 +4,6 @@
 //! It provides tools to model the FPGA fabric, nodes, and routing paths,
 //! as well as algorithms for finding and validating optimal routes.  
 
-#![deny(clippy::nursery)]
-#![deny(clippy::pedantic)]
-
 pub(crate) mod api;
 pub(crate) mod dijkstra;
 pub(crate) mod error;
