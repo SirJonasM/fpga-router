@@ -33,7 +33,7 @@ pub struct RouteArgs {
     /// Can be `json` or `fasm`
     pub output: String,
     #[arg(short, long)]
-    pub routing_list: String,
+    pub net_list: String,
     #[arg(short, long)]
     pub graph: String,
     #[arg(short = 'S', long, value_enum, default_value_t = SolverType::Simple)]
@@ -70,7 +70,7 @@ pub struct RouteStaArgs {
     #[arg(short, long)]
     pub graph: String,
     #[arg(short, long)]
-    pub routing_list: String,
+    pub net_list: String,
     #[arg(short, long)]
     pub output: String, // This will be the final FASM output
     #[arg(short = 'S', long, value_enum, default_value_t = SolverType::Simple)]

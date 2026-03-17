@@ -5,7 +5,7 @@ mod cli;
 use clap::Parser;
 use router::{
     FileLog, Loggers, SimpleSolver, SimpleSteinerSolver, SteinerSolver, create_fasm,
-    create_test, start_routing, validate_routing,
+    create_test, start_routing, validate_routing, RoutingConfig,
 };
 
 use crate::cli::{Cli, Commands, CreateTestArgs, FasmArgs, LoggerType, SolverType, ValidateArgs, Solver};
@@ -62,15 +62,19 @@ fn command_route(args: cli::RouteArgs) -> Result<(), u32> {
         }
     };
 
+    let config = RoutingConfig{
+        graph_file: args.graph,
+        net_list_file: args.net_list,
+        output_file: args.output,
+        hist_factor: args.hist_factor,
+        max_iterations: args.max_iterations,
+    };
+
     match start_routing(
-        &args.graph,
-        &args.routing_list,
-        &solver,
-        args.hist_factor,
-        &args.output,
-        &logger,
-        args.max_iterations,
+        config,
         args.slack_report,
+        &solver,
+        &logger,
     ) {
         Ok(()) => {
             println!("Finished routing.");
@@ -98,17 +102,20 @@ fn command_route_sta(args: cli::RouteStaArgs) -> Result<(), u32> {
             Loggers::File(file_log)
         }
     };
+    let config = RoutingConfig{
+        graph_file: args.graph,
+        net_list_file: args.net_list,
+        output_file: args.output,
+        hist_factor: args.hist_factor,
+        max_iterations: args.max_iterations,
+    };
 
     match router::route_sta(
-        &args.graph,
-        &args.routing_list,
-        &solver,
-        args.hist_factor,
-        &args.output,
-        &logger,
-        args.max_iterations,
+        config,
         args.max_sta_cycles,
         args.target_ps,
+        &solver,
+        &logger,
     ) {
         Ok(()) => {
             println!("Routing is valid and in timing bounds.");
