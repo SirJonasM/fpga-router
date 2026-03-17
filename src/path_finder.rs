@@ -11,11 +11,11 @@ use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 
 use crate::fabric_graph::FabricGraph;
-use crate::node::NodeId;
+use crate::logger::LogInstance;
 use crate::netlist::NetInternal;
+use crate::node::NodeId;
 use crate::solver::SolveRouting;
 use crate::{FabricError, FabricResult, Logging, NetListInternal};
-
 
 /// Test case parameters for running a routing algorithm.
 #[derive(Deserialize, Debug, Clone, Serialize)]
@@ -57,7 +57,7 @@ impl Default for Config {
 /// # Errors
 ///
 pub fn route<T, L>(
-    route_plan: &mut NetListInternal,
+    net_list: &mut NetListInternal,
     graph: &mut FabricGraph,
     config: &Config,
     solver: &T,
@@ -72,15 +72,14 @@ where
     let mut i = 0;
     let mut last_conflicts = 0;
     let mut same_conflicts = 0;
-    solver.pre_process(graph, &mut route_plan.plan)?;
+    solver.pre_process(graph, &mut net_list.plan)?;
     let max_iterations = config.max_iterations;
     loop {
-        let mut result =
-            iteration(graph, &mut route_plan.plan, solver, hist_fac).map_err(|e| FabricError::IterationError { source: e.into() })?;
-        result.iteration = i;
-        result.test_case = config.clone();
-
-        logger.log(&result)?;
+        let time1 = Instant::now();
+        let conflicts = iteration(graph, &mut net_list.plan, solver, hist_fac)
+            .map_err(|e| FabricError::IterationError { source: e.into() })?;
+        let duration = time1.elapsed();
+        let result = analyze_result(i, conflicts, duration, graph, net_list, config);
 
         if result.conflicts == last_conflicts {
             same_conflicts += 1;
@@ -95,8 +94,9 @@ where
 
         last_conflicts = result.conflicts;
         if same_conflicts == 200 {
-            solver.pre_process(graph, &mut route_plan.plan)?;
+            solver.pre_process(graph, &mut net_list.plan)?;
         }
+        logger.log(&LogInstance::RouterIteration(result))?;
         i += 1;
     }
 }
@@ -109,8 +109,7 @@ pub fn iteration(
     routing: &mut [NetInternal],
     solver: &dyn SolveRouting,
     hist_fac: f32,
-) -> FabricResult<IterationResult> {
-    let time1 = Instant::now();
+) -> FabricResult<usize> {
     for route in &mut *routing {
         solver.solve(graph, route).map_err(|_e| "Test")?;
         if let Some(result) = &route.result {
@@ -125,101 +124,100 @@ pub fn iteration(
             conflicts += 1;
         }
     }
-    let duration = time1.elapsed();
-    let result = analyze_result(conflicts, duration, graph, routing);
-    Ok(result)
+    Ok(conflicts)
 }
 
-/// Analyze the routing result for metrics like longest path, total wire usage, and wire reuse.
-fn analyze_result(conflicts: usize, duration: Duration, graph: &FabricGraph, steiner: &[NetInternal]) -> IterationResult {
-    let mut result = IterationResult {
-        iteration: 0,
-        conflicts,
-        test_case: Config {
-            id: 0,
-            hist_factor: 0.0,
-            max_iterations: 1000,
-        },
-        longest_path: (0, 0),
-        longest_path_cost: 0.0,
-        average_path: 0.0,
-        total_wire_use: 0,
-        wire_reuse: 0.0,
-        duration: duration.as_micros(),
-    };
-    let mut total_wire_use = 0;
-    for s in steiner {
-        if let Some(steiner_result) = &s.result {
-            let mut usages = HashMap::new();
-            let paths = &steiner_result.paths;
-            for (sink, path) in paths {
-                let mut cost = 0.0;
-                assert_eq!(path[0], s.signal);
-                assert_eq!(path[path.len() - 1], *sink);
-                for pair in path.windows(2) {
-                    let (start, end) = (pair[0], pair[1]);
-                    let edge = graph.get_edge_panic(start, end);
-                    cost += edge.cost;
-                }
+fn analyze_result(
+    iteration: usize,
+    conflicts: usize,
+    duration: Duration,
+    graph: &FabricGraph,
+    net_list: &NetListInternal,
+    config: &Config,
+) -> IterationResult {
+    let mut total_wire_segments = 0;
+    let mut total_path_cost = 0.0;
+    let mut path_count = 0;
 
-                if result.longest_path_cost < cost {
-                    result.longest_path = (s.signal, *sink);
-                    result.longest_path_cost = cost;
-                }
+    let mut max_path_info = ((0, 0), f32::MIN); // (path_tuple, cost)
+    let mut total_sharing_efficiency = 0.0;
+
+    for net in &net_list.plan {
+        let Some(routing) = &net.result else { continue };
+
+        // 1. Calculate Path Costs (Longest and Accumulator for Average)
+        for (sink, path) in &routing.paths {
+            let mut current_path_cost = 0.0;
+
+            // Calculate cost using windows for edge lookups
+            for pair in path.windows(2) {
+                let edge = graph.get_edge_panic(pair[0], pair[1]);
+                current_path_cost += edge.cost;
             }
 
-            for node in steiner_result.paths.values().flatten() {
-                usages.entry(node).and_modify(|x| *x += 1).or_insert(1);
+            if current_path_cost > max_path_info.1 {
+                max_path_info = ((net.signal, *sink), current_path_cost);
             }
-            #[allow(clippy::cast_precision_loss)]
-            let wire_reuse = usages.values().sum::<i32>() as f32;
-            #[allow(clippy::cast_precision_loss)]
-            let wire_reuse2 = usages.len() as f32;
 
-            result.wire_reuse += wire_reuse / wire_reuse2;
-            total_wire_use += steiner_result.nodes.len();
+            total_path_cost += current_path_cost;
+            path_count += 1;
         }
+
+        // 2. Calculate Wire Sharing Efficiency for this net
+        // unique_nodes: physical wires used. total_points: sum of nodes across all paths.
+        let unique_nodes = routing.nodes.len(); // Assuming this contains unique nodes in the Steiner tree
+        let total_nodes_in_all_paths: usize = routing.paths.values().map(|p| p.len()).sum();
+
+        if unique_nodes > 0 {
+            #[allow(clippy::cast_precision_loss)]
+            {
+                total_sharing_efficiency += total_nodes_in_all_paths as f32 / unique_nodes as f32;
+            }
+        }
+
+        total_wire_segments += unique_nodes;
     }
-    #[allow(clippy::cast_precision_loss)]
-    let wire_reuse3 = steiner.len() as f32;
-    result.wire_reuse /= wire_reuse3;
-    result.total_wire_use = total_wire_use;
-    result
+
+    let avg_path_cost = if path_count > 0 {
+        total_path_cost / path_count as f32
+    } else {
+        0.0
+    };
+    let avg_wire_sharing = if !net_list.plan.is_empty() {
+        total_sharing_efficiency / net_list.plan.len() as f32
+    } else {
+        0.0
+    };
+
+    let longest_path = (graph.get_node(max_path_info.0.0).id(), graph.get_node(max_path_info.0.1).id());
+
+    IterationResult {
+        iteration,
+        conflicts,
+        longest_path,
+        longest_path_cost: max_path_info.1,
+        average_path_cost: avg_path_cost,
+        total_wire_use: total_wire_segments,
+        wire_reuse: avg_wire_sharing,
+        duration: duration.as_micros(),
+        test_case: config.clone()
+    }
 }
 
-#[derive(Deserialize, Debug, Clone, Serialize)]
+#[derive(Deserialize, Debug, Clone, Serialize, Default)]
 pub struct IterationResult {
     pub iteration: usize,
     pub test_case: Config,
     pub conflicts: usize,
-    pub longest_path: (NodeId, NodeId),
+    pub longest_path: (String, String),
     pub longest_path_cost: f32,
-    pub average_path: f32,
+    pub average_path_cost: f32,
     pub total_wire_use: usize,
     pub wire_reuse: f32,
     pub duration: u128,
 }
-
-impl IterationResult {
-    pub const CSV_HEADER: &'static str = "iteration,test_id,percentage,dst,hist_factor,solver,conflicts,longest_path_start,longest_path_end,longest_path_cost,average_path,total_wire_use,wire_reuse,duration";
-}
-
 impl Display for IterationResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{},{},{},{},{},{},{},{},{},{},{}",
-            self.iteration,
-            self.test_case.id,
-            self.test_case.hist_factor,
-            self.conflicts,
-            self.longest_path.0,
-            self.longest_path.1,
-            self.longest_path_cost,
-            self.average_path,
-            self.total_wire_use,
-            self.wire_reuse,
-            self.duration
-        )
+        write!(f, "Iteration: {}, Conflicts: {}, Wire Efficency: {}, ", self.iteration, self.conflicts, self.wire_reuse)
     }
 }

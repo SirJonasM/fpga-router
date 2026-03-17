@@ -3,6 +3,7 @@ use std::{fs, path::Path};
 
 use rand::seq::SliceRandom;
 
+use crate::logger::LogInstance;
 use crate::{
     FabricError, FabricResult, Logging,
     fabric_graph::{FabricGraph, bucket_luts},
@@ -28,16 +29,11 @@ pub struct RoutingConfig<P: AsRef<Path>> {
 /// # Errors
 /// Fails if files cannot be read or cannot be parsed or it cannot write to the output file.
 /// Fails if the `max_iterations` are reached
-pub fn start_routing<T, L, P>(
-    config: RoutingConfig<P>,
-    slack_report: Option<P>,
-    solver: &T,
-    logger: &L,
-) -> FabricResult<()>
+pub fn start_routing<T, L, P>(config: RoutingConfig<P>, slack_report: Option<P>, solver: &T, logger: &L) -> FabricResult<()>
 where
     T: SolveRouting,
     L: Logging,
-    P: AsRef<Path>
+    P: AsRef<Path>,
 {
     let output_file_ref = config.output_file.as_ref();
     let mut graph = FabricGraph::from_file(config.graph_file)?;
@@ -157,7 +153,7 @@ where
     let slack_file = "current_slack.csv";
 
     for current_cycle in 0..max_sta_cycles {
-        println!("\n=== STA Routing Cycle {current_cycle} ===");
+        logger.log(&LogInstance::from(format!("\n=== STA Routing Cycle {current_cycle} ===")))?;
 
         // 2. ROUTE: Run the actual Pathfinder iterations
         // You might need to expose a function that takes objects, not paths
@@ -169,13 +165,13 @@ where
         })?;
 
         // 4. ANALYZE: Call Python Mock STA
-        println!("Running STA Analysis...");
+        logger.log(&LogInstance::from("Running STA Analysis..."))?;
         match run_mock_sta(&routing_config.output_file, slack_file, target_ps) {
             Ok(r) => {
-                println!("{r}");
+                logger.log(&LogInstance::Text(r))?;
                 return Ok(());
             }
-            Err(MockError::Slack(out)) => println!("{out}"),
+            Err(MockError::Slack(out)) => logger.log(&LogInstance::Text(out))?,
             Err(MockError::Other(err)) => return Err(FabricError::StaFailed(err)),
         }
 
@@ -183,7 +179,7 @@ where
         let report = SlackReport::from_file(slack_file)?;
 
         if report.get_worst_slack() > 0.0 {
-            println!("Success: Timing met and congestion resolved.");
+            logger.log(&LogInstance::from("Success: Timing met and congestion resolved."))?;
             break;
         }
 
