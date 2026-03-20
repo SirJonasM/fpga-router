@@ -20,6 +20,7 @@
             rust-analyzer
             rustfmt
 			clippy
+			python3
           ];
 
           # buildInputs are for libraries your code links against
