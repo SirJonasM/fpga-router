@@ -10,25 +10,24 @@ use std::{
 };
 
 #[derive(Debug, Clone, Serialize)]
-pub enum LogInstance {
+pub enum LogInstance<'a> {
     Text(String),
-    RouterIteration(IterationResult),
+    RouterIteration(&'a IterationResult),
 }
 
-impl From<&str> for LogInstance {
+impl<'a> From<&str> for LogInstance<'a> {
     fn from(value: &str) -> Self {
         Self::Text(value.to_string())
     }
 }
 
-
-impl From<String> for LogInstance {
+impl<'a> From<String> for LogInstance<'a> {
     fn from(value: String) -> Self {
         Self::Text(value)
     }
 }
 
-impl Display for LogInstance {
+impl<'a> Display for LogInstance<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LogInstance::Text(s) => write!(f, "{}", s),
@@ -55,10 +54,23 @@ impl crate::Logging for Loggers {
     fn log(&self, log_instance: &LogInstance) -> FabricResult<()> {
         match self {
             Self::No => {}
-            Self::Terminal => println!("{log_instance}"),
+            Self::Terminal => terminal_log(log_instance),
             Self::File(file_log) => file_log.log(log_instance)?,
         }
         Ok(())
+    }
+}
+
+fn terminal_log(log_instance: &LogInstance) {
+    match log_instance {
+        LogInstance::Text(t) => println!("{t}"),
+        LogInstance::RouterIteration(iteration_result) => {
+            print!(
+                "\rIteration: {: >3}, Conflicts: {: >4}, Wire Efficiency: {:.3}",
+                iteration_result.iteration, iteration_result.conflicts, iteration_result.wire_reuse
+            );
+            std::io::stdout().flush().unwrap();
+        }
     }
 }
 

@@ -156,8 +156,7 @@ where
         logger.log(&LogInstance::from(format!("\n=== STA Routing Cycle {current_cycle} ===")))?;
 
         // 2. ROUTE: Run the actual Pathfinder iterations
-        // You might need to expose a function that takes objects, not paths
-        route(&mut net_list, &mut graph, &config, solver, logger)?;
+        let _result = route(&mut net_list, &mut graph, &config, solver, logger)?;
         let mut net_list = net_list.to_external(&graph);
         fs::write(&routing_config.output_file, routing_to_fasm(&net_list)).map_err(|e| FabricError::Io {
             path: routing_config.output_file.as_ref().to_path_buf(),
@@ -169,6 +168,7 @@ where
         match run_mock_sta(&routing_config.output_file, slack_file, target_ps) {
             Ok(r) => {
                 logger.log(&LogInstance::Text(r))?;
+                logger.log(&LogInstance::from("Success: Timing met and congestion resolved."))?;
                 return Ok(());
             }
             Err(MockError::Slack(out)) => logger.log(&LogInstance::Text(out))?,
@@ -177,11 +177,6 @@ where
 
         // 5. EVALUATE: Load report and check bounds
         let report = SlackReport::from_file(slack_file)?;
-
-        if report.get_worst_slack() > 0.0 {
-            logger.log(&LogInstance::from("Success: Timing met and congestion resolved."))?;
-            break;
-        }
 
         graph.reset_usage();
         net_list.add_slack(&report);
@@ -220,8 +215,7 @@ fn run_mock_sta<P: AsRef<Path>>(fasm_in: &P, csv_out: &str, target: u32) -> Resu
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     if !output.status.success() {
-        let err = String::from_utf8_lossy(&output.stderr);
-        return Err(MockError::Slack(format!("Result: {stdout}\n STA Script Error: {err}")));
+        return Err(MockError::Slack(format!("Result: {stdout}")));
     }
     Ok(stdout)
 }

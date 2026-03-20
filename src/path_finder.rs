@@ -5,7 +5,6 @@
 //! routing iterations, log results, and validate routing correctness.
 #![macro_use]
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
@@ -13,7 +12,6 @@ use std::time::{Duration, Instant};
 use crate::fabric_graph::FabricGraph;
 use crate::logger::LogInstance;
 use crate::netlist::NetInternal;
-use crate::node::NodeId;
 use crate::solver::SolveRouting;
 use crate::{FabricError, FabricResult, Logging, NetListInternal};
 
@@ -62,12 +60,13 @@ pub fn route<T, L>(
     config: &Config,
     solver: &T,
     logger: &L,
-) -> FabricResult<()>
+) -> FabricResult<Vec<IterationResult>>
 where
     T: SolveRouting,
     L: Logging,
 {
     let hist_fac = config.hist_factor;
+    let mut results = Vec::new();
 
     let mut i = 0;
     let mut last_conflicts = 0;
@@ -85,10 +84,12 @@ where
             same_conflicts += 1;
         }
         if result.conflicts == 0 {
-            return Ok(());
+            logger.log(&LogInstance::RouterIteration(&result))?;
+            return Ok(results);
         }
 
         if i == max_iterations {
+            logger.log(&LogInstance::RouterIteration(&result))?;
             return Err(FabricError::RoutingMaxIterationsReached);
         }
 
@@ -96,7 +97,8 @@ where
         if same_conflicts == 200 {
             solver.pre_process(graph, &mut net_list.plan)?;
         }
-        logger.log(&LogInstance::RouterIteration(result))?;
+        logger.log(&LogInstance::RouterIteration(&result))?;
+        results.push(result);
         i += 1;
     }
 }
