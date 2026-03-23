@@ -12,7 +12,7 @@ use crate::{
     node::NodeId,
     path_finder::{Config, route},
     slack::SlackReport,
-    solver::SolveRouting,
+    solver::RouteNet,
     validate,
 };
 
@@ -31,7 +31,7 @@ pub struct RoutingConfig<P: AsRef<Path>> {
 /// Fails if the `max_iterations` are reached
 pub fn start_routing<T, L, P>(config: RoutingConfig<P>, slack_report: Option<P>, solver: &T, logger: &L) -> FabricResult<()>
 where
-    T: SolveRouting,
+    T: RouteNet,
     L: Logging,
     P: AsRef<Path>,
 {
@@ -61,8 +61,14 @@ where
             })?;
             Ok(())
         }
-        Err(_) => Err("Test".into()),
+        Err(err) => {
+            if let FabricError::RoutingMaxIterationsReached(congestion_report) = &err {
+                println!("{congestion_report:#?}");
+            }
+            Err(err)
+        },
     }
+
 }
 
 /// Can be used to create a `FASM` file from a netlist
@@ -141,7 +147,7 @@ pub fn route_sta<T, L, P>(
     logger: &L,
 ) -> FabricResult<()>
 where
-    T: SolveRouting,
+    T: RouteNet,
     L: Logging,
     P: AsRef<Path>,
 {
@@ -156,7 +162,12 @@ where
         logger.log(&LogInstance::from(format!("\n=== STA Routing Cycle {current_cycle} ===")))?;
 
         // 2. ROUTE: Run the actual Pathfinder iterations
-        let _result = route(&mut net_list, &mut graph, &config, solver, logger)?;
+        if let Err(err) = route(&mut net_list, &mut graph, &config, solver, logger) {
+            if let FabricError::RoutingMaxIterationsReached(congestion_report) = &err {
+                println!("{congestion_report:?}");
+            }
+            return Err(err);
+        };
         let mut net_list = net_list.to_external(&graph);
         fs::write(&routing_config.output_file, routing_to_fasm(&net_list)).map_err(|e| FabricError::Io {
             path: routing_config.output_file.as_ref().to_path_buf(),

@@ -12,7 +12,7 @@ use crate::{FabricResult, fabric_graph::FabricGraph, netlist::NetInternal};
 ///
 /// Implementors of this trait can define how individual signals are routed
 /// and how the global routing plan is prepared before execution.
-pub trait SolveRouting {
+pub trait RouteNet {
     /// Executes the routing algorithm for a single net.
     ///
     /// This method is responsible for finding a path in the [`FabricGraph`]

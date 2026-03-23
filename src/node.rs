@@ -8,7 +8,7 @@ use crate::error::ParseError;
 
 pub type NodeId = u16;
 
-/// Edge in the graph with a destination node and cost
+/// Programmable Connectio between nodes
 #[derive(Debug, Clone)]
 pub struct Edge {
     /// Destination node index
@@ -17,7 +17,7 @@ pub struct Edge {
     pub cost: f32,
 }
 
-/// A node in the FPGA graph with its type and metadata.
+/// A node in the FPGA graph 
 #[derive(Hash, Eq, PartialEq, Clone, Debug)]
 pub struct Node {
     /// Unique identifier of the node
@@ -36,7 +36,7 @@ pub struct Costs {
     /// Maximum capacity of the node
     pub capacity: f32,
     /// Current usage count
-    pub usage: u32,
+    pub usage: u16,
 }
 
 impl Node {

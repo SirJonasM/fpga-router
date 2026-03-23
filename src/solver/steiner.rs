@@ -2,7 +2,7 @@ use std::{cmp::Ordering, collections::{HashMap, HashSet}};
 
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::{netlist::NetResultInternal, node::NodeId, FabricGraph, FabricResult, NetInternal, SolveRouting};
+use crate::{netlist::NetResultInternal, node::NodeId, FabricGraph, FabricResult, NetInternal, RouteNet};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SteinerSolver;
@@ -14,7 +14,7 @@ struct SteinerCandidate {
     costs: f32,
 }
 
-impl SolveRouting for SteinerSolver {
+impl RouteNet for SteinerSolver {
     fn identifier(&self) -> &'static str {
         "Steiner Solver"
     }

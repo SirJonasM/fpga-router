@@ -7,15 +7,14 @@ use crate::FabricResult;
 /// The raw record format expected from the Timing Team's CSV
 #[derive(Debug, Deserialize)]
 struct SlackRecord {
-    #[serde(rename = "source_wire")]
     source_wire: String,
-    #[serde(rename = "slack_ps")]
     slack_ps: f32,
 }
 
 pub struct SlackReport {
     /// Mapping of Wire Name -> Slack in picoseconds
     pub slacks: HashMap<String, f32>,
+    pub worst_slack: (String, f32),
 }
 
 impl SlackReport {
@@ -23,24 +22,24 @@ impl SlackReport {
     pub fn from_file<P: AsRef<Path>>(path: P) -> FabricResult<Self> {
         let mut rdr = csv::Reader::from_path(path)?;
         let mut slacks = HashMap::new();
+        let mut worst_slack = (String::new(), f32::INFINITY);
 
         for result in rdr.deserialize() {
             let record: SlackRecord = result?;
-            slacks.insert(record.source_wire, record.slack_ps);
+            slacks.insert(record.source_wire.clone(), record.slack_ps);
+            if worst_slack.1 < record.slack_ps {
+                worst_slack = (record.source_wire, record.slack_ps);
+            }
         }
 
-        Ok(Self { slacks })
+        Ok(Self { slacks , worst_slack})
     }
 
-    /// Helper to find the worst (most negative) slack for normalization
-    pub fn get_worst_slack(&self) -> f32 {
-        self.slacks.values().fold(0.0, |min, val| if *val < min { *val } else { min })
-    }
     /// Returns a criticality value between 0.0 and 1.0 for a given wire.
     /// 1.0 = This is the most critical net in the design (worst slack).
     /// 0.0 = This net meets timing or is not in the report.
     pub fn calculate_criticality(&self, source_wire: &str) -> Option<f32> {
-        let worst_slack = self.get_worst_slack();
+        let worst_slack = self.worst_slack.1;
 
         // If worst_slack is 0 or positive, the whole design meets timing.
         // Everyone gets 0.0 criticality.

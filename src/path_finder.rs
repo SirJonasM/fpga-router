@@ -5,6 +5,7 @@
 //! routing iterations, log results, and validate routing correctness.
 #![macro_use]
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
@@ -12,7 +13,7 @@ use std::time::{Duration, Instant};
 use crate::fabric_graph::FabricGraph;
 use crate::logger::LogInstance;
 use crate::netlist::NetInternal;
-use crate::solver::SolveRouting;
+use crate::solver::RouteNet;
 use crate::{FabricError, FabricResult, Logging, NetListInternal};
 
 /// Test case parameters for running a routing algorithm.
@@ -62,7 +63,7 @@ pub fn route<T, L>(
     logger: &L,
 ) -> FabricResult<Vec<IterationResult>>
 where
-    T: SolveRouting,
+    T: RouteNet,
     L: Logging,
 {
     let hist_fac = config.hist_factor;
@@ -83,6 +84,8 @@ where
         if result.conflicts == last_conflicts {
             same_conflicts += 1;
         }
+        last_conflicts = result.conflicts;
+
         if result.conflicts == 0 {
             logger.log(&LogInstance::RouterIteration(&result))?;
             return Ok(results);
@@ -90,10 +93,11 @@ where
 
         if i == max_iterations {
             logger.log(&LogInstance::RouterIteration(&result))?;
-            return Err(FabricError::RoutingMaxIterationsReached);
+            let congestion_report = congestion_report(net_list);
+            let congestion_report = CongestionReportExtern::from_intern(&congestion_report, graph);
+            return Err(FabricError::RoutingMaxIterationsReached(congestion_report));
         }
 
-        last_conflicts = result.conflicts;
         if same_conflicts == 200 {
             solver.pre_process(graph, &mut net_list.plan)?;
         }
@@ -103,13 +107,91 @@ where
     }
 }
 
+fn congestion_report(net_list: &NetListInternal) -> CongestionReportIntern {
+    let mut congestion: HashMap<u16, Vec<u16>> = HashMap::new();
+    let mut net_congestion: HashMap<u16, f32> = HashMap::new();
+
+    for net in &net_list.plan {
+        let signal = net.signal;
+        if let Some(net_res) = &net.result {
+            for node_id in &net_res.nodes {
+                congestion
+                    .entry(*node_id)
+                    .and_modify(|node_usage| node_usage.push(signal))
+                    .or_insert(vec![signal]);
+            }
+        }
+    }
+    for net in &net_list.plan {
+        let signal_id = net.signal;
+        if let Some(net_res) = &net.result {
+            let signal_congestion = net_res
+                .nodes
+                .iter()
+                .map(|node_id| {
+                    if let Some(con) = congestion.get(node_id) {
+                        con.len() as f32
+                    } else {
+                        0.0
+                    }
+                })
+                .sum::<f32>()
+                / net_res.nodes.len() as f32;
+            net_congestion.insert(signal_id, signal_congestion);
+        }
+    }
+    congestion.retain(|_k,v| v.len() > 1);
+    CongestionReportIntern {
+        congestion,
+        net_congestion,
+    }
+}
+
+#[derive(Debug)]
+pub struct CongestionReportIntern {
+    pub congestion: HashMap<u16, Vec<u16>>,
+    pub net_congestion: HashMap<u16, f32>,
+}
+
+impl CongestionReportExtern {
+    pub fn from_intern(intern: &CongestionReportIntern, graph: &FabricGraph) -> Self {
+        let congestion = intern
+            .congestion
+            .iter()
+            .map(|(key, value)| {
+                let mapped_key = graph.get_node(*key).id();
+                let mapped_value = value.iter().map(|id| graph.get_node(*id).id()).collect();
+                (mapped_key, mapped_value)
+            })
+            .collect::<HashMap<String, Vec<String>>>();
+        let congestion_signals = intern
+            .net_congestion
+            .iter()
+            .map(|(key, value)| {
+                let mapped_key = graph.get_node(*key).id();
+                (mapped_key, *value)
+            })
+            .collect::<HashMap<String, f32>>();
+
+        Self {
+            congestion,
+            net_congestion: congestion_signals,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct CongestionReportExtern {
+    pub congestion: HashMap<String, Vec<String>>,
+    pub net_congestion: HashMap<String, f32>,
+}
 /// Perform a single iteration of routing for all routing requests.
 ///
-/// Updates node usages, calculates conflicts, and returns iteration statistics.
+/// Updates node usages and calculates conflicts
 pub fn iteration(
     graph: &mut FabricGraph,
     routing: &mut [NetInternal],
-    solver: &dyn SolveRouting,
+    solver: &dyn RouteNet,
     hist_fac: f32,
 ) -> FabricResult<usize> {
     for route in &mut *routing {
@@ -202,7 +284,7 @@ fn analyze_result(
         total_wire_use: total_wire_segments,
         wire_reuse: avg_wire_sharing,
         duration: duration.as_micros(),
-        test_case: config.clone()
+        test_case: config.clone(),
     }
 }
 
@@ -220,6 +302,10 @@ pub struct IterationResult {
 }
 impl Display for IterationResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Iteration: {}, Conflicts: {}, Wire Efficency: {}, ", self.iteration, self.conflicts, self.wire_reuse)
+        write!(
+            f,
+            "Iteration: {}, Conflicts: {}, Wire Efficency: {}, ",
+            self.iteration, self.conflicts, self.wire_reuse
+        )
     }
 }

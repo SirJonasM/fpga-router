@@ -2,12 +2,12 @@ use std::collections::{HashMap, HashSet};
 
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::{netlist::NetResultInternal, node::NodeId, FabricError, FabricGraph, FabricResult, NetInternal, SolveRouting};
+use crate::{netlist::NetResultInternal, node::NodeId, FabricError, FabricGraph, FabricResult, NetInternal, RouteNet};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SimpleSolver;
 
-impl SolveRouting for SimpleSolver {
+impl RouteNet for SimpleSolver {
     fn pre_process(&self, _graph: &mut FabricGraph, _route_plan: &mut [NetInternal]) -> FabricResult<()> {
         Ok(())
     }

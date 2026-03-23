@@ -1,7 +1,7 @@
 use std::{io, path::PathBuf};
 use thiserror::Error;
 
-use crate::node::NodeId;
+use crate::{node::NodeId, path_finder::CongestionReportExtern};
 
 // A shorthand for results in your library
 pub type FabricResult<T> = Result<T, FabricError>;
@@ -20,7 +20,7 @@ pub enum FabricError {
     IterationError { source: Box<Self> },
 
     #[error("Routing has reached its maximum iterations.")]
-    RoutingMaxIterationsReached,
+    RoutingMaxIterationsReached(CongestionReportExtern),
 
     // This variant wraps the ParseError with line-specific context
     #[error("Parsing failed on line {line_number}: {source}\n  Line: \"{content}\"")]

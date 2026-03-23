@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand, ValueEnum};
-use router::{FabricGraph, NetInternal, SimpleSolver, SimpleSteinerSolver, SolveRouting, SteinerSolver};
+use router::{FabricGraph, NetInternal, SimpleSolver, SimpleSteinerSolver, RouteNet, SteinerSolver};
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum SolverType {
@@ -120,7 +120,7 @@ pub enum Solver {
     Steiner(SteinerSolver),
 }
 
-impl SolveRouting for Solver {
+impl RouteNet for Solver {
     fn solve(&self, graph: &FabricGraph, routing: &mut NetInternal) -> router::FabricResult<()> {
         match self {
             Self::Simple(simple_solver) => simple_solver.solve(graph, routing),

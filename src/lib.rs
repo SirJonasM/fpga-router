@@ -27,4 +27,4 @@ pub use netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal, Ne
 pub use path_finder::IterationResult;
 
 pub use logger::{FileLog, Loggers, Logging};
-pub use solver::{SimpleSolver, SimpleSteinerSolver, SolveRouting, SteinerSolver};
+pub use solver::{SimpleSolver, SimpleSteinerSolver, RouteNet, SteinerSolver};
