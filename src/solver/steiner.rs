@@ -2,7 +2,7 @@ use std::{cmp::Ordering, collections::{HashMap, HashSet}};
 
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::{netlist::NetResultInternal, node::NodeId, FabricGraph, FabricResult, NetInternal, RouteNet};
+use crate::{netlist::NetResultInternal, graph::node::NodeId, FabricGraph, FabricResult, NetInternal, RouteNet};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SteinerSolver;
@@ -53,7 +53,7 @@ impl RouteNet for SteinerSolver {
                         // Find the connection node (min_node) on the base_path
                         let (min_node, cost_to_base_path) = base_path
                             .iter()
-                            .map(|&node| (node, terminal_distances[node as usize]))
+                            .map(|&node| (node, terminal_distances[node]))
                             .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Greater))
                             .unwrap();
 

@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{FabricError, FabricGraph, FabricResult, slack::SlackReport, node::NodeId};
+use crate::{FabricError, FabricGraph, FabricResult, slack::SlackReport, graph::node::NodeId};
 
 pub struct NetListInternal {
     pub plan: Vec<NetInternal>,
@@ -39,15 +39,15 @@ impl NetResultInternal {
         let nodes = self
             .nodes
             .iter()
-            .map(|a| graph.nodes[*a as usize].id())
+            .map(|a| graph.nodes[*a].id())
             .collect::<HashSet<String>>();
         let paths = self
             .paths
             .iter()
             .map(|(sink, path)| {
                 (
-                    graph.nodes[*sink as usize].id(),
-                    path.iter().map(|c| graph.nodes[*c as usize].id()).collect::<Vec<String>>(),
+                    graph.nodes[*sink].id(),
+                    path.iter().map(|c| graph.nodes[*c].id()).collect::<Vec<String>>(),
                 )
             })
             .collect::<HashMap<String, Vec<String>>>();
@@ -103,17 +103,14 @@ impl NetInternal {
         let mut sinks_cloned = external.sinks.iter().cloned().collect::<HashSet<String>>();
         let mut sinks: Vec<NodeId> = vec![];
 
-        for (i, node) in graph.nodes.iter().enumerate() {
+        for node in graph.nodes.iter() {
             let id = node.id();
+            let node_id = graph.get_node_id(&id).unwrap();
             if id == external.signal {
-                #[allow(clippy::cast_possible_truncation)]
-                let x = i as NodeId;
-                signal = Some(x);
+                signal = Some(*node_id);
             }
             if sinks_cloned.remove(&id) {
-                #[allow(clippy::cast_possible_truncation)]
-                let x = i as NodeId;
-                sinks.push(x);
+                sinks.push(*node_id);
             }
         }
         match (signal, sinks_cloned.is_empty()) {
@@ -178,8 +175,8 @@ impl NetListExternal {
     }
 
     pub(crate) fn add_slack(&mut self, slack_report: &SlackReport) {
-        for x in &mut self.plan {
-            x.criticallity = slack_report.calculate_criticality(&x.signal);
+        for net in &mut self.plan {
+            net.criticallity = slack_report.calculate_criticality(&net.signal);
         }
     }
 }

@@ -14,7 +14,7 @@ use std::{
 use crate::{
     FabricError, FabricResult,
     error::ParseError,
-    node::{Costs, Edge, Node, NodeId},
+    graph::node::{Costs, Edge, Node, NodeId},
 };
 
 /// Representation of the FPGA fabric graph
@@ -29,11 +29,11 @@ pub struct FabricGraph {
     pub map: Vec<Vec<Edge>>,
     /// Reversed adjacency list
     pub map_reversed: Vec<Vec<Edge>>,
+    index: HashMap<String, NodeId>,
 }
 
 struct PipsParser {
     graph: FabricGraph,
-    index: HashMap<Node, NodeId>,
 }
 struct PipsLine {
     start_node: Node,
@@ -46,7 +46,6 @@ impl PipsParser {
     fn new() -> Self {
         Self {
             graph: FabricGraph::default(),
-            index: HashMap::default(),
         }
     }
     fn parse_line(&mut self, line: &str, line_number: usize) -> FabricResult<()> {
@@ -68,24 +67,28 @@ impl PipsParser {
         let sid = self.get_or_create_node(&start_node)?;
         let eid = self.get_or_create_node(&end_node)?;
 
-        self.graph.map[sid as usize].push(Edge { node_id: eid, cost });
+        self.graph.map[sid].push(Edge { node_id: eid, cost });
+        self.graph.map_reversed[eid].push(Edge { node_id: sid, cost });
+
         Ok(())
     }
 
     fn get_or_create_node(&mut self, node: &Node) -> FabricResult<NodeId> {
-        if let Some(sid) = self.index.get(node) {
+        if let Some(sid) = self.graph.index.get(&node.id()) {
             return Ok(*sid);
         }
-        let id = NodeId::try_from(self.graph.nodes.len()).map_err(|_| FabricError::NodeIdValueSpaceTooSmall)?;
-        self.index.insert(node.clone(), id);
+        let id = NodeId(self.graph.nodes.len() as u16);
+        self.graph.index.insert(node.id(), id);
         self.graph.nodes.push(node.clone());
         self.graph.costs.push(Costs::new());
+
         self.graph.map.push(Vec::new());
+        self.graph.map_reversed.push(Vec::new());
+        
         Ok(id)
     }
 
-    fn build_graph(mut self) -> FabricGraph {
-        self.graph.map_reversed = get_reversed_map(&self.graph.nodes, &self.graph.map);
+    fn build_graph(self) -> FabricGraph {
         self.graph
     }
 }
@@ -93,14 +96,14 @@ impl PipsParser {
 impl FabricGraph {
     #[must_use]
     pub fn get_node(&self, node_id: NodeId) -> &Node {
-        &self.nodes[node_id as usize]
+        &self.nodes[node_id]
     }
     #[must_use]
     pub fn get_costs(&self, node_id: NodeId) -> &Costs {
-        &self.costs[node_id as usize]
+        &self.costs[node_id]
     }
     pub fn get_costs_mut(&mut self, node_id: NodeId) -> &mut Costs {
-        &mut self.costs[node_id as usize]
+        &mut self.costs[node_id]
     }
     #[must_use]
     /// Returns the edge that connects `start` to `end`
@@ -108,7 +111,7 @@ impl FabricGraph {
     /// # Panics
     /// This panics when the graph does not contain that edge
     pub fn get_edge_panic(&self, start: NodeId, end: NodeId) -> &Edge {
-        self.map[start as usize]
+        self.map[start]
             .iter()
             .find(|a| a.node_id == end)
             .unwrap_or_else(|| panic!("Graph did not contain the edge: a: {start}, b: {end}"))
@@ -118,7 +121,7 @@ impl FabricGraph {
     /// # Errors
     /// This fails when the graph does not contain that edge
     pub fn get_edge(&self, start: NodeId, end: NodeId) -> FabricResult<&Edge> {
-        self.map[start as usize]
+        self.map[start]
             .iter()
             .find(|a| a.node_id == end)
             .ok_or(FabricError::EdgeDoesNotExist { start, end })
@@ -161,6 +164,10 @@ impl FabricGraph {
         self.costs.iter_mut().for_each(|a| a.usage = 0);
     }
 
+    pub(crate) fn get_node_id(&self, id: &str) -> Option<&NodeId> {
+        self.index.get(id)
+    }
+
     // pub(crate) fn reset(&mut self){
     //     self.costs.iter_mut().for_each(|cost| {
     //         cost.historic_cost = 0.0;
@@ -170,32 +177,13 @@ impl FabricGraph {
 }
 
 /// Generate reversed adjacency list from forward map
-fn get_reversed_map(nodes: &[Node], map: &[Vec<Edge>]) -> Vec<Vec<Edge>> {
-    let n = nodes.len();
-    let mut rev_map = vec![Vec::new(); n];
-
-    for (u, edge_list) in map.iter().enumerate() {
-        for edge in edge_list {
-            let v = edge.node_id;
-
-            #[allow(clippy::cast_possible_truncation)]
-            let node_id = u as NodeId;
-            let cost = edge.cost;
-
-            rev_map[v as usize].push(Edge { node_id, cost });
-        }
-    }
-
-    rev_map
-}
-
-pub fn bucket_luts(nodes: &[Node]) -> (Vec<NodeId>, Vec<NodeId>) {
+pub fn bucket_luts(graph: &FabricGraph) -> (Vec<NodeId>, Vec<NodeId>) {
+    let nodes = &graph.nodes;
     let mut lut_inputs = vec![];
     let mut lut_outputs = vec![];
-    for (i, node) in nodes.iter().enumerate() {
+    for node in nodes.iter() {
         if node.id.starts_with('L') {
-            #[allow(clippy::cast_possible_truncation)]
-            let id = i as NodeId;
+            let id = *graph.get_node_id(&node.id()).unwrap();
             if node.id.chars().nth(3) == Some('O') {
                 lut_outputs.push(id);
             } else if node.id.chars().nth(3) == Some('I') {

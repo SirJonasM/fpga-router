@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::{netlist::NetResultInternal, node::NodeId, FabricError, FabricGraph, FabricResult, NetInternal, RouteNet};
+use crate::{netlist::NetResultInternal, graph::node::NodeId, FabricError, FabricGraph, FabricResult, NetInternal, RouteNet};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SimpleSolver;

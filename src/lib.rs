@@ -7,11 +7,10 @@
 pub(crate) mod api;
 pub(crate) mod dijkstra;
 pub(crate) mod error;
-pub(crate) mod fabric_graph;
+pub(crate) mod graph;
 pub(crate) mod fasm;
 pub(crate) mod logger;
 pub(crate) mod netlist;
-pub(crate) mod node;
 pub(crate) mod path_finder;
 pub(crate) mod solver;
 pub(crate) mod validate;
@@ -22,7 +21,7 @@ pub use error::{FabricError, FabricResult};
 
 // Public API
 pub use api::*;
-pub use fabric_graph::FabricGraph;
+pub use graph::fabric_graph::FabricGraph;
 pub use netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal, NetResultExternal};
 pub use path_finder::IterationResult;
 

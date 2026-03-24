@@ -10,7 +10,7 @@ use std::fmt::{Display, Formatter};
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 
-use crate::fabric_graph::FabricGraph;
+use crate::graph::{node::NodeId, fabric_graph::FabricGraph};
 use crate::logger::LogInstance;
 use crate::netlist::NetInternal;
 use crate::solver::RouteNet;
@@ -108,8 +108,8 @@ where
 }
 
 fn congestion_report(net_list: &NetListInternal) -> CongestionReportIntern {
-    let mut congestion: HashMap<u16, Vec<u16>> = HashMap::new();
-    let mut net_congestion: HashMap<u16, f32> = HashMap::new();
+    let mut congestion: HashMap<NodeId, Vec<NodeId>> = HashMap::new();
+    let mut net_congestion: HashMap<NodeId, f32> = HashMap::new();
 
     for net in &net_list.plan {
         let signal = net.signal;
@@ -149,8 +149,8 @@ fn congestion_report(net_list: &NetListInternal) -> CongestionReportIntern {
 
 #[derive(Debug)]
 pub struct CongestionReportIntern {
-    pub congestion: HashMap<u16, Vec<u16>>,
-    pub net_congestion: HashMap<u16, f32>,
+    pub congestion: HashMap<NodeId, Vec<NodeId>>,
+    pub net_congestion: HashMap<NodeId, f32>,
 }
 
 impl CongestionReportExtern {
@@ -223,7 +223,7 @@ fn analyze_result(
     let mut total_path_cost = 0.0;
     let mut path_count = 0;
 
-    let mut max_path_info = ((0, 0), f32::MIN); // (path_tuple, cost)
+    let mut max_path_info = ((String::new(), String::new()), f32::MIN);
     let mut total_sharing_efficiency = 0.0;
 
     for net in &net_list.plan {
@@ -240,7 +240,8 @@ fn analyze_result(
             }
 
             if current_path_cost > max_path_info.1 {
-                max_path_info = ((net.signal, *sink), current_path_cost);
+                
+                max_path_info = ((graph.get_node(net.signal).id(), graph.get_node(*sink).id()), current_path_cost);
             }
 
             total_path_cost += current_path_cost;
@@ -273,7 +274,7 @@ fn analyze_result(
         0.0
     };
 
-    let longest_path = (graph.get_node(max_path_info.0.0).id(), graph.get_node(max_path_info.0.1).id());
+    let longest_path = (max_path_info.0.0, max_path_info.0.1);
 
     IterationResult {
         iteration,

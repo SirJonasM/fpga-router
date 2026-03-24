@@ -2,7 +2,7 @@ use std::{cmp::Ordering, collections::{HashMap, HashSet}};
 
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::{netlist::NetResultInternal, node::NodeId, FabricError, FabricGraph, FabricResult, NetInternal, RouteNet};
+use crate::{netlist::NetResultInternal, graph::node::NodeId, FabricError, FabricGraph, FabricResult, NetInternal, RouteNet};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SimpleSteinerSolver;
@@ -95,7 +95,7 @@ fn pre_calc_steiner_tree(graph: &mut FabricGraph, net: &NetInternal) -> FabricRe
                         .expect("Dists map was built from the same sink list; this is a logic invariant.");
                     let (min_node, cost_to_base_path) = base_path
                         .iter()
-                        .map(|&node| (node, terminal_distances[node as usize]))
+                        .map(|&node| (node, terminal_distances[node]))
                         .min_by(|a, b| {
                             if graph.get_costs(a.0).usage > 0 {
                                 return Ordering::Greater;
@@ -145,6 +145,6 @@ fn pre_calc_steiner_tree(graph: &mut FabricGraph, net: &NetInternal) -> FabricRe
         .ok_or(FabricError::NoSteinerTreeFound)?;
 
     // 3. Final Calculation: Sequentially calculate the full result for the winner.
-    best_candidate.nodes.iter().for_each(|x| graph.costs[*x as usize].usage = 1);
+    best_candidate.nodes.iter().for_each(|x| graph.costs[*x].usage = 1);
     Ok(best_candidate.steiner_nodes)
 }

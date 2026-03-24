@@ -4,9 +4,34 @@
 //! nodes, their types, and associated costs for routing algorithms.
 
 
+use std::fmt::Display;
+
 use crate::error::ParseError;
 
-pub type NodeId = u16;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct NodeId(pub(super) u16);
+
+
+impl Display for NodeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+// Implement Index so you can write: nodes[my_node_id]
+impl<T> std::ops::Index<NodeId> for Vec<T> {
+    type Output = T;
+    fn index(&self, index: NodeId) -> &Self::Output {
+        &self[index.0 as usize]
+    }
+}
+
+// Implement IndexMut so you can modify: nodes[my_node_id] = new_node;
+impl<T> std::ops::IndexMut<NodeId> for Vec<T> {
+    fn index_mut(&mut self, index: NodeId) -> &mut Self::Output {
+        &mut self[index.0 as usize]
+    }
+}
 
 /// Programmable Connectio between nodes
 #[derive(Debug, Clone)]

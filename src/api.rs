@@ -6,10 +6,10 @@ use rand::seq::SliceRandom;
 use crate::logger::LogInstance;
 use crate::{
     FabricError, FabricResult, Logging,
-    fabric_graph::{FabricGraph, bucket_luts},
+    graph::fabric_graph::{FabricGraph, bucket_luts},
     fasm::routing_to_fasm,
     netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal},
-    node::NodeId,
+    graph::node::NodeId,
     path_finder::{Config, route},
     slack::SlackReport,
     solver::RouteNet,
@@ -90,7 +90,7 @@ pub fn create_fasm(netlist_file: &str, output_file: &str) -> FabricResult<()> {
 pub fn create_test<P: AsRef<Path>>(graph_file: P, output_file: P, percentage: f32, destinations: usize) -> FabricResult<()> {
     let mut rng = rand::rng();
     let graph = FabricGraph::from_file(graph_file)?;
-    let (mut inputs, mut outputs) = bucket_luts(&graph.nodes);
+    let (mut inputs, mut outputs) = bucket_luts(&graph);
 
     inputs.shuffle(&mut rng);
     outputs.shuffle(&mut rng);
