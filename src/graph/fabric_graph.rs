@@ -11,7 +11,7 @@ use std::{
     path::Path,
 };
 
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 use crate::{
     FabricError, FabricResult,
@@ -112,11 +112,15 @@ impl FabricGraph {
     /// # Panics
     /// This panics when the graph does not contain that edge
     pub fn get_edge_panic(&self, start: NodeId, end: NodeId) -> &Edge {
-        self.map[start]
-            .iter()
-            .find(|a| a.node_id == end)
-            .unwrap_or_else(|| panic!("Graph did not contain the edge: a: {start}, b: {end}"))
+        self.map[start].iter().find(|a| a.node_id == end).unwrap_or_else(|| {
+            panic!(
+                "Graph did not contain the edge: a: {}, b: {}",
+                start.name(self),
+                end.name(self)
+            )
+        })
     }
+
     /// Returns the edge that connects `start` to `end`
     ///
     /// # Errors
@@ -125,7 +129,10 @@ impl FabricGraph {
         self.map[start]
             .iter()
             .find(|a| a.node_id == end)
-            .ok_or(FabricError::EdgeDoesNotExist { start, end })
+            .ok_or_else(|| FabricError::EdgeDoesNotExist {
+                start: start.name(self),
+                end: end.name(self),
+            })
     }
 
     /// Parses a `pips.txt` file to a `FabricGraph`
@@ -139,7 +146,6 @@ impl FabricGraph {
     ///
     /// let test_file = "pips_8x8.txt";
     /// let graph = FabricGraph::from_file(test_file).unwrap();
-    ///
     /// ```
     pub fn from_file<P: AsRef<Path>>(path: P) -> FabricResult<Self> {
         let path_ref = path.as_ref();

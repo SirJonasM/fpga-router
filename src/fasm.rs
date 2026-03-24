@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use crate::netlist::NetListExternal;
 
 /// Converts Expanded JSON-like structure to a FASM string
+#[must_use]
 pub fn routing_to_fasm(expanded_nets: &NetListExternal) -> String {
     let mut fasm_lines = HashSet::new();
 

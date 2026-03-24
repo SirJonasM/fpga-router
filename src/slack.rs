@@ -19,6 +19,9 @@ pub struct SlackReport {
 
 impl SlackReport {
     /// Parses the CSV file from the timing team
+    ///
+    /// # Errors
+    /// When it cannot deserialize the CSV file
     pub fn from_file<P: AsRef<Path>>(path: P) -> FabricResult<Self> {
         let mut rdr = csv::Reader::from_path(path)?;
         let mut slacks = HashMap::new();
@@ -27,7 +30,7 @@ impl SlackReport {
         for result in rdr.deserialize() {
             let record: SlackRecord = result?;
             slacks.insert(record.source_wire.clone(), record.slack_ps);
-            if worst_slack.1 < record.slack_ps {
+            if worst_slack.1 > record.slack_ps {
                 worst_slack = (record.source_wire, record.slack_ps);
             }
         }
@@ -38,6 +41,7 @@ impl SlackReport {
     /// Returns a criticality value between 0.0 and 1.0 for a given wire.
     /// 1.0 = This is the most critical net in the design (worst slack).
     /// 0.0 = This net meets timing or is not in the report.
+    #[must_use]
     pub fn calculate_criticality(&self, source_wire: &str) -> Option<f32> {
         let worst_slack = self.worst_slack.1;
 

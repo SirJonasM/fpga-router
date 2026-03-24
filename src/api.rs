@@ -1,29 +1,24 @@
-use std::path::PathBuf;
-use std::process::Command;
-use std::{fs, path::Path};
-
 use rand::seq::SliceRandom;
 
 use crate::IterationResult;
 use crate::{
-    FabricError, FabricResult, LogInstance, Logging,
+    FabricError, FabricResult, Logging,
     fasm::routing_to_fasm,
     graph::fabric_graph::{FabricGraph, bucket_luts},
     graph::node::NodeId,
     netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal},
-    path_finder::{Config, route},
+    path_finder::{Config, path_finder},
     slack::SlackReport,
     solver::RouteNet,
     validate,
 };
 
-pub struct RoutingConfig<P: AsRef<Path>> {
-    pub graph_file: P,
-    pub net_list_file: P,
-    pub output_file: P,
+pub struct RoutingConfig {
+    pub graph: FabricGraph,
+    pub net_list: NetListExternal,
     pub hist_factor: f32,
     pub max_iterations: usize,
-    pub slack_report: Option<P>,
+    pub slack_report: Option<SlackReport>,
 }
 
 /// Tries to solve a `NetList`
@@ -31,62 +26,39 @@ pub struct RoutingConfig<P: AsRef<Path>> {
 /// # Errors
 /// Fails if files cannot be read or cannot be parsed or it cannot write to the output file.
 /// Fails if the `max_iterations` are reached
-pub fn start_routing<T, L, P>(config: RoutingConfig<P>, solver: &T, logger: &L) -> FabricResult<Vec<IterationResult>>
+pub fn route<T, L>(config: &mut RoutingConfig, solver: &T, logger: &L) -> FabricResult<Vec<IterationResult>>
 where
     T: RouteNet,
     L: Logging,
-    P: AsRef<Path>,
 {
-    let output_file_ref = config.output_file.as_ref();
-    let mut graph = FabricGraph::from_file(config.graph_file)?;
-    let mut route_plan_external = NetListExternal::from_file(config.net_list_file)?;
-    if let Some(hash) = &route_plan_external.hash {
+    let net_list_external = &mut config.net_list;
+    let graph = &mut config.graph;
+    if let Some(hash) = &net_list_external.hash {
         if hash != &graph.calculate_structure_hash() {
             eprintln!("Warning: The net-list was not created with this graph.");
         }
     } else {
         eprintln!("Warning: Cannot determine if the net-list was created with this graph. Missing field in net-list.");
     }
-    if let Some(slack_report) = config.slack_report {
-        let slack_report = SlackReport::from_file(slack_report)?;
-        route_plan_external.add_slack(&slack_report);
+    if let Some(slack_report) = &config.slack_report {
+        net_list_external.add_slack(slack_report);
     }
-    let mut route_plan = NetListInternal::from_external(&graph, &route_plan_external)?;
+    let mut net_list = NetListInternal::from_external(graph, net_list_external)?;
     let config = Config::new(config.hist_factor, config.max_iterations);
 
-    match route(&mut route_plan, &mut graph, &config, solver, logger) {
-        Ok(x) => {
-            let ex = route_plan.to_external(&graph);
-            let out = if let Some(s) = output_file_ref.extension()
-                && s == "fasm"
-            {
-                routing_to_fasm(&ex)
-            } else {
-                serde_json::to_string_pretty(&ex.plan)?
-            };
-            fs::write(output_file_ref, out).map_err(|e| FabricError::Io {
-                path: output_file_ref.to_path_buf(),
-                source: e,
-            })?;
-            Ok(x)
-        }
-        Err(err) => {
-            if let FabricError::RoutingMaxIterationsReached(congestion_report) = &err {
-                println!("{congestion_report:#?}");
-            }
-            Err(err)
-        }
+    let x = path_finder(&mut net_list, graph, &config, solver, logger);
+    if x.is_ok() {
+        *net_list_external = net_list.to_external(graph);
     }
+    x
 }
 
 /// Can be used to create a `FASM` file from a netlist
 /// # Errors
 /// Fails if files do not exist or deserialization does not succeed.
-pub fn create_fasm(netlist_file: &str, output_file: &str) -> FabricResult<()> {
-    let route_plan = NetListExternal::from_file(netlist_file).map_err(|_| format!("Error reading routeplan: {netlist_file}"))?;
-    let fasm = routing_to_fasm(&route_plan);
-    fs::write(output_file, fasm).map_err(|_| format!("Error writing to file: {output_file}"))?;
-    Ok(())
+pub fn create_fasm(netlist: &NetListExternal) -> FabricResult<String> {
+    let fasm = routing_to_fasm(netlist);
+    Ok(fasm)
 }
 
 /// Creates a Test Netlist by using a `percentage` of all Lut-Outputs and for each `destinations`
@@ -95,11 +67,10 @@ pub fn create_fasm(netlist_file: &str, output_file: &str) -> FabricResult<()> {
 /// # Errors
 /// Can produce File Io erros.
 /// Fails if parameters are bad like trying to use more than 100% of Lut-Outputs
-pub fn create_test<P: AsRef<Path>>(graph_file: P, output_file: P, percentage: f32, destinations: usize) -> FabricResult<()> {
+pub fn create_test(graph: &FabricGraph, percentage: f32, destinations: usize) -> FabricResult<NetListExternal> {
     let mut rng = rand::rng();
-    let graph = FabricGraph::from_file(graph_file)?;
     let graph_hash = graph.calculate_structure_hash();
-    let (mut inputs, mut outputs) = bucket_luts(&graph);
+    let (mut inputs, mut outputs) = bucket_luts(graph);
 
     inputs.shuffle(&mut rng);
     outputs.shuffle(&mut rng);
@@ -117,7 +88,7 @@ pub fn create_test<P: AsRef<Path>>(graph_file: P, output_file: P, percentage: f3
 
     let used_outs = inputs.iter().take(output_count).copied().collect::<Vec<NodeId>>();
 
-    let route_plan = outputs
+    let net_list = outputs
         .iter()
         .take(input_count)
         .copied()
@@ -131,122 +102,24 @@ pub fn create_test<P: AsRef<Path>>(graph_file: P, output_file: P, percentage: f3
                 priority: None,
                 criticallity: 0.0,
             }
-            .to_external(&graph)
+            .to_external(graph)
         })
         .collect::<Vec<NetExternal>>();
-    let route_plan = NetListExternal {
-        plan: route_plan,
+
+    let net_list = NetListExternal {
+        plan: net_list,
         hash: Some(graph_hash),
     };
 
-    let pretty = serde_json::to_string_pretty(&route_plan)?;
-    fs::write(&output_file, pretty).map_err(|e| FabricError::Io {
-        path: output_file.as_ref().to_path_buf(),
-        source: e,
-    })?;
-    Ok(())
-}
-
-/// Starts a routing and runs a Static Timing Analysis to meet timing requirements.
-/// # Errors
-/// This fails if `max_iterations` or `max_sta_cycles` are reached
-/// It also writes to files so `io::Errors` can occure
-pub fn route_sta<T, L, P>(
-    routing_config: RoutingConfig<P>,
-    max_sta_cycles: usize,
-    target_ps: u32,
-    solver: &T,
-    logger: &L,
-) -> FabricResult<()>
-where
-    T: RouteNet,
-    L: Logging,
-    P: AsRef<Path>,
-{
-    let mut graph = FabricGraph::from_file(routing_config.graph_file)?;
-    let net_list = NetListExternal::from_file(routing_config.net_list_file)?;
-    if let Some(hash) = &net_list.hash {
-        if hash != &graph.calculate_structure_hash() {
-            eprintln!("Warning: The net-list was not created with this graph.");
-        }
-    } else {
-        eprintln!("Warning: Cannot determine if the net-list was created with this graph. Missing field in net-list.");
-    }
-    let mut net_list = NetListInternal::from_external(&graph, &net_list)?;
-    let config = Config::new(routing_config.hist_factor, routing_config.max_iterations);
-
-    let slack_file = routing_config
-        .slack_report
-        .map_or_else(|| PathBuf::from("current_slack.csv"), |p| p.as_ref().to_path_buf());
-
-    for current_cycle in 0..max_sta_cycles {
-        logger.log(&LogInstance::from(format!("\n=== STA Routing Cycle {current_cycle} ===")))?;
-
-        // 2. ROUTE: Run the actual Pathfinder iterations
-        if let Err(err) = route(&mut net_list, &mut graph, &config, solver, logger) {
-            if let FabricError::RoutingMaxIterationsReached(congestion_report) = &err {
-                println!("{congestion_report:?}");
-            }
-            return Err(err);
-        }
-        let mut net_list = net_list.to_external(&graph);
-        fs::write(&routing_config.output_file, routing_to_fasm(&net_list)).map_err(|e| FabricError::Io {
-            path: routing_config.output_file.as_ref().to_path_buf(),
-            source: e,
-        })?;
-
-        // 4. ANALYZE: Call Python Mock STA
-        logger.log(&LogInstance::from("Running STA Analysis..."))?;
-        // 5. EVALUATE: Load report and check bounds
-        let report = SlackReport::from_file(&slack_file)?;
-        match run_mock_sta(&routing_config.output_file, &slack_file, target_ps) {
-            Ok(r) => {
-                logger.log(&LogInstance::Text(r))?;
-                logger.log(&LogInstance::from("Success: Timing met and congestion resolved."))?;
-                return Ok(());
-            }
-            Err(MockError::Slack(out)) => logger.log(&LogInstance::Text(out))?,
-            Err(MockError::Other(err)) => return Err(FabricError::StaFailed(err)),
-        }
-
-        graph.reset_usage();
-        net_list.add_slack(&report);
-    }
-    Err(FabricError::TimingNotMet)
+    Ok(net_list)
 }
 
 /// Validates a routing for a given `FabricGraph`
 ///
 /// # Errors
-/// Fails when bad files or invalid
-pub fn validate_routing(graph_file: &str, netlist_file: &str) -> FabricResult<()> {
-    let graph = FabricGraph::from_file(graph_file).map_err(|_| format!("Error reading file: {graph_file}"))?;
-    let route_plan = NetListExternal::from_file(netlist_file)?;
-    let route_plan =
-        NetListInternal::from_external(&graph, &route_plan).map_err(|_| format!("Error reading file: {netlist_file}"))?;
-    validate::validate(&route_plan, &graph)?;
+/// Fails when netlist is invalid
+pub fn validate_routing(graph: &FabricGraph, netlist: &NetListExternal) -> FabricResult<()> {
+    let netlist = NetListInternal::from_external(graph, netlist)?;
+    validate::validate(&netlist, graph)?;
     Ok(())
-}
-
-enum MockError {
-    Slack(String),
-    Other(String),
-}
-
-// This is just for the moment as there is no current implementation of the STA
-fn run_mock_sta<P: AsRef<Path>, C: AsRef<Path>>(fasm_in: &P, csv_out: &C, target: u32) -> Result<String, MockError> {
-    let output = Command::new("python3")
-        .arg("mock_slack.py") // Name of your python script
-        .arg(fasm_in.as_ref().to_str().unwrap())
-        .arg(csv_out.as_ref().to_str().unwrap())
-        .arg("--target")
-        .arg(target.to_string())
-        .output()
-        .map_err(|e| MockError::Other(format!("{e}")))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    if !output.status.success() {
-        return Err(MockError::Slack(format!("Result: {stdout}")));
-    }
-    Ok(stdout)
 }

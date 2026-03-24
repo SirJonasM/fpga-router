@@ -14,7 +14,7 @@ use crate::LogInstance;
 use crate::graph::{fabric_graph::FabricGraph, node::NodeId};
 use crate::netlist::NetInternal;
 use crate::solver::RouteNet;
-use crate::{FabricError, FabricResult, Logging, NetListInternal};
+use crate::{FabricError, FabricResult, Logging, netlist::NetListInternal};
 
 /// Test case parameters for running a routing algorithm.
 #[derive(Deserialize, Debug, Clone, Serialize)]
@@ -44,10 +44,10 @@ impl Default for Config {
     }
 }
 
-/// Execute routing for a given `TestCase` and `FabricGraph`.
+/// Execute routing using the `path_finder` algorihm
 ///
 /// # Arguments
-/// * `route_plan` - Array of routing requests to process
+/// * `net_list` - Array of routing requests to process
 /// * `graph` - FPGA fabric graph
 /// * `config` - Configuration parameters
 /// * `solver` - Solver that implements `Solve` to solve a `NetInternal` (Router)
@@ -55,7 +55,7 @@ impl Default for Config {
 ///
 /// # Errors
 ///
-pub fn route<T, L>(
+pub fn path_finder<T, L>(
     net_list: &mut NetListInternal,
     graph: &mut FabricGraph,
     config: &Config,
@@ -67,7 +67,7 @@ where
     L: Logging,
 {
     let hist_fac = config.hist_factor;
-    let mut results = Vec::new();
+    let mut iteration_report = Vec::new();
 
     let mut i = 0;
     let mut last_conflicts = 0;
@@ -88,22 +88,25 @@ where
 
         if result.conflicts == 0 {
             logger.log(&LogInstance::RouterIteration(&result))?;
-            results.push(result);
-            return Ok(results);
+            iteration_report.push(result);
+            return Ok(iteration_report);
         }
 
         if i == max_iterations {
             logger.log(&LogInstance::RouterIteration(&result))?;
             let congestion_report = congestion_report(net_list);
             let congestion_report = CongestionReportExtern::from_intern(&congestion_report, graph);
-            return Err(FabricError::RoutingMaxIterationsReached(congestion_report));
+            return Err(FabricError::RoutingMaxIterationsReached {
+                congestion_report,
+                iteration_report,
+            });
         }
 
         if same_conflicts == 200 {
             solver.pre_process(graph, &mut net_list.plan)?;
         }
         logger.log(&LogInstance::RouterIteration(&result))?;
-        results.push(result);
+        iteration_report.push(result);
         i += 1;
     }
 }
@@ -152,6 +155,7 @@ pub struct CongestionReportIntern {
 }
 
 impl CongestionReportExtern {
+    #[must_use]
     pub fn from_intern(intern: &CongestionReportIntern, graph: &FabricGraph) -> Self {
         let congestion = intern
             .congestion
@@ -192,9 +196,9 @@ pub fn iteration(
     solver: &dyn RouteNet,
     hist_fac: f32,
 ) -> FabricResult<usize> {
-    for route in &mut *routing {
-        solver.solve(graph, route).map_err(|_e| "Test")?;
-        if let Some(result) = &route.result {
+    for net in &mut *routing {
+        solver.solve(graph, net).map_err(|_e| "Test")?;
+        if let Some(result) = &net.result {
             result.nodes.iter().for_each(|index| {
                 graph.get_costs_mut(*index).usage += 1;
             });
@@ -286,7 +290,7 @@ fn analyze_result(
         average_path_cost: avg_path_cost,
         total_wire_use: total_wire_segments,
         wire_reuse: avg_wire_sharing,
-        duration: duration.as_micros(),
+        duration,
         test_case: config.clone(),
     }
 }
@@ -301,8 +305,9 @@ pub struct IterationResult {
     pub average_path_cost: f32,
     pub total_wire_use: usize,
     pub wire_reuse: f32,
-    pub duration: u128,
+    pub duration: Duration,
 }
+
 impl Display for IterationResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(

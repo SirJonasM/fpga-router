@@ -1,24 +1,26 @@
 use std::collections::{HashSet, VecDeque};
 
 use crate::{
-    NetListInternal,
+    netlist::NetListInternal,
     graph::{fabric_graph::FabricGraph, node::NodeId},
 };
 
-pub fn validate(route_plan: &NetListInternal, graph: &FabricGraph) -> Result<(), String> {
+pub fn validate(net_list: &NetListInternal, graph: &FabricGraph) -> Result<(), String> {
     let mut used_nodes_global: HashSet<NodeId> = HashSet::new();
 
-    for (tree_idx, tree) in route_plan.plan.iter().enumerate() {
+    for tree in &net_list.plan {
         let result = tree
             .result
             .as_ref()
-            .ok_or_else(|| format!("Tree {tree_idx} has no SteinerTreeResult"))?;
+            .ok_or_else(|| format!("Tree {} has no SteinerTreeResult", tree.signal.name(graph)))?;
 
         // --- Check: no node is used in multiple signals ---
         for &n in &result.nodes {
             if !used_nodes_global.insert(n) {
                 return Err(format!(
-                    "Node {n} is used by more than one signal (conflict at tree {tree_idx})",
+                    "Node {} is used by more than one signal (conflict at tree {})",
+                    n.name(graph),
+                    tree.signal.name(graph),
                 ));
             }
         }
@@ -28,8 +30,8 @@ pub fn validate(route_plan: &NetListInternal, graph: &FabricGraph) -> Result<(),
             if !is_reachable_within_set(graph, tree.signal, sink, &result.nodes) {
                 println!("Sink in nodes: {}", result.nodes.contains(&sink));
                 return Err(format!(
-                    "Tree {}: sink {} is NOT reachable from signal {} using tree nodes",
-                    tree_idx, sink, tree.signal,
+                    "sink {} is NOT reachable from signal {} using tree nodes",
+                    sink.name(graph), tree.signal.name(graph),
                 ));
             }
         }

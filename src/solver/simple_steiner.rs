@@ -5,7 +5,7 @@ use std::{
 
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::{FabricError, FabricGraph, FabricResult, NetInternal, RouteNet, graph::node::NodeId, netlist::NetResultInternal};
+use crate::{FabricError, FabricGraph, FabricResult, netlist::NetInternal, RouteNet, graph::node::NodeId, netlist::NetResultInternal};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SimpleSteinerSolver;
@@ -21,16 +21,21 @@ impl RouteNet for SimpleSteinerSolver {
         let mut used_nodes = HashSet::new();
         for route in route_plan.iter_mut() {
             let signal_id = route.signal;
-            let steiner_tree = pre_calc_steiner_tree(graph, route).map_err(|e| FabricError::RoutePreProcessing {
-                signal: signal_id,
-                source: e.into(),
+            let steiner_tree = pre_calc_steiner_tree(graph, route).map_err(|e| {
+                let signal_id_name = graph.get_node(signal_id).id();
+                FabricError::RoutePreProcessing {
+                    signal: signal_id_name,
+                    source: e.into(),
+                }
             })?;
 
             for &node_id in &steiner_tree.values().flatten().copied().collect::<HashSet<NodeId>>() {
                 if !used_nodes.insert(node_id) {
+                    let signal_id_name = graph.get_node(signal_id).id();
+                    let node_id_name = graph.get_node(node_id).id();
                     return Err(FabricError::RoutePreProcessing {
-                        signal: signal_id,
-                        source: Box::new(FabricError::ResourceConflict { node_id }),
+                        signal: signal_id_name,
+                        source: Box::new(FabricError::ResourceConflict { node_id: node_id_name }),
                     });
                 }
             }
@@ -49,7 +54,9 @@ impl RouteNet for SimpleSteinerSolver {
                 for steiner_node in route.windows(2) {
                     let (start, end) = (steiner_node[0], steiner_node[1]);
                     let Some((a, _b)) = graph.dijkstra(start, end, criticallity) else {
-                        return Err(format!("Could not find path between steinere nodes: {start}, {end}").into());
+                        let start_name = graph.get_node(start).id();
+                        let end_name = graph.get_node(end).id();
+                        return Err(format!("Could not find path between steiner nodes: {start_name}->{end_name}").into());
                     };
                     nodes.extend(&a);
                     path.extend(&a[..a.len() - 1]);
@@ -85,7 +92,11 @@ fn pre_calc_steiner_tree(graph: &mut FabricGraph, net: &NetInternal) -> FabricRe
         .map(|(start, base_sink)| {
             let (base_path, mut costs) = graph
                 .dijkstra(start, base_sink, criticallity)
-                .ok_or(FabricError::PathfindingFailed { start, sink: base_sink })?;
+                .ok_or_else(||{
+                    let start_name = graph.get_node(start).id();
+                    let sink_name = graph.get_node(base_sink).id();
+                    FabricError::PathfindingFailed { start: start_name, sink: sink_name }
+                })?;
 
             let mut nodes = HashSet::new();
             let min_points = net
@@ -120,9 +131,10 @@ fn pre_calc_steiner_tree(graph: &mut FabricGraph, net: &NetInternal) -> FabricRe
             let mut steiner_nodes = HashMap::new();
             for sink in &net.sinks {
                 let mut sink_uses_steiner_nodes = vec![net.signal];
-                let m = min_points
-                    .get(sink)
-                    .ok_or_else(|| format!("No midpoint calculated for sink {sink}"))?;
+                let m = min_points.get(sink).ok_or_else(|| {
+                    let sink_name = graph.get_node(*sink).id();
+                    format!("No midpoint calculated for sink {sink_name}")
+                })?;
                 for n in &base_path {
                     if n == m {
                         sink_uses_steiner_nodes.push(*sink);

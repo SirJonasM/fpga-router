@@ -3,14 +3,13 @@
 //! This module defines the building blocks of the FPGA fabric graph:
 //! nodes, their types, and associated costs for routing algorithms.
 
-use std::fmt::Display;
-
-use crate::{FabricError, FabricResult, error::ParseError};
+use crate::{FabricError, FabricGraph, FabricResult, error::ParseError};
 
 type NodeIdType = u16;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NodeId(pub(super) NodeIdType);
+
 
 impl NodeId {
     pub(super) fn new(id: usize) -> FabricResult<Self> {
@@ -18,13 +17,11 @@ impl NodeId {
             .map(Self)
             .map_err(|_e| FabricError::NodeIdValueSpaceTooSmall)
     }
-}
-
-impl Display for NodeId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+    pub(crate) fn name(self, graph: &FabricGraph) -> String {
+        graph.get_node(self).id()
     }
 }
+
 
 impl<T> std::ops::Index<NodeId> for Vec<T> {
     type Output = T;

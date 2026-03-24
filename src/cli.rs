@@ -11,7 +11,6 @@ pub enum SolverType {
 pub enum LoggerType {
     No,
     Terminal,
-    File,
 }
 
 // --- Subcommand Arguments ---
@@ -54,7 +53,7 @@ pub struct FasmArgs {
     #[arg(short, long)]
     pub output: String,
     #[arg(short, long)]
-    pub routing: String,
+    pub net_list: String,
 }
 
 #[derive(Parser, Debug)]
@@ -62,7 +61,7 @@ pub struct ValidateArgs {
     #[arg(short, long)]
     pub graph: String,
     #[arg(short, long)]
-    pub routing: String,
+    pub net_list: String,
 }
 
 #[derive(Parser, Debug)]

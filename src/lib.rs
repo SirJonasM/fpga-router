@@ -24,8 +24,10 @@ pub use error::{FabricError, FabricResult};
 // Public API
 pub use api::*;
 pub use graph::fabric_graph::FabricGraph;
-pub use netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal, NetResultExternal};
-pub use path_finder::IterationResult;
+pub use netlist::{NetExternal, NetListExternal, NetInternal, NetResultExternal};
+pub use path_finder::{IterationResult, CongestionReportExtern};
+pub use slack::SlackReport;
+pub use fasm::routing_to_fasm;
 
 use serde::Serialize;
 pub use solver::{RouteNet, SimpleSolver, SimpleSteinerSolver, SteinerSolver};

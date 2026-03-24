@@ -43,10 +43,8 @@ def generate_mock_slack(fasm_path, output_path, target_ps):
     print(f"Worst Slack: {worst_slack} ps")
     
     if violation_count == 0:
-        print("TIMING STATUS: PASSED")
         return True # Success
     else:
-        print(f"TIMING STATUS: FAILED ({violation_count} violations)")
         return False # Failure
 
 if __name__ == "__main__":

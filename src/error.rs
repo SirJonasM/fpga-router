@@ -1,7 +1,7 @@
 use std::{io, path::PathBuf};
 use thiserror::Error;
 
-use crate::{graph::node::NodeId, path_finder::CongestionReportExtern};
+use crate::{IterationResult, path_finder::CongestionReportExtern};
 
 // A shorthand for results in your library
 pub type FabricResult<T> = Result<T, FabricError>;
@@ -19,8 +19,9 @@ pub enum FabricError {
     #[error("Iteration Failed")]
     IterationError { source: Box<Self> },
 
+
     #[error("Routing has reached its maximum iterations.")]
-    RoutingMaxIterationsReached(CongestionReportExtern),
+    RoutingMaxIterationsReached{congestion_report: CongestionReportExtern, iteration_report: Vec<IterationResult>},
 
     // This variant wraps the ParseError with line-specific context
     #[error("Parsing failed on line {line_number}: {source}\n  Line: \"{content}\"")]
@@ -43,7 +44,7 @@ pub enum FabricError {
     MappingExternelNet { signal: String, reason: String },
 
     #[error("Edge does not exist in Graph: {start} -> {end}")]
-    EdgeDoesNotExist { start: NodeId, end: NodeId },
+    EdgeDoesNotExist { start: String, end: String },
 
     #[error("Parsing Failed: {0}")]
     Parse(#[from] ParseError),
@@ -53,16 +54,16 @@ pub enum FabricError {
 
     #[error("Failed to preprocess route for signal {signal}: {source}")]
     RoutePreProcessing {
-        signal: NodeId,
+        signal: String,
         #[source]
         source: Box<Self>,
     },
 
     #[error("Path finding for Start: {start} and Sink: {sink} failed.")]
-    PathfindingFailed { start: NodeId, sink: NodeId },
+    PathfindingFailed { start: String, sink: String },
 
     #[error("Steiner tree conflict: Node {node_id} is already in use by another route.")]
-    ResourceConflict { node_id: NodeId },
+    ResourceConflict { node_id: String },
 
     #[error("No valid Steiner tree could be constructed for the given sinks.")]
     NoSteinerTreeFound,

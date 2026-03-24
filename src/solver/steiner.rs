@@ -5,7 +5,7 @@ use std::{
 
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::{FabricGraph, FabricResult, NetInternal, RouteNet, graph::node::NodeId, netlist::NetResultInternal};
+use crate::{FabricGraph, FabricResult, netlist::NetInternal, RouteNet, graph::node::NodeId, netlist::NetResultInternal};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SteinerSolver;
@@ -41,7 +41,9 @@ impl RouteNet for SteinerSolver {
                 // --- Computation to find the MINIMUM COST ---
                 // Calculate the cost of the base path (Dijkstra is still necessary here)
                 let Some((base_path, mut costs)) = graph.dijkstra(start, base_sink, criticallity) else {
-                    return Err(format!("Could not find a base path start: {start}, base sink: {base_sink}"));
+                    let start_name = graph.get_node(start).id();
+                    let base_sink_name = graph.get_node(base_sink).id();
+                    return Err(format!("Could not find a base path start: {start_name}, base sink: {base_sink_name}"));
                 };
 
                 // Calculate the cost of connecting all other sinks to this base path
@@ -50,7 +52,8 @@ impl RouteNet for SteinerSolver {
                     .iter()
                     .map(|sink| {
                         let Some(terminal_distances) = dists.get(sink) else {
-                            return Err(format!("No precalculated distances for the sink: {sink}"));
+                            let sink_name = graph.get_node(*sink).id();
+                            return Err(format!("No precalculated distances for the sink: {sink_name}"));
                         };
 
                         // Find the connection node (min_node) on the base_path
@@ -100,10 +103,12 @@ impl RouteNet for SteinerSolver {
 
             for (sink, mid_point) in &best_candidate.mid_points {
                 let Some((mut path_to_mid, _cost)) = graph.dijkstra(signal, *mid_point, criticallity) else {
-                    return Err(format!("Could not find a route for sink: {sink}").into());
+                    let sink_name = graph.get_node(*sink).id();
+                    return Err(format!("Could not find a route for sink: {sink_name}").into());
                 };
                 let Some((path_from_mid, _cost)) = graph.dijkstra(*mid_point, *sink, criticallity) else {
-                    return Err(format!("Could not find a route for sink: {sink}").into());
+                    let sink_name = graph.get_node(*sink).id();
+                    return Err(format!("Could not find a route for sink: {sink_name}").into());
                 };
                 nodes.extend(&path_from_mid);
                 path_to_mid.extend(&path_from_mid[1..]);
