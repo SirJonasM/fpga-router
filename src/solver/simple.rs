@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::{netlist::NetResultInternal, graph::node::NodeId, FabricError, FabricGraph, FabricResult, NetInternal, RouteNet};
+use crate::{FabricError, FabricGraph, FabricResult, NetInternal, RouteNet, graph::node::NodeId, netlist::NetResultInternal};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SimpleSolver;
@@ -18,10 +18,12 @@ impl RouteNet for SimpleSolver {
             .sinks
             .par_iter()
             .map(|sink| {
-                let (path, _cost) = graph.dijkstra(signal, *sink, criticallity).ok_or(FabricError::PathfindingFailed {
-                    start: signal,
-                    sink: *sink,
-                })?;
+                let (path, _cost) = graph
+                    .dijkstra(signal, *sink, criticallity)
+                    .ok_or(FabricError::PathfindingFailed {
+                        start: signal,
+                        sink: *sink,
+                    })?;
                 Ok((*sink, path))
             })
             .collect::<Result<HashMap<NodeId, Vec<NodeId>>, FabricError>>()?;

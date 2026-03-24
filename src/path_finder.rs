@@ -10,7 +10,7 @@ use std::fmt::{Display, Formatter};
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 
-use crate::graph::{node::NodeId, fabric_graph::FabricGraph};
+use crate::graph::{fabric_graph::FabricGraph, node::NodeId};
 use crate::logger::LogInstance;
 use crate::netlist::NetInternal;
 use crate::solver::RouteNet;
@@ -140,7 +140,7 @@ fn congestion_report(net_list: &NetListInternal) -> CongestionReportIntern {
             net_congestion.insert(signal_id, signal_congestion);
         }
     }
-    congestion.retain(|_k,v| v.len() > 1);
+    congestion.retain(|_k, v| v.len() > 1);
     CongestionReportIntern {
         congestion,
         net_congestion,
@@ -240,8 +240,10 @@ fn analyze_result(
             }
 
             if current_path_cost > max_path_info.1 {
-                
-                max_path_info = ((graph.get_node(net.signal).id(), graph.get_node(*sink).id()), current_path_cost);
+                max_path_info = (
+                    (graph.get_node(net.signal).id(), graph.get_node(*sink).id()),
+                    current_path_cost,
+                );
             }
 
             total_path_cost += current_path_cost;

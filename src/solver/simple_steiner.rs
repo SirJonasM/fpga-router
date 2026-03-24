@@ -1,8 +1,11 @@
-use std::{cmp::Ordering, collections::{HashMap, HashSet}};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+};
 
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::{netlist::NetResultInternal, graph::node::NodeId, FabricError, FabricGraph, FabricResult, NetInternal, RouteNet};
+use crate::{FabricError, FabricGraph, FabricResult, NetInternal, RouteNet, graph::node::NodeId, netlist::NetResultInternal};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SimpleSteinerSolver;
@@ -37,7 +40,7 @@ impl RouteNet for SimpleSteinerSolver {
         Ok(())
     }
     fn solve(&self, graph: &FabricGraph, net: &mut NetInternal) -> FabricResult<()> {
-        let criticallity= net.criticallity;
+        let criticallity = net.criticallity;
         if let Some(steiner_tree) = &net.intermediate_nodes {
             let mut paths = HashMap::new();
             let mut nodes = HashSet::new();

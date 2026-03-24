@@ -17,7 +17,7 @@ impl FabricGraph {
         dist[start] = 0.0;
         heap.push(State {
             cost: 0.0,
-            position: start ,
+            position: start,
         });
 
         while let Some(State { cost, position }) = heap.pop() {
@@ -54,7 +54,7 @@ impl FabricGraph {
 
                 if next_cost < dist[next_pos] {
                     dist[next_pos] = next_cost;
-                    prev[next_pos] = Some(position ); 
+                    prev[next_pos] = Some(position);
                     heap.push(State {
                         cost: next_cost,
                         position: next_pos,
@@ -67,7 +67,7 @@ impl FabricGraph {
     }
 
     #[must_use]
-    pub fn dijkstra_all(&self, start: NodeId, criticallity: f32) -> Vec<f32>{
+    pub fn dijkstra_all(&self, start: NodeId, criticallity: f32) -> Vec<f32> {
         let n = self.nodes.len();
 
         let mut dist: Vec<f32> = vec![f32::MAX; n];
@@ -84,14 +84,14 @@ impl FabricGraph {
                 continue;
             }
 
-            for edge in &self.map_reversed[position ] {
+            for edge in &self.map_reversed[position] {
                 let base_cost = edge.cost;
-                let next_cost = cost + self.costs[edge.node_id ].calc_costs(base_cost, criticallity);
+                let next_cost = cost + self.costs[edge.node_id].calc_costs(base_cost, criticallity);
 
                 let next_pos = edge.node_id;
 
-                if next_cost < dist[next_pos ] {
-                    dist[next_pos ] = next_cost;
+                if next_cost < dist[next_pos] {
+                    dist[next_pos] = next_cost;
                     heap.push(State {
                         cost: next_cost,
                         position: next_pos,
@@ -102,9 +102,6 @@ impl FabricGraph {
 
         dist
     }
-
-    
-
 }
 // PriorityQueue state
 #[derive(Clone)]

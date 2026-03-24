@@ -1,8 +1,11 @@
-use std::{cmp::Ordering, collections::{HashMap, HashSet}};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+};
 
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::{netlist::NetResultInternal, graph::node::NodeId, FabricGraph, FabricResult, NetInternal, RouteNet};
+use crate::{FabricGraph, FabricResult, NetInternal, RouteNet, graph::node::NodeId, netlist::NetResultInternal};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SteinerSolver;

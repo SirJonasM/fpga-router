@@ -1,11 +1,12 @@
 use std::{
     collections::{HashMap, HashSet},
-    fs, path::Path,
+    fs,
+    path::Path,
 };
 
 use serde::{Deserialize, Serialize};
 
-use crate::{FabricError, FabricGraph, FabricResult, slack::SlackReport, graph::node::NodeId};
+use crate::{FabricError, FabricGraph, FabricResult, graph::node::NodeId, slack::SlackReport};
 
 pub struct NetListInternal {
     pub plan: Vec<NetInternal>,
@@ -36,11 +37,7 @@ pub struct NetResultInternal {
 
 impl NetResultInternal {
     pub fn to_external(&self, graph: &FabricGraph) -> NetResultExternal {
-        let nodes = self
-            .nodes
-            .iter()
-            .map(|a| graph.nodes[*a].id())
-            .collect::<HashSet<String>>();
+        let nodes = self.nodes.iter().map(|a| graph.nodes[*a].id()).collect::<HashSet<String>>();
         let paths = self
             .paths
             .iter()
@@ -76,8 +73,9 @@ impl NetListInternal {
     }
     #[must_use]
     pub fn to_external(&self, graph: &FabricGraph) -> NetListExternal {
-        let ex = self.plan.iter().map(|x| x.to_external(graph)).collect::<Vec<_>>();
-        NetListExternal { plan: ex }
+        let plan = self.plan.iter().map(|x| x.to_external(graph)).collect::<Vec<_>>();
+        let hash = Some(graph.calculate_structure_hash());
+        NetListExternal { plan, hash}
     }
 }
 impl NetInternal {
@@ -131,6 +129,7 @@ impl NetInternal {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetListExternal {
+    pub hash: Option<String>,
     pub plan: Vec<NetExternal>,
 }
 
@@ -167,7 +166,7 @@ impl NetListExternal {
     pub fn from_file<P: AsRef<Path>>(file: P) -> FabricResult<Self> {
         let path_ref = file.as_ref();
         let data: String = fs::read_to_string(path_ref).map_err(|e| FabricError::Io {
-            path: path_ref.to_path_buf(), 
+            path: path_ref.to_path_buf(),
             source: e,
         })?;
         let x: Self = serde_json::de::from_str(&data)?;

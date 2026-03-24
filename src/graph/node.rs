@@ -3,14 +3,12 @@
 //! This module defines the building blocks of the FPGA fabric graph:
 //! nodes, their types, and associated costs for routing algorithms.
 
-
 use std::fmt::Display;
 
 use crate::error::ParseError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NodeId(pub(super) u16);
-
 
 impl Display for NodeId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -42,7 +40,7 @@ pub struct Edge {
     pub cost: f32,
 }
 
-/// A node in the FPGA graph 
+/// A node in the FPGA graph
 #[derive(Hash, Eq, PartialEq, Clone, Debug)]
 pub struct Node {
     /// Unique identifier of the node
@@ -147,7 +145,7 @@ impl Costs {
 #[cfg(test)]
 mod test {
     use super::*;
-    const TOLERANCE:f32 = 0.001;
+    const TOLERANCE: f32 = 0.001;
     #[test]
     fn test_update_costs_uncongested() {
         let mut costs = Costs {
@@ -175,7 +173,7 @@ mod test {
         assert!(c);
         assert!((updated_costs.historic_cost - costs.historic_cost).abs() < TOLERANCE);
         assert_eq!(updated_costs.usage, costs.usage);
-        assert!((updated_costs.capacity- costs.capacity).abs() < TOLERANCE);
+        assert!((updated_costs.capacity - costs.capacity).abs() < TOLERANCE);
     }
 
     #[test]

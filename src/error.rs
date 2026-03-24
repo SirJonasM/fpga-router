@@ -88,18 +88,10 @@ pub enum ParseError {
     },
 
     #[error("Failed to parse start node id: {id} cords: {cords}")]
-    InvalidStartNode {
-        id: String,
-        cords: String,
-        source: Box<Self>,
-    },
+    InvalidStartNode { id: String, cords: String, source: Box<Self> },
 
     #[error("Failed to parse end node id: {id} cords: {cords}")]
-    InvalidEndNode {
-        id: String,
-        cords: String,
-        source: Box<Self>,
-    },
+    InvalidEndNode { id: String, cords: String, source: Box<Self> },
 
     #[error("Missing coordinate prefix '{prefix}' in token: {token}")]
     MissingPrefix { prefix: char, token: String },

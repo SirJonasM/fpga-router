@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::netlist::{NetListExternal};
+use crate::netlist::NetListExternal;
 
 /// Converts Expanded JSON-like structure to a FASM string
 pub fn routing_to_fasm(expanded_nets: &NetListExternal) -> String {
@@ -28,7 +28,9 @@ fn nodes_to_fasm_line(u_id: &str, v_id: &str) -> Option<String> {
     let u_parts: Vec<&str> = u_id.split('.').collect();
     let v_parts: Vec<&str> = v_id.split('.').collect();
 
-    if u_parts.len() < 2 || v_parts.len() < 2 { return None; }
+    if u_parts.len() < 2 || v_parts.len() < 2 {
+        return None;
+    }
 
     // u_parts[0] = Wire Name, u_parts[1] = Coordinate (X1Y1)
     if u_parts[0] == v_parts[0] {

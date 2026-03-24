@@ -6,10 +6,10 @@ use rand::seq::SliceRandom;
 use crate::logger::LogInstance;
 use crate::{
     FabricError, FabricResult, Logging,
-    graph::fabric_graph::{FabricGraph, bucket_luts},
     fasm::routing_to_fasm,
-    netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal},
+    graph::fabric_graph::{FabricGraph, bucket_luts},
     graph::node::NodeId,
+    netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal},
     path_finder::{Config, route},
     slack::SlackReport,
     solver::RouteNet,
@@ -38,6 +38,13 @@ where
     let output_file_ref = config.output_file.as_ref();
     let mut graph = FabricGraph::from_file(config.graph_file)?;
     let mut route_plan_external = NetListExternal::from_file(config.net_list_file)?;
+    if let Some(hash) = &route_plan_external.hash {
+        if hash != &graph.calculate_structure_hash() {
+           eprintln!("Warning: The net-list was not created with this graph.") 
+        } 
+    } else {
+        eprintln!("Warning: Cannot determine if the net-list was created with this graph. Missing field in net-list.") 
+    }
     if let Some(slack_report) = slack_report {
         let slack_report = SlackReport::from_file(slack_report)?;
         route_plan_external.add_slack(&slack_report);
@@ -66,9 +73,8 @@ where
                 println!("{congestion_report:#?}");
             }
             Err(err)
-        },
+        }
     }
-
 }
 
 /// Can be used to create a `FASM` file from a netlist
@@ -90,6 +96,7 @@ pub fn create_fasm(netlist_file: &str, output_file: &str) -> FabricResult<()> {
 pub fn create_test<P: AsRef<Path>>(graph_file: P, output_file: P, percentage: f32, destinations: usize) -> FabricResult<()> {
     let mut rng = rand::rng();
     let graph = FabricGraph::from_file(graph_file)?;
+    let graph_hash = graph.calculate_structure_hash();
     let (mut inputs, mut outputs) = bucket_luts(&graph);
 
     inputs.shuffle(&mut rng);
@@ -125,7 +132,7 @@ pub fn create_test<P: AsRef<Path>>(graph_file: P, output_file: P, percentage: f3
             .to_external(&graph)
         })
         .collect::<Vec<NetExternal>>();
-    let route_plan = NetListExternal { plan: route_plan };
+    let route_plan = NetListExternal { plan: route_plan , hash: Some(graph_hash) };
 
     let pretty = serde_json::to_string_pretty(&route_plan)?;
     fs::write(&output_file, pretty).map_err(|e| FabricError::Io {
@@ -153,6 +160,13 @@ where
 {
     let mut graph = FabricGraph::from_file(routing_config.graph_file)?;
     let net_list = NetListExternal::from_file(routing_config.net_list_file)?;
+    if let Some(hash) = &net_list.hash {
+        if hash != &graph.calculate_structure_hash() {
+           eprintln!("Warning: The net-list was not created with this graph.") 
+        } 
+    } else {
+        eprintln!("Warning: Cannot determine if the net-list was created with this graph. Missing field in net-list.") 
+    }
     let mut net_list = NetListInternal::from_external(&graph, &net_list)?;
     let config = Config::new(routing_config.hist_factor, routing_config.max_iterations);
 

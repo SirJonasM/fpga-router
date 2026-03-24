@@ -11,6 +11,8 @@ use std::{
     path::Path,
 };
 
+use sha2::{Sha256, Digest};
+
 use crate::{
     FabricError, FabricResult,
     error::ParseError,
@@ -20,8 +22,6 @@ use crate::{
 /// Representation of the FPGA fabric graph
 #[derive(Debug, Clone, Default)]
 pub struct FabricGraph {
-    pub filename: String,
-    /// List of nodes in the graph
     pub nodes: Vec<Node>,
     /// Costs associated with each node
     pub costs: Vec<Costs>,
@@ -84,7 +84,7 @@ impl PipsParser {
 
         self.graph.map.push(Vec::new());
         self.graph.map_reversed.push(Vec::new());
-        
+
         Ok(id)
     }
 
@@ -174,6 +174,31 @@ impl FabricGraph {
     //         cost.usage = 0;
     //     });
     // }
+    pub fn calculate_structure_hash(&self) -> String {
+        let mut hasher = Sha256::new();
+
+        // 1. Hash the number of nodes to start
+        hasher.update((self.nodes.len() as u64).to_le_bytes());
+
+        // 2. Hash node identifiers (assuming node.id() returns a string/bytes)
+        for node in &self.nodes {
+            hasher.update(node.id().as_bytes());
+        }
+
+        // 3. Hash the Adjacency Map
+        for edge_list in &self.map {
+            // Hash the length of the sub-vector to distinguish [[1], [2]] from [[1, 2]]
+            hasher.update((edge_list.len() as u64).to_le_bytes());
+            for edge in edge_list {
+                // edge.node_id is our Newtype NodeId(u16)
+                hasher.update(edge.node_id.0.to_le_bytes());
+                // If cost is f32/f64, use to_bits() to get stable bytes
+                hasher.update(edge.cost.to_bits().to_le_bytes());
+            }
+        }
+
+        format!("{:x}", hasher.finalize())
+    }
 }
 
 /// Generate reversed adjacency list from forward map

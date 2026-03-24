@@ -7,14 +7,14 @@
 pub(crate) mod api;
 pub(crate) mod dijkstra;
 pub(crate) mod error;
-pub(crate) mod graph;
 pub(crate) mod fasm;
+pub(crate) mod graph;
 pub(crate) mod logger;
 pub(crate) mod netlist;
 pub(crate) mod path_finder;
+pub(crate) mod slack;
 pub(crate) mod solver;
 pub(crate) mod validate;
-pub(crate) mod slack;
 
 // Error handling
 pub use error::{FabricError, FabricResult};
@@ -26,4 +26,4 @@ pub use netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal, Ne
 pub use path_finder::IterationResult;
 
 pub use logger::{FileLog, Loggers, Logging};
-pub use solver::{SimpleSolver, SimpleSteinerSolver, RouteNet, SteinerSolver};
+pub use solver::{RouteNet, SimpleSolver, SimpleSteinerSolver, SteinerSolver};

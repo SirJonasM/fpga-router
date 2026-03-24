@@ -1,8 +1,11 @@
 use std::collections::{HashSet, VecDeque};
 
-use crate::{graph::{fabric_graph::FabricGraph, node::NodeId}, NetListInternal};
+use crate::{
+    NetListInternal,
+    graph::{fabric_graph::FabricGraph, node::NodeId},
+};
 
-pub fn validate(route_plan: &NetListInternal, graph: &FabricGraph )-> Result<(),String> {
+pub fn validate(route_plan: &NetListInternal, graph: &FabricGraph) -> Result<(), String> {
     let mut used_nodes_global: HashSet<NodeId> = HashSet::new();
 
     for (tree_idx, tree) in route_plan.plan.iter().enumerate() {
@@ -10,7 +13,6 @@ pub fn validate(route_plan: &NetListInternal, graph: &FabricGraph )-> Result<(),
             .result
             .as_ref()
             .ok_or_else(|| format!("Tree {tree_idx} has no SteinerTreeResult"))?;
-
 
         // --- Check: no node is used in multiple signals ---
         for &n in &result.nodes {

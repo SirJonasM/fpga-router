@@ -4,11 +4,11 @@
 mod cli;
 use clap::Parser;
 use router::{
-    FileLog, Loggers, SimpleSolver, SimpleSteinerSolver, SteinerSolver, create_fasm,
-    create_test, start_routing, validate_routing, RoutingConfig,
+    FileLog, Loggers, RoutingConfig, SimpleSolver, SimpleSteinerSolver, SteinerSolver, create_fasm, create_test, start_routing,
+    validate_routing,
 };
 
-use crate::cli::{Cli, Commands, CreateTestArgs, FasmArgs, LoggerType, SolverType, ValidateArgs, Solver};
+use crate::cli::{Cli, Commands, CreateTestArgs, FasmArgs, LoggerType, Solver, SolverType, ValidateArgs};
 
 fn main() -> Result<(), u32> {
     match Cli::parse().command {
@@ -19,7 +19,6 @@ fn main() -> Result<(), u32> {
         Commands::Validate(args) => command_validate(&args),
     }
 }
-
 
 fn command_create_test(args: &CreateTestArgs) -> Result<(), u32> {
     match create_test(&args.graph, &args.output, args.percentage, args.destinations) {
@@ -62,7 +61,7 @@ fn command_route(args: cli::RouteArgs) -> Result<(), u32> {
         }
     };
 
-    let config = RoutingConfig{
+    let config = RoutingConfig {
         graph_file: args.graph,
         net_list_file: args.net_list,
         output_file: args.output,
@@ -70,12 +69,7 @@ fn command_route(args: cli::RouteArgs) -> Result<(), u32> {
         max_iterations: args.max_iterations,
     };
 
-    match start_routing(
-        config,
-        args.slack_report,
-        &solver,
-        &logger,
-    ) {
+    match start_routing(config, args.slack_report, &solver, &logger) {
         Ok(()) => {
             println!("Finished routing.");
             Ok(())
@@ -102,7 +96,7 @@ fn command_route_sta(args: cli::RouteStaArgs) -> Result<(), u32> {
             Loggers::File(file_log)
         }
     };
-    let config = RoutingConfig{
+    let config = RoutingConfig {
         graph_file: args.graph,
         net_list_file: args.net_list,
         output_file: args.output,
@@ -110,13 +104,7 @@ fn command_route_sta(args: cli::RouteStaArgs) -> Result<(), u32> {
         max_iterations: args.max_iterations,
     };
 
-    match router::route_sta(
-        config,
-        args.max_sta_cycles,
-        args.target_ps,
-        &solver,
-        &logger,
-    ) {
+    match router::route_sta(config, args.max_sta_cycles, args.target_ps, &solver, &logger) {
         Ok(()) => {
             println!("Routing is valid and in timing bounds.");
             Ok(())

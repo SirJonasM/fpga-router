@@ -32,7 +32,7 @@ impl SlackReport {
             }
         }
 
-        Ok(Self { slacks , worst_slack})
+        Ok(Self { slacks, worst_slack })
     }
 
     /// Returns a criticality value between 0.0 and 1.0 for a given wire.

@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand, ValueEnum};
-use router::{FabricGraph, NetInternal, SimpleSolver, SimpleSteinerSolver, RouteNet, SteinerSolver};
+use router::{FabricGraph, NetInternal, RouteNet, SimpleSolver, SimpleSteinerSolver, SteinerSolver};
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum SolverType {
@@ -58,7 +58,7 @@ pub struct FasmArgs {
 }
 
 #[derive(Parser, Debug)]
-pub struct ValidateArgs{
+pub struct ValidateArgs {
     #[arg(short, long)]
     pub graph: String,
     #[arg(short, long)]
@@ -112,7 +112,6 @@ pub enum Commands {
 
     RouteSta(RouteStaArgs),
 }
-
 
 pub enum Solver {
     Simple(SimpleSolver),
