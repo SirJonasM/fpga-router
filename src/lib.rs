@@ -1,3 +1,6 @@
+#![deny(clippy::nursery)]
+#![deny(clippy::pedantic)]
+
 //! # FPGA Path Finder
 //!
 //! This crate implements a Path Finder algorithm for FPGA routing**.
@@ -9,7 +12,6 @@ pub(crate) mod dijkstra;
 pub(crate) mod error;
 pub(crate) mod fasm;
 pub(crate) mod graph;
-pub(crate) mod logger;
 pub(crate) mod netlist;
 pub(crate) mod path_finder;
 pub(crate) mod slack;
@@ -25,5 +27,33 @@ pub use graph::fabric_graph::FabricGraph;
 pub use netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal, NetResultExternal};
 pub use path_finder::IterationResult;
 
-pub use logger::{FileLog, Loggers, Logging};
+use serde::Serialize;
 pub use solver::{RouteNet, SimpleSolver, SimpleSteinerSolver, SteinerSolver};
+
+
+/// Trait for logging pathfinding iterations.
+pub trait Logging {
+    /// Logs the current iteration result.
+    ///
+    /// # Errors
+    /// Should return an `LoggingError`
+    fn log(&self, log_instance: &LogInstance) -> FabricResult<()>;
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub enum LogInstance<'a> {
+    Text(String),
+    RouterIteration(&'a IterationResult),
+}
+
+impl From<&str> for LogInstance<'_> {
+    fn from(value: &str) -> Self {
+        Self::Text(value.to_string())
+    }
+}
+
+impl From<String> for LogInstance<'_> {
+    fn from(value: String) -> Self {
+        Self::Text(value)
+    }
+}

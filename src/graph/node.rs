@@ -5,10 +5,20 @@
 
 use std::fmt::Display;
 
-use crate::error::ParseError;
+use crate::{FabricError, FabricResult, error::ParseError};
+
+type NodeIdType = u16;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct NodeId(pub(super) u16);
+pub struct NodeId(pub(super) NodeIdType);
+
+impl NodeId {
+    pub(super) fn new(id: usize) -> FabricResult<Self> {
+        NodeIdType::try_from(id)
+            .map(Self)
+            .map_err(|_e| FabricError::NodeIdValueSpaceTooSmall)
+    }
+}
 
 impl Display for NodeId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -16,18 +26,20 @@ impl Display for NodeId {
     }
 }
 
-// Implement Index so you can write: nodes[my_node_id]
 impl<T> std::ops::Index<NodeId> for Vec<T> {
     type Output = T;
     fn index(&self, index: NodeId) -> &Self::Output {
-        &self[index.0 as usize]
+        #[allow(clippy::cast_possible_truncation)]
+        let index = index.0 as usize;
+        &self[index]
     }
 }
 
-// Implement IndexMut so you can modify: nodes[my_node_id] = new_node;
 impl<T> std::ops::IndexMut<NodeId> for Vec<T> {
     fn index_mut(&mut self, index: NodeId) -> &mut Self::Output {
-        &mut self[index.0 as usize]
+        #[allow(clippy::cast_possible_truncation)]
+        let index = index.0 as usize;
+        &mut self[index]
     }
 }
 
@@ -117,7 +129,7 @@ impl Costs {
     /// Returns `true` if the node is congested (`usage` > `capacity`)
     pub fn update(&mut self, historic_factor: f32) -> bool {
         #[allow(clippy::cast_precision_loss)]
-        let usage = self.usage as f32;
+        let usage = f32::from(self.usage);
         let over_use = usage - self.capacity;
 
         if over_use > 0.0 {
@@ -130,7 +142,7 @@ impl Costs {
     /// Calculate total cost for this node
     pub fn calc_costs(&self, base_cost: f32, criticallity: f32) -> f32 {
         #[allow(clippy::cast_precision_loss)]
-        let casted_usage = self.usage as f32;
+        let casted_usage = f32::from(self.usage);
         let congestion_cost = (1.0 + self.historic_cost) * (1.0 + casted_usage);
 
         criticallity.mul_add(base_cost, (1.0 - criticallity) * congestion_cost)

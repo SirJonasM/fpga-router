@@ -1,56 +1,15 @@
-use serde::Serialize;
-
-use crate::{FabricError, FabricResult, IterationResult};
 use std::{
-    fmt::Display,
-    fs::{self, File},
-    io::{BufWriter, Write},
-    path::Path,
-    sync::Mutex,
+    fs::{self, File}, io::{BufWriter, Write}, path::Path, sync::Mutex
 };
 
-#[derive(Debug, Clone, Serialize)]
-pub enum LogInstance<'a> {
-    Text(String),
-    RouterIteration(&'a IterationResult),
-}
-
-impl<'a> From<&str> for LogInstance<'a> {
-    fn from(value: &str) -> Self {
-        Self::Text(value.to_string())
-    }
-}
-
-impl<'a> From<String> for LogInstance<'a> {
-    fn from(value: String) -> Self {
-        Self::Text(value)
-    }
-}
-
-impl<'a> Display for LogInstance<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LogInstance::Text(s) => write!(f, "{}", s),
-            LogInstance::RouterIteration(iteration_result) => write!(f, "{}", iteration_result),
-        }
-    }
-}
-
-/// Trait for logging pathfinding iterations.
-pub trait Logging {
-    /// Logs the current iteration result.
-    ///
-    /// # Errors
-    /// Should return an `LoggingError`
-    fn log(&self, log_instance: &LogInstance) -> FabricResult<()>;
-}
+use router::{FabricError, FabricResult, LogInstance};
 
 pub enum Loggers {
     No,
     Terminal,
     File(FileLog),
 }
-impl crate::Logging for Loggers {
+impl router::Logging for Loggers {
     fn log(&self, log_instance: &LogInstance) -> FabricResult<()> {
         match self {
             Self::No => {}
@@ -88,7 +47,7 @@ impl FileLog {
             .create(true)
             .append(true)
             .open(path)
-            .map_err(|_| format!("Could not open log file: {:?}", path.as_ref().to_path_buf()))?;
+            .map_err(|_| format!("Could not open log file: {}", path.as_ref().to_path_buf().display()))?;
 
         Ok(Self {
             writer: Mutex::new(BufWriter::new(file)),

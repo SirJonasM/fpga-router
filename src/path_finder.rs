@@ -10,8 +10,8 @@ use std::fmt::{Display, Formatter};
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 
+use crate::LogInstance;
 use crate::graph::{fabric_graph::FabricGraph, node::NodeId};
-use crate::logger::LogInstance;
 use crate::netlist::NetInternal;
 use crate::solver::RouteNet;
 use crate::{FabricError, FabricResult, Logging, NetListInternal};
@@ -88,6 +88,7 @@ where
 
         if result.conflicts == 0 {
             logger.log(&LogInstance::RouterIteration(&result))?;
+            results.push(result);
             return Ok(results);
         }
 
@@ -118,26 +119,23 @@ fn congestion_report(net_list: &NetListInternal) -> CongestionReportIntern {
                 congestion
                     .entry(*node_id)
                     .and_modify(|node_usage| node_usage.push(signal))
-                    .or_insert(vec![signal]);
+                    .or_insert_with(|| vec![signal]);
             }
         }
     }
     for net in &net_list.plan {
         let signal_id = net.signal;
-        if let Some(net_res) = &net.result {
-            let signal_congestion = net_res
-                .nodes
-                .iter()
-                .map(|node_id| {
-                    if let Some(con) = congestion.get(node_id) {
-                        con.len() as f32
-                    } else {
-                        0.0
-                    }
-                })
-                .sum::<f32>()
-                / net_res.nodes.len() as f32;
-            net_congestion.insert(signal_id, signal_congestion);
+        if let Some(net_result) = &net.result {
+            #[allow(clippy::cast_precision_loss)]
+            {
+                let signal_congestion = net_result
+                    .nodes
+                    .iter()
+                    .map(|node_id| congestion.get(node_id).map_or(0.0, |con| con.len() as f32))
+                    .sum::<f32>()
+                    / net_result.nodes.len() as f32;
+                net_congestion.insert(signal_id, signal_congestion);
+            }
         }
     }
     congestion.retain(|_k, v| v.len() > 1);
@@ -253,7 +251,7 @@ fn analyze_result(
         // 2. Calculate Wire Sharing Efficiency for this net
         // unique_nodes: physical wires used. total_points: sum of nodes across all paths.
         let unique_nodes = routing.nodes.len(); // Assuming this contains unique nodes in the Steiner tree
-        let total_nodes_in_all_paths: usize = routing.paths.values().map(|p| p.len()).sum();
+        let total_nodes_in_all_paths: usize = routing.paths.values().map(Vec::len).sum();
 
         if unique_nodes > 0 {
             #[allow(clippy::cast_precision_loss)]
@@ -265,15 +263,17 @@ fn analyze_result(
         total_wire_segments += unique_nodes;
     }
 
+    #[allow(clippy::cast_precision_loss)]
     let avg_path_cost = if path_count > 0 {
         total_path_cost / path_count as f32
     } else {
         0.0
     };
-    let avg_wire_sharing = if !net_list.plan.is_empty() {
-        total_sharing_efficiency / net_list.plan.len() as f32
-    } else {
+    #[allow(clippy::cast_precision_loss)]
+    let avg_wire_sharing = if net_list.plan.is_empty() {
         0.0
+    } else {
+        total_sharing_efficiency / net_list.plan.len() as f32
     };
 
     let longest_path = (max_path_info.0.0, max_path_info.0.1);

@@ -29,7 +29,8 @@ pub struct FabricGraph {
     pub map: Vec<Vec<Edge>>,
     /// Reversed adjacency list
     pub map_reversed: Vec<Vec<Edge>>,
-    index: HashMap<String, NodeId>,
+    /// Index of String ids from PIPS file to internal `NodeId`
+    pub index: HashMap<String, NodeId>,
 }
 
 struct PipsParser {
@@ -77,7 +78,7 @@ impl PipsParser {
         if let Some(sid) = self.graph.index.get(&node.id()) {
             return Ok(*sid);
         }
-        let id = NodeId(self.graph.nodes.len() as u16);
+        let id = NodeId::new(self.graph.nodes.len())?;
         self.graph.index.insert(node.id(), id);
         self.graph.nodes.push(node.clone());
         self.graph.costs.push(Costs::new());
@@ -174,6 +175,8 @@ impl FabricGraph {
     //         cost.usage = 0;
     //     });
     // }
+
+    #[must_use]
     pub fn calculate_structure_hash(&self) -> String {
         let mut hasher = Sha256::new();
 
@@ -203,10 +206,9 @@ impl FabricGraph {
 
 /// Generate reversed adjacency list from forward map
 pub fn bucket_luts(graph: &FabricGraph) -> (Vec<NodeId>, Vec<NodeId>) {
-    let nodes = &graph.nodes;
     let mut lut_inputs = vec![];
     let mut lut_outputs = vec![];
-    for node in nodes.iter() {
+    for node in &graph.nodes {
         if node.id.starts_with('L') {
             let id = *graph.get_node_id(&node.id()).unwrap();
             if node.id.chars().nth(3) == Some('O') {

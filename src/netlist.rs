@@ -26,6 +26,19 @@ pub struct NetInternal {
     pub criticallity: f32,
 }
 
+impl NetInternal {
+    fn new(signal: NodeId, sinks: Vec<NodeId>) -> Self {
+        Self {
+            signal,
+            sinks,
+            result: None,
+            intermediate_nodes: Option::default(),
+            priority: Option::default(),
+            criticallity: 0.0,
+        }
+    }
+}
+
 /// Routing result for a routing request
 #[derive(Debug, Clone)]
 pub struct NetResultInternal {
@@ -75,7 +88,7 @@ impl NetListInternal {
     pub fn to_external(&self, graph: &FabricGraph) -> NetListExternal {
         let plan = self.plan.iter().map(|x| x.to_external(graph)).collect::<Vec<_>>();
         let hash = Some(graph.calculate_structure_hash());
-        NetListExternal { plan, hash}
+        NetListExternal { hash, plan }
     }
 }
 impl NetInternal {
@@ -97,33 +110,20 @@ impl NetInternal {
     /// # Errors
     /// Fails if mapping is not possible
     pub fn from_external(external: &NetExternal, graph: &FabricGraph) -> FabricResult<Self> {
-        let mut signal: Option<NodeId> = None;
-        let mut sinks_cloned = external.sinks.iter().cloned().collect::<HashSet<String>>();
-        let mut sinks: Vec<NodeId> = vec![];
+        let map_id = |name: &String| {
+            graph.index.get(name).copied().ok_or_else(|| FabricError::MappingExternelNet {
+                signal: external.signal.clone(),
+                reason: "Index did not contain a internal NodeId for that Id.".to_string(),
+            })
+        };
+        let signal = map_id(&external.signal)?;
+        let sinks = external
+            .sinks
+            .iter()
+            .map(map_id)
+            .collect::<Result<Vec<NodeId>, FabricError>>()?;
 
-        for node in graph.nodes.iter() {
-            let id = node.id();
-            let node_id = graph.get_node_id(&id).unwrap();
-            if id == external.signal {
-                signal = Some(*node_id);
-            }
-            if sinks_cloned.remove(&id) {
-                sinks.push(*node_id);
-            }
-        }
-        match (signal, sinks_cloned.is_empty()) {
-            (Some(signal), true) => Ok(Self {
-                sinks,
-                signal,
-                result: None,
-                intermediate_nodes: None,
-                priority: None,
-                criticallity: external.criticallity.unwrap_or(0.0),
-            }),
-            (Some(_), false) => Err(format!("Sinks: {sinks_cloned:?} do not exist.").into()),
-            (None, true) => Err("Signal does not exist in graph".into()),
-            (None, false) => Err(format!("Signal does not exist and sinks: {sinks_cloned:?}").into()),
-        }
+        Ok(Self::new(signal, sinks))
     }
 }
 

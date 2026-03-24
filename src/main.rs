@@ -2,13 +2,14 @@
 #![deny(clippy::pedantic)]
 
 mod cli;
+mod logger;
 use clap::Parser;
 use router::{
-    FileLog, Loggers, RoutingConfig, SimpleSolver, SimpleSteinerSolver, SteinerSolver, create_fasm, create_test, start_routing,
+    RoutingConfig, SimpleSolver, SimpleSteinerSolver, SteinerSolver, create_fasm, create_test, start_routing,
     validate_routing,
 };
 
-use crate::cli::{Cli, Commands, CreateTestArgs, FasmArgs, LoggerType, Solver, SolverType, ValidateArgs};
+use crate::{cli::{Cli, Commands, CreateTestArgs, FasmArgs, LoggerType, Solver, SolverType, ValidateArgs}, logger::{FileLog, Loggers}};
 
 fn main() -> Result<(), u32> {
     match Cli::parse().command {
@@ -67,11 +68,13 @@ fn command_route(args: cli::RouteArgs) -> Result<(), u32> {
         output_file: args.output,
         hist_factor: args.hist_factor,
         max_iterations: args.max_iterations,
+        slack_report: args.slack_report,
     };
 
-    match start_routing(config, args.slack_report, &solver, &logger) {
-        Ok(()) => {
-            println!("Finished routing.");
+    match start_routing(config, &solver, &logger) {
+        Ok(result) => {
+            println!();
+            println!("{:#?}", result.last().unwrap());
             Ok(())
         }
         Err(err) => {
@@ -102,6 +105,7 @@ fn command_route_sta(args: cli::RouteStaArgs) -> Result<(), u32> {
         output_file: args.output,
         hist_factor: args.hist_factor,
         max_iterations: args.max_iterations,
+        slack_report: args.slack_report,
     };
 
     match router::route_sta(config, args.max_sta_cycles, args.target_ps, &solver, &logger) {

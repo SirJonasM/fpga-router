@@ -1,11 +1,12 @@
+use std::path::PathBuf;
 use std::process::Command;
 use std::{fs, path::Path};
 
 use rand::seq::SliceRandom;
 
-use crate::logger::LogInstance;
+use crate::IterationResult;
 use crate::{
-    FabricError, FabricResult, Logging,
+    FabricError, FabricResult, LogInstance, Logging,
     fasm::routing_to_fasm,
     graph::fabric_graph::{FabricGraph, bucket_luts},
     graph::node::NodeId,
@@ -22,6 +23,7 @@ pub struct RoutingConfig<P: AsRef<Path>> {
     pub output_file: P,
     pub hist_factor: f32,
     pub max_iterations: usize,
+    pub slack_report: Option<P>,
 }
 
 /// Tries to solve a `NetList`
@@ -29,7 +31,7 @@ pub struct RoutingConfig<P: AsRef<Path>> {
 /// # Errors
 /// Fails if files cannot be read or cannot be parsed or it cannot write to the output file.
 /// Fails if the `max_iterations` are reached
-pub fn start_routing<T, L, P>(config: RoutingConfig<P>, slack_report: Option<P>, solver: &T, logger: &L) -> FabricResult<()>
+pub fn start_routing<T, L, P>(config: RoutingConfig<P>, solver: &T, logger: &L) -> FabricResult<Vec<IterationResult>>
 where
     T: RouteNet,
     L: Logging,
@@ -40,12 +42,12 @@ where
     let mut route_plan_external = NetListExternal::from_file(config.net_list_file)?;
     if let Some(hash) = &route_plan_external.hash {
         if hash != &graph.calculate_structure_hash() {
-           eprintln!("Warning: The net-list was not created with this graph.") 
-        } 
+            eprintln!("Warning: The net-list was not created with this graph.");
+        }
     } else {
-        eprintln!("Warning: Cannot determine if the net-list was created with this graph. Missing field in net-list.") 
+        eprintln!("Warning: Cannot determine if the net-list was created with this graph. Missing field in net-list.");
     }
-    if let Some(slack_report) = slack_report {
+    if let Some(slack_report) = config.slack_report {
         let slack_report = SlackReport::from_file(slack_report)?;
         route_plan_external.add_slack(&slack_report);
     }
@@ -53,7 +55,7 @@ where
     let config = Config::new(config.hist_factor, config.max_iterations);
 
     match route(&mut route_plan, &mut graph, &config, solver, logger) {
-        Ok(_x) => {
+        Ok(x) => {
             let ex = route_plan.to_external(&graph);
             let out = if let Some(s) = output_file_ref.extension()
                 && s == "fasm"
@@ -66,7 +68,7 @@ where
                 path: output_file_ref.to_path_buf(),
                 source: e,
             })?;
-            Ok(())
+            Ok(x)
         }
         Err(err) => {
             if let FabricError::RoutingMaxIterationsReached(congestion_report) = &err {
@@ -132,7 +134,10 @@ pub fn create_test<P: AsRef<Path>>(graph_file: P, output_file: P, percentage: f3
             .to_external(&graph)
         })
         .collect::<Vec<NetExternal>>();
-    let route_plan = NetListExternal { plan: route_plan , hash: Some(graph_hash) };
+    let route_plan = NetListExternal {
+        plan: route_plan,
+        hash: Some(graph_hash),
+    };
 
     let pretty = serde_json::to_string_pretty(&route_plan)?;
     fs::write(&output_file, pretty).map_err(|e| FabricError::Io {
@@ -162,15 +167,17 @@ where
     let net_list = NetListExternal::from_file(routing_config.net_list_file)?;
     if let Some(hash) = &net_list.hash {
         if hash != &graph.calculate_structure_hash() {
-           eprintln!("Warning: The net-list was not created with this graph.") 
-        } 
+            eprintln!("Warning: The net-list was not created with this graph.");
+        }
     } else {
-        eprintln!("Warning: Cannot determine if the net-list was created with this graph. Missing field in net-list.") 
+        eprintln!("Warning: Cannot determine if the net-list was created with this graph. Missing field in net-list.");
     }
     let mut net_list = NetListInternal::from_external(&graph, &net_list)?;
     let config = Config::new(routing_config.hist_factor, routing_config.max_iterations);
 
-    let slack_file = "current_slack.csv";
+    let slack_file = routing_config
+        .slack_report
+        .map_or_else(|| PathBuf::from("current_slack.csv"), |p| p.as_ref().to_path_buf());
 
     for current_cycle in 0..max_sta_cycles {
         logger.log(&LogInstance::from(format!("\n=== STA Routing Cycle {current_cycle} ===")))?;
@@ -181,7 +188,7 @@ where
                 println!("{congestion_report:?}");
             }
             return Err(err);
-        };
+        }
         let mut net_list = net_list.to_external(&graph);
         fs::write(&routing_config.output_file, routing_to_fasm(&net_list)).map_err(|e| FabricError::Io {
             path: routing_config.output_file.as_ref().to_path_buf(),
@@ -190,7 +197,9 @@ where
 
         // 4. ANALYZE: Call Python Mock STA
         logger.log(&LogInstance::from("Running STA Analysis..."))?;
-        match run_mock_sta(&routing_config.output_file, slack_file, target_ps) {
+        // 5. EVALUATE: Load report and check bounds
+        let report = SlackReport::from_file(&slack_file)?;
+        match run_mock_sta(&routing_config.output_file, &slack_file, target_ps) {
             Ok(r) => {
                 logger.log(&LogInstance::Text(r))?;
                 logger.log(&LogInstance::from("Success: Timing met and congestion resolved."))?;
@@ -199,9 +208,6 @@ where
             Err(MockError::Slack(out)) => logger.log(&LogInstance::Text(out))?,
             Err(MockError::Other(err)) => return Err(FabricError::StaFailed(err)),
         }
-
-        // 5. EVALUATE: Load report and check bounds
-        let report = SlackReport::from_file(slack_file)?;
 
         graph.reset_usage();
         net_list.add_slack(&report);
@@ -228,11 +234,11 @@ enum MockError {
 }
 
 // This is just for the moment as there is no current implementation of the STA
-fn run_mock_sta<P: AsRef<Path>>(fasm_in: &P, csv_out: &str, target: u32) -> Result<String, MockError> {
+fn run_mock_sta<P: AsRef<Path>, C: AsRef<Path>>(fasm_in: &P, csv_out: &C, target: u32) -> Result<String, MockError> {
     let output = Command::new("python3")
         .arg("mock_slack.py") // Name of your python script
         .arg(fasm_in.as_ref().to_str().unwrap())
-        .arg(csv_out)
+        .arg(csv_out.as_ref().to_str().unwrap())
         .arg("--target")
         .arg(target.to_string())
         .output()

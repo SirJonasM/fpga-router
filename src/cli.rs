@@ -83,11 +83,12 @@ pub struct RouteStaArgs {
     pub log_file: Option<String>,
     #[arg(short = 'i', long, default_value_t = 2000)]
     pub max_iterations: usize,
-
     #[arg(long, default_value = "5000")]
     pub target_ps: u32,
     #[arg(long, default_value = "10")]
     pub max_sta_cycles: usize,
+    #[arg(short = 's', long)]
+    pub slack_report: Option<String>,
 }
 
 // --- CLI Structure ---
