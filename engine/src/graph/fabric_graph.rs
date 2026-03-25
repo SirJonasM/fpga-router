@@ -142,9 +142,10 @@ impl FabricGraph {
     ///
     /// # Example
     /// ```
+    /// use testing_utils::get_test_data_path;
     /// use router::FabricGraph;
     ///
-    /// let test_file = "pips_8x8.txt";
+    /// let test_file = get_test_data_path("pips_8x8.txt");
     /// let graph = FabricGraph::from_file(test_file).unwrap();
     /// ```
     pub fn from_file<P: AsRef<Path>>(path: P) -> FabricResult<Self> {
@@ -258,9 +259,11 @@ const fn distance(a: &Node, b: &Node) -> f32 {
 #[cfg(test)]
 mod test {
     use super::*;
+    use testing_utils::get_test_data_path;
     #[test]
     fn test_parse_pips_file() {
-        let test_file = "../pips_8x8.txt";
+        let test_file = get_test_data_path("pips_8x8.txt");
+
         let graph = FabricGraph::from_file(test_file).unwrap();
         assert_eq!(graph.nodes[0], Node::parse("N1END3", "X1Y0").unwrap());
     }

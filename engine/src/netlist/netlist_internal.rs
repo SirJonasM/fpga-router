@@ -21,19 +21,6 @@ pub struct NetInternal {
     pub criticallity: f32,
 }
 
-impl NetInternal {
-    fn new(signal: NodeId, sinks: Vec<NodeId>) -> Self {
-        Self {
-            signal,
-            sinks,
-            result: None,
-            intermediate_nodes: Option::default(),
-            priority: Option::default(),
-            criticallity: 0.0,
-        }
-    }
-}
-
 /// Routing result for a routing request
 #[derive(Debug, Clone)]
 pub struct NetResultInternal {

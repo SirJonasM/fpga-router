@@ -1,6 +1,7 @@
 [workspace]
   members = [
 	"engine",
-	"cli"
+	"cli",
+	"testing_utils"
   ]
   resolver = "3"

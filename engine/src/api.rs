@@ -24,7 +24,17 @@ pub struct RoutingConfig<T: RouteNet, L: Logging> {
 }
 
 /// Tries to solve a `NetList`
+/// # Example
+/// ```
+/// use router::{FabricGraph, route, NetListExternal, create_test, RoutingConfigBuilder};
 ///
+/// let path = testing_utils::get_test_data_path("pips_4x4.txt");
+/// let graph = FabricGraph::from_file(path).unwrap();
+///
+/// let mut config = RoutingConfigBuilder::default().graph(graph).with_test_netlist(0.1,2).unwrap().build().unwrap();
+///
+/// let _ = route(&mut config).unwrap();
+/// ```
 /// # Errors
 /// Fails if files cannot be read or cannot be parsed or it cannot write to the output file.
 /// Fails if the `max_iterations` are reached
