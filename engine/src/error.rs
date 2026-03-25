@@ -1,7 +1,7 @@
 use std::{io, path::PathBuf};
 use thiserror::Error;
 
-use crate::{IterationResult, path_finder::CongestionReportExtern};
+use crate::{IterationResult, netlist::error::MapExternalError, path_finder::CongestionReportExtern};
 
 // A shorthand for results in your library
 pub type FabricResult<T> = Result<T, FabricError>;
@@ -40,8 +40,8 @@ pub enum FabricError {
     #[error("Serialization error: {0}")]
     Csv(#[from] csv::Error),
 
-    #[error("Mapping expanded Node {signal} of Routeplan to a internal graph node id failed.\n Reason: {reason}")]
-    MappingExternelNet { signal: String, reason: String },
+    #[error("Failed to Map External Net to Internal representaion.")]
+    MapExternalNet(#[from] MapExternalError),
 
     #[error("Edge does not exist in Graph: {start} -> {end}")]
     EdgeDoesNotExist { start: String, end: String },

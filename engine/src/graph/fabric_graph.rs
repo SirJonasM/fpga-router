@@ -260,7 +260,7 @@ mod test {
     use super::*;
     #[test]
     fn test_parse_pips_file() {
-        let test_file = "pips_8x8.txt";
+        let test_file = "../pips_8x8.txt";
         let graph = FabricGraph::from_file(test_file).unwrap();
         assert_eq!(graph.nodes[0], Node::parse("N1END3", "X1Y0").unwrap());
     }

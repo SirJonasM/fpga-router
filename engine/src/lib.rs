@@ -59,3 +59,11 @@ impl From<String> for LogInstance<'_> {
         Self::Text(value)
     }
 }
+
+pub struct SimpleLogging;
+impl Logging for SimpleLogging {
+    fn log(&self, log_instance: &LogInstance) -> FabricResult<()> {
+        println!("{log_instance:?}");
+        Ok(())
+    }
+}

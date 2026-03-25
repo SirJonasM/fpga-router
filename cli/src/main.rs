@@ -9,8 +9,8 @@ use std::{fs, path::Path, process::Command};
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use router::{
-    FabricGraph, NetListExternal, RoutingConfig, SimpleSolver, SimpleSteinerSolver, SlackReport, SteinerSolver, create_fasm,
-    create_test, route, validate_routing,
+    FabricGraph, NetListExternal, RoutingConfigBuilder, SimpleSolver, SimpleSteinerSolver, SlackReport,
+    SteinerSolver, create_fasm, create_test, route, validate_routing,
 };
 
 use crate::{
@@ -67,28 +67,28 @@ fn command_route(args: &cli::RouteArgs) -> Result<()> {
         LoggerType::No => Loggers::No,
         LoggerType::Terminal => Loggers::Terminal,
     };
+    let graph = FabricGraph::from_file(&args.graph)
+        .with_context(|| format!("STA initialization failed: unable to load graph {}", args.graph))?;
+    let net_list = NetListExternal::from_file(&args.net_list)
+        .with_context(|| format!("STA initialization failed: unable to load net-list {}", args.net_list))?;
 
-    let slack_report = match &args.slack_report {
-        Some(slack_report) => Some(
-            SlackReport::from_file(slack_report)
-                .with_context(|| format!("Failed to load timing/slack report from {slack_report}"))?,
-        ),
-        None => None,
-    };
+    let mut config = RoutingConfigBuilder::default()
+        .hist_factor(args.hist_factor)
+        .max_iterations(args.max_iterations)
+        .graph(graph)
+        .net_list(net_list)
+        .solver(solver);
 
-    let mut config = RoutingConfig {
-        graph: FabricGraph::from_file(&args.graph)
-            .with_context(|| format!("Failed to initialize routing: could not load graph {}", args.graph))?,
-        net_list: NetListExternal::from_file(&args.net_list)
-            .with_context(|| format!("Failed to initialize routing: could not load net-list {}", args.net_list))?,
-        hist_factor: args.hist_factor,
-        max_iterations: args.max_iterations,
-        slack_report,
-    };
+    if let Some(slack_report) = &args.slack_report {
+        let slack_report = SlackReport::from_file(slack_report)
+            .with_context(|| format!("Failed to load timing/slack report from {slack_report}"))?;
+        config = config.slack_report(slack_report);
+    }
 
+    let mut config = config.logger(logger).build()?;
     let _ = clearscreen::clear();
-    display_run_metadata_route(args, &solver);
-    let result = match route(&mut config, &solver, &logger) {
+    display_run_metadata_route(args, &config.solver);
+    let result = match route(&mut config) {
         Ok(result) => result,
 
         Err(router::FabricError::RoutingMaxIterationsReached {
@@ -131,24 +131,26 @@ fn command_route_sta(args: &cli::RouteStaArgs) -> Result<()> {
         LoggerType::No => Loggers::No,
         LoggerType::Terminal => Loggers::Terminal,
     };
-
-    let mut config = RoutingConfig {
-        graph: FabricGraph::from_file(&args.graph)
-            .with_context(|| format!("STA initialization failed: unable to load graph {}", args.graph))?,
-        net_list: NetListExternal::from_file(&args.net_list)
-            .with_context(|| format!("STA initialization failed: unable to load net-list {}", args.net_list))?,
-        hist_factor: args.hist_factor,
-        max_iterations: args.max_iterations,
-        slack_report: None,
-    };
+    let graph = FabricGraph::from_file(&args.graph)
+        .with_context(|| format!("STA initialization failed: unable to load graph {}", args.graph))?;
+    let net_list = NetListExternal::from_file(&args.net_list)
+        .with_context(|| format!("STA initialization failed: unable to load net-list {}", args.net_list))?;
 
     let default_slack_report = "slack.csv".to_string();
 
     let slack_report_file = args.slack_report.as_ref().unwrap_or(&default_slack_report);
+    let mut config = RoutingConfigBuilder::default()
+        .hist_factor(args.hist_factor)
+        .max_iterations(args.max_iterations)
+        .graph(graph)
+        .net_list(net_list)
+        .solver(solver)
+        .logger(logger)
+        .build()?;
 
-    display_run_metadata_route_sta(args, &solver);
+    display_run_metadata_route_sta(args, &config.solver);
     for i in 0..args.max_sta_cycles {
-        let result = match route(&mut config, &solver, &logger) {
+        let result = match route(&mut config) {
             Ok(result) => result,
 
             Err(router::FabricError::RoutingMaxIterationsReached {
