@@ -3,7 +3,7 @@ use rand::seq::SliceRandom;
 use crate::{IterationResult, SimpleLogging, SimpleSolver};
 use crate::{
     FabricError, FabricResult, Logging,
-    fasm::routing_to_fasm,
+    fasm::net_to_fasm,
     graph::fabric_graph::{FabricGraph, bucket_luts},
     graph::node::NodeId,
     netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal},
@@ -65,12 +65,12 @@ where
     x
 }
 
-/// Can be used to create a `FASM` file from a netlist
+/// Converts Expanded JSON-like structure to a FASM string
 /// # Errors
-/// Fails if files do not exist or deserialization does not succeed.
+/// This errors when the provided `NetListExternal` is not solved meaning it has a result field
+/// being `None`
 pub fn create_fasm(netlist: &NetListExternal) -> FabricResult<String> {
-    let fasm = routing_to_fasm(netlist);
-    Ok(fasm)
+    net_to_fasm(netlist)
 }
 
 /// Creates a Test Netlist by using a `percentage` of all Lut-Outputs and for each `destinations`

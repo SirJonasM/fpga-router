@@ -167,7 +167,7 @@ fn command_route_sta(args: &cli::RouteStaArgs) -> Result<()> {
             }
         };
         display_results(&result);
-        let fasm = router::routing_to_fasm(&config.net_list);
+        let fasm = router::create_fasm(&config.net_list).context("Failed to produce FASM output.")?;
         fs::write(&args.output, fasm)
             .with_context(|| format!("Failed to update FASM file at {} during STA cycle", args.output))?;
         run_mock_sta(&args.output, &slack_report_file, args.target_ps).with_context(|| {

@@ -3,7 +3,8 @@
 //! This module defines the building blocks of the FPGA fabric graph:
 //! nodes, their types, and associated costs for routing algorithms.
 
-use crate::{FabricError, FabricGraph, FabricResult, error::ParseError};
+use crate::FabricGraph;
+use super::error::ParseError;
 
 type NodeIdType = u16;
 
@@ -12,10 +13,9 @@ pub struct NodeId(pub(super) NodeIdType);
 
 
 impl NodeId {
-    pub(super) fn new(id: usize) -> FabricResult<Self> {
-        NodeIdType::try_from(id)
-            .map(Self)
-            .map_err(|_e| FabricError::NodeIdValueSpaceTooSmall)
+    pub(super) fn new(id: usize) -> Self {
+        let x = NodeIdType::try_from(id).expect("The id space is too small to create this NodeId. Try building the engine with a internal NodeId");
+        Self(x)
     }
     pub(crate) fn name(self, graph: &FabricGraph) -> String {
         graph.get_node(self).id()

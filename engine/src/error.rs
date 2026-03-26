@@ -1,15 +1,24 @@
 use std::{io, path::PathBuf};
 use thiserror::Error;
 
-use crate::{IterationResult, netlist::error::MapExternalError, path_finder::CongestionReportExtern};
+use crate::{IterationResult, graph::error::ParseError, netlist::error::MapExternalError, path_finder::CongestionReportExtern};
 
 // A shorthand for results in your library
 pub type FabricResult<T> = Result<T, FabricError>;
 
 #[derive(Error, Debug)]
 pub enum FabricError {
-    #[error("IO error while accessing '{path}': {source}")]
-    Io { path: PathBuf, source: io::Error },
+    #[error("The String does not represent a valid Node Id '{0}'.")]
+    InvalidStringNodeId(String),
+    #[error("Tried to unwrap the result field in Net but it was none.")]
+    NetNotSolved,
+    #[error("IO error while accessing '{path}'")]
+    Io {
+        path: PathBuf,
+        #[source]
+        source: io::Error,
+    },
+
     #[error("Cannot give each Node an own id because value space is too small.")]
     NodeIdValueSpaceTooSmall,
 
@@ -19,15 +28,16 @@ pub enum FabricError {
     #[error("Iteration Failed")]
     IterationError { source: Box<Self> },
 
-
     #[error("Routing has reached its maximum iterations.")]
-    RoutingMaxIterationsReached{congestion_report: CongestionReportExtern, iteration_report: Vec<IterationResult>},
+    RoutingMaxIterationsReached {
+        congestion_report: CongestionReportExtern,
+        iteration_report: Vec<IterationResult>,
+    },
 
-    // This variant wraps the ParseError with line-specific context
-    #[error("Parsing failed on line {line_number}: {source}\n  Line: \"{content}\"")]
-    LineError {
+    #[error("Error in line {line_number}.")]
+    ParseError {
         line_number: usize,
-        content: String,
+        #[source]
         source: ParseError,
     },
 
@@ -45,9 +55,6 @@ pub enum FabricError {
 
     #[error("Edge does not exist in Graph: {start} -> {end}")]
     EdgeDoesNotExist { start: String, end: String },
-
-    #[error("Parsing Failed: {0}")]
-    Parse(#[from] ParseError),
 
     #[error("Failed to log: {0}")]
     LoggingError(String),
@@ -73,37 +80,6 @@ pub enum FabricError {
 
     #[error("Some Error: {0}")]
     Other(String),
-}
-
-#[derive(Error, Debug, PartialEq)]
-pub enum ParseError {
-    #[error("Wrong Pips line format. Expecting 6 parts.")]
-    InvalidLineFormat,
-
-    #[error("Failed to parse {part}")]
-    InvalidCoordinates {
-        token: String,
-        part: String,
-        #[source]
-        source: Box<Self>,
-    },
-
-    #[error("Failed to parse start node id: {id} cords: {cords}")]
-    InvalidStartNode { id: String, cords: String, source: Box<Self> },
-
-    #[error("Failed to parse end node id: {id} cords: {cords}")]
-    InvalidEndNode { id: String, cords: String, source: Box<Self> },
-
-    #[error("Missing coordinate prefix '{prefix}' in token: {token}")]
-    MissingPrefix { prefix: char, token: String },
-
-    #[error("Failed to parse '{component}' coordinate: {token}")]
-    InvalidCoordinate {
-        component: &'static str,
-        token: String,
-        #[source]
-        source: std::num::ParseIntError,
-    },
 }
 
 // ADD this manual implementation
