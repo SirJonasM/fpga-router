@@ -1,21 +1,30 @@
-#![deny(clippy::nursery)]
-#![deny(clippy::pedantic)]
+// #![deny(clippy::nursery)]
+// #![deny(clippy::pedantic)]
 
 mod cli;
 mod display_helper;
 mod logger;
-use std::{fs, path::Path, process::Command};
+use fpga_timing_analyzer::{Pip, TimingConstraints, TimingModel, analysis::TimingAnalysisResult, generate_slack_report};
+use serde::Deserialize;
+use std::{
+    collections::HashMap,
+    fs::{self, File},
+    io::BufReader,
+    path::Path,
+};
 
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use router::{
-    FabricError, FabricGraph, FabricResult, NetListExternal, RoutingConfigBuilder, SimpleSolver, SimpleSteinerSolver, SlackReport, SteinerSolver, TileManager, TimingAnalysis, create_fasm, create_test, route, route_timing_driven, validate_routing
+    Fabric, FabricError, FabricGraph, FabricResult, NetListExternal, RoutingConfigBuilder, SimpleSolver, SimpleSteinerSolver,
+    SlackReport, SteinerSolver, TileManager, TimingAnalysis, create_fasm, create_test, route, route_timing_driven,
+    validate_routing,
 };
 
 use crate::{
-    cli::{Cli, Commands, CreateTestArgs, FasmArgs, LoggerType, Solver, SolverType, ValidateArgs},
+    cli::{Cli, Commands, CreateTestArgs, LoggerType, Solver, SolverType, ValidateArgs},
     display_helper::{
-        display_failed_routing, display_results, display_run_create_fasm, display_run_create_test, display_run_metadata_route,
+        display_failed_routing, display_results, display_run_create_test, display_run_metadata_route,
         display_run_metadata_route_sta,
     },
     logger::Loggers,
@@ -24,7 +33,6 @@ use crate::{
 fn main() -> Result<()> {
     match Cli::parse().command {
         Commands::CreateTest(args) => command_create_test(&args),
-        Commands::Fasm(args) => command_fasm(&args),
         Commands::Route(args) => command_route(&args),
         Commands::RouteSta(args) => command_route_sta(&args),
         Commands::Validate(args) => command_validate(&args),
@@ -34,7 +42,7 @@ fn main() -> Result<()> {
 
 fn command_create_test(args: &CreateTestArgs) -> Result<()> {
     let graph =
-        FabricGraph::from_file(&args.graph).with_context(|| format!("Failed to load fabric graph from {}", args.graph))?;
+        FabricGraph::from_file(&args.graph, None).with_context(|| format!("Failed to load fabric graph from {}", args.graph))?;
     let _ = clearscreen::clear();
     display_run_create_test(args);
     let net_list = create_test(&graph, args.percentage, args.destinations).with_context(|| "Failed to create test File")?;
@@ -43,16 +51,6 @@ fn command_create_test(args: &CreateTestArgs) -> Result<()> {
         .with_context(|| "Failed to serialize the net-list into a readable JSON format")?;
     fs::write(&args.output, pretty).with_context(|| format!("Failed to write the generated test net-list to {}", args.output))?;
     println!("Created Test net-list.");
-    Ok(())
-}
-fn command_fasm(args: &FasmArgs) -> Result<()> {
-    let _ = clearscreen::clear();
-    display_run_create_fasm(args);
-    let route_plan =
-        NetListExternal::from_file(&args.net_list).with_context(|| format!("Failed to load net-list from {}", args.net_list))?;
-    let fasm = create_fasm(&route_plan).with_context(|| "Failed to create FASM File")?;
-    fs::write(&args.output, fasm).with_context(|| format!("Failed to save the generated FASM file to {}", args.output))?;
-    println!("Created Fasm in: {}", args.output);
     Ok(())
 }
 
@@ -66,10 +64,29 @@ fn command_route(args: &cli::RouteArgs) -> Result<()> {
         LoggerType::No => Loggers::No,
         LoggerType::Terminal => Loggers::Terminal,
     };
-    let graph = FabricGraph::from_file(&args.graph)
+    let (_, graph_timing_model) = match &args.timing_model {
+        Some(path) => {
+            let file = File::open(path)?;
+            let reader = BufReader::new(file);
+            let sta:Sta = serde_json::from_reader(reader)?;
+            let grap_timing_model = router::TimingModel {
+                lut_delay: sta.timing_model.lut_delay as f32,
+                pip_delay: sta.timing_model.pip_delay as f32,
+                fanout_delay: sta.timing_model.fanout_delay as f32,
+                clock_to_output_delay: sta.timing_model.clock_to_output_delay as f32,
+                clock_tree_delay: sta.timing_model.clock_tree_delay as f32,
+            };
+
+            // Read the JSON contents of the file as an instance of `User`.
+            (Some(sta), Some(grap_timing_model))
+        }
+        None => (None, None),
+    };
+    let graph = FabricGraph::from_file(&args.graph, graph_timing_model)
         .with_context(|| format!("Router initialization failed: unable to load graph {}", args.graph))?;
     let net_list = NetListExternal::from_file(&args.net_list)
         .with_context(|| format!("Router initialization failed: unable to load net-list {}", args.net_list))?;
+
     let tile_manager = TileManager::from_file(&args.bel);
     let mut config = RoutingConfigBuilder::default()
         .hist_factor(args.hist_factor)
@@ -102,14 +119,28 @@ fn command_route(args: &cli::RouteArgs) -> Result<()> {
     let path = Path::new(&args.output);
     let serialized_net_list = match path.extension().and_then(|s| s.to_str()) {
         Some("fasm") => {
-            create_fasm(&config.net_list).with_context(|| "Failed to generate FASM output from the routed net-list")?
+            let ffs = if let Some(ffs) = &args.ffs {
+                fs::read_to_string(ffs).unwrap()
+            } else {
+                "".to_string()
+            };
+            let fasm = create_fasm(&config.net_list, &config.fabric.tile_manager)
+                .with_context(|| "Failed to generate FASM output from the routed net-list")?;
+            format!("{fasm}\n{ffs}")
         }
         Some("json") => {
             serde_json::to_string_pretty(&config.net_list).with_context(|| "Failed to serialize net-list for FASM generation")?
         }
         _ => {
             println!("Unknown file extension defaulting to fasm.");
-            create_fasm(&config.net_list).with_context(|| "Failed to generate default FASM output")?
+            let ffs = if let Some(ffs) = &args.ffs {
+                fs::read_to_string(ffs).unwrap()
+            } else {
+                "".to_string()
+            };
+            let fasm = create_fasm(&config.net_list, &config.fabric.tile_manager)
+                .with_context(|| "Failed to generate FASM output from the routed net-list")?;
+            format!("{fasm}\n{ffs}")
         }
     };
     fs::write(path, serialized_net_list).with_context(|| format!("Failed to write routing results to {}", args.output))?;
@@ -126,10 +157,26 @@ fn command_route_sta(args: &cli::RouteStaArgs) -> Result<()> {
         LoggerType::No => Loggers::No,
         LoggerType::Terminal => Loggers::Terminal,
     };
-    let graph = FabricGraph::from_file(&args.graph)
+    let file = File::open(&args.timings)?;
+    let reader = BufReader::new(file);
+    // Read the JSON contents of the file as an instance of `User`.
+
+    let mut timing_model: Sta = serde_json::from_reader(reader)?;
+    timing_model.graph = Some(fpga_timing_analyzer::pips_parser(&args.graph));
+
+    let grap_timing_model = router::TimingModel {
+        lut_delay: timing_model.timing_model.lut_delay as f32,
+        pip_delay: timing_model.timing_model.pip_delay as f32,
+        fanout_delay: timing_model.timing_model.fanout_delay as f32,
+        clock_to_output_delay: timing_model.timing_model.clock_to_output_delay as f32,
+        clock_tree_delay: timing_model.timing_model.clock_tree_delay as f32,
+    };
+    let graph = FabricGraph::from_file(&args.graph, Some(grap_timing_model))
         .with_context(|| format!("Router initialization failed: unable to load graph {}", args.graph))?;
     let net_list = NetListExternal::from_file(&args.net_list)
         .with_context(|| format!("Router initialization failed: unable to load net-list {}", args.net_list))?;
+
+    let tile_manager = TileManager::from_file(&args.bel);
 
     let mut config = RoutingConfigBuilder::default()
         .hist_factor(args.hist_factor)
@@ -138,13 +185,13 @@ fn command_route_sta(args: &cli::RouteStaArgs) -> Result<()> {
         .solver(solver)
         .logger(logger)
         .graph(graph)
-        .build_timing_driven(Sta)?;
+        .tile_manager(tile_manager)
+        .build_timing_driven(timing_model)?;
 
     let _ = clearscreen::clear();
     display_run_metadata_route_sta(args, &config.solver);
     let result = match route_timing_driven(&mut config) {
         Ok(result) => result,
-
         Err(router::FabricError::RoutingMaxIterationsReached {
             congestion_report,
             iteration_report,
@@ -161,14 +208,20 @@ fn command_route_sta(args: &cli::RouteStaArgs) -> Result<()> {
     let path = Path::new(&args.output);
     let serialized_net_list = match path.extension().and_then(|s| s.to_str()) {
         Some("fasm") => {
-            serde_json::to_string_pretty(&config.net_list).with_context(|| "Failed to serialize net-list for FASM generation")?
+            let ffs = fs::read_to_string(&args.ffs).unwrap();
+            let fasm = create_fasm(&config.net_list, &config.fabric.tile_manager)
+                .with_context(|| "Failed to generate FASM output from the routed net-list")?;
+            format!("{fasm}\n{ffs}")
         }
         Some("json") => {
-            create_fasm(&config.net_list).with_context(|| "Failed to generate FASM output from the routed net-list")?
+            serde_json::to_string_pretty(&config.net_list).with_context(|| "Failed to serialize net-list for FASM generation")?
         }
         _ => {
             println!("Unknown file extension defaulting to fasm.");
-            create_fasm(&config.net_list).with_context(|| "Failed to generate default FASM output")?
+            let ffs = fs::read_to_string(&args.ffs).unwrap();
+            let fasm = create_fasm(&config.net_list, &config.fabric.tile_manager)
+                .with_context(|| "Failed to generate FASM output from the routed net-list")?;
+            format!("{fasm}\n{ffs}")
         }
     };
     fs::write(path, serialized_net_list).with_context(|| format!("Failed to write routing results to {}", args.output))?;
@@ -176,7 +229,8 @@ fn command_route_sta(args: &cli::RouteStaArgs) -> Result<()> {
 }
 
 fn command_validate(args: &ValidateArgs) -> Result<()> {
-    let graph = FabricGraph::from_file(&args.graph).with_context(|| format!("Failed to load graph from file: {}", args.graph))?;
+    let graph =
+        FabricGraph::from_file(&args.graph, None).with_context(|| format!("Failed to load graph from file: {}", args.graph))?;
     let route_plan = NetListExternal::from_file(&args.net_list)
         .with_context(|| format!("Validation aborted: could not load net-list {}", args.net_list))?;
     validate_routing(&graph, &route_plan).with_context(|| "Routing is invalid due to")?;
@@ -185,29 +239,92 @@ fn command_validate(args: &ValidateArgs) -> Result<()> {
     Ok(())
 }
 
-// This is just for the moment as there is no current implementation of the STA
-fn run_mock_sta(fasm_in: &str, csv_out: &str, target: u32) -> FabricResult<String> {
-    let output = Command::new("python3")
-        .arg("mock_slack.py") // Name of your python script
-        .arg(fasm_in)
-        .arg(csv_out)
-        .arg("--target")
-        .arg(target.to_string())
-        .output()
-        .map_err(|_| FabricError::STAInternalError)?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    Ok(stdout)
+#[derive(Deserialize, Debug)]
+struct Sta {
+    timing_model: TimingModel,
+    timing_constraints: TimingConstraints,
+    #[serde(skip)]
+    pub graph: Option<Vec<Pip>>,
 }
 
-struct Sta;
 impl TimingAnalysis for Sta {
-    fn timing_analysis(&self, graph: &FabricGraph, net_list: &router::NetListInternal) -> FabricResult<SlackReport> {
-        let ex = net_list.to_external(graph);
-        let fasm = create_fasm(&ex)?;
-        fs::write(".fasm", &fasm).map_err(|_| FabricError::STAInternalError)?;
-        let _ = run_mock_sta(".fasm", ".slack", 10)?;
-        let slack_report = SlackReport::from_file(".slack", graph)?;
+    fn timing_analysis(&self, fabric: &Fabric, net_list: &router::NetListInternal) -> FabricResult<SlackReport> {
+        let ex = net_list.to_external(&fabric.graph);
+        let mut fasm = create_fasm(&ex, &fabric.tile_manager)?;
+        let ffs = fs::read_to_string("ffs.fasm").unwrap();
+        fasm.push('\n');
+        fasm.push_str(&ffs);
+        let graph = self.graph.as_ref().ok_or(FabricError::Other("Graph was none".into()))?;
+        let timing_analyisis_report = generate_slack_report(&fasm, graph, &self.timing_model).unwrap();
+        let slack_report =
+            slack_report_from_timing_analyis(timing_analyisis_report, &fabric.graph, self.timing_constraints.clk_period)
+                .map_err(|e| FabricError::Csv(Box::new(e)))?;
         Ok(slack_report)
     }
+}
+
+fn slack_report_from_timing_analyis(
+    timing_analyisis: TimingAnalysisResult,
+    graph: &FabricGraph,
+    target_period_ps: f64,
+) -> FabricResult<SlackReport> {
+    let mut slacks = HashMap::new();
+    let mut criticalities = HashMap::new();
+    let mut worst_node_str = (String::new(), String::new());
+
+    let mut min_slack_val = f64::INFINITY;
+    let max_arrival = timing_analyisis.max_paths.iter().map(|p| p.1).fold(0.0, f64::max);
+
+    for (_, arrival, src, sink, path) in &timing_analyisis.max_paths {
+        let slack = target_period_ps - arrival;
+        let criticality = (arrival / max_arrival).clamp(0.0, 1.0);
+
+        // MAP THE SINK:
+        // If the sink is a 'FF_SINK', the router actually needs to know
+        // the wire-end (the LUT input) that fed it.
+        let router_sink = if sink.pin.contains("FF_SINK") {
+            // Get the node immediately BEFORE the FF_SINK in the timing path
+            path.iter()
+                .rev()
+                .nth(2)
+                .map(|tn| format!("X{}Y{}.{}", tn.tile.0, tn.tile.1, tn.pin))
+                .unwrap_or_else(|| format!("X{}Y{}.{}", sink.tile.0, sink.tile.1, sink.pin))
+        } else {
+            format!("X{}Y{}.{}", sink.tile.0, sink.tile.1, sink.pin)
+        };
+
+        let source_str = format!("X{}Y{}.{}", src.tile.0, src.tile.1, src.pin);
+        let source_id = *graph
+            .get_node_id(&source_str)
+            .ok_or(FabricError::InvalidStringNodeId(source_str.clone()))?;
+
+        let sink_id = *graph
+            .get_node_id(&router_sink)
+            .ok_or(FabricError::InvalidStringNodeId(router_sink.clone()))?;
+
+        if min_slack_val > slack {
+            min_slack_val = slack;
+            worst_node_str = (source_str, router_sink);
+        }
+
+        criticalities.insert((source_id, sink_id), criticality as f32);
+        slacks.insert((source_id, sink_id), slack as f32);
+    }
+    let worst_slack = (
+        (
+            *graph
+                .get_node_id(&worst_node_str.0)
+                .ok_or(FabricError::InvalidStringNodeId(worst_node_str.0))?,
+            *graph
+                .get_node_id(&worst_node_str.1)
+                .ok_or(FabricError::InvalidStringNodeId(worst_node_str.1))?,
+        ),
+        min_slack_val as f32,
+    );
+
+    Ok(SlackReport {
+        slacks,
+        criticalities,
+        worst_slack,
+    })
 }

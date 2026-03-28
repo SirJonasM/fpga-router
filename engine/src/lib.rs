@@ -24,12 +24,15 @@ pub use error::{FabricError, FabricResult};
 // Public API
 pub use api::*;
 pub use graph::fabric_graph::{FabricGraph, Fabric, TileManager};
+pub use graph::parser::TimingModel;
 pub use netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal, NetResultExternal, NetResultInternal};
 pub use path_finder::{CongestionReportExtern, IterationResult, TimingAnalysis};
 pub use slack::SlackReport;
 
 use serde::Serialize;
 pub use solver::{RouteNet, SimpleSolver, SimpleSteinerSolver, SteinerSolver};
+
+use crate::path_finder::StaIterationResult;
 
 /// Trait for logging pathfinding iterations.
 pub trait Logging {
@@ -44,6 +47,7 @@ pub trait Logging {
 pub enum LogInstance<'a> {
     Text(String),
     RouterIteration(&'a IterationResult),
+    RouterStaIteration(&'a StaIterationResult<'a>),
 }
 
 impl From<&str> for LogInstance<'_> {

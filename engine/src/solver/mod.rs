@@ -6,7 +6,7 @@ pub use simple::SimpleSolver;
 pub use simple_steiner::SimpleSteinerSolver;
 pub use steiner::SteinerSolver;
 
-use crate::{FabricResult, graph::fabric_graph::FabricGraph, netlist::NetInternal};
+use crate::{Fabric, FabricResult, graph::fabric_graph::FabricGraph, netlist::NetInternal};
 
 /// A trait for implementing custom routing algorithms within the fabric.
 ///
@@ -22,7 +22,7 @@ pub trait RouteNet {
     ///
     /// Returns [`FabricError::PathfindingFailed`] if a valid route cannot be found
     /// given the current graph constraints.
-    fn solve(&self, graph: &FabricGraph, routing: &mut NetInternal) -> FabricResult<()>;
+    fn solve(&self, graph: &Fabric, routing: &mut NetInternal) -> FabricResult<()>;
 
     /// Prepares the graph or the route plan before the main solving phase.
     ///
@@ -33,7 +33,7 @@ pub trait RouteNet {
     ///
     /// Returns [`FabricError::RoutePreProcessing`] if the pre-processing logic
     /// detects overlapping requirements that cannot be resolved.
-    fn pre_process(&self, graph: &mut FabricGraph, route_plan: &mut [NetInternal]) -> FabricResult<()>;
+    fn pre_process(&self, graph: &mut Fabric, route_plan: &mut [NetInternal]) -> FabricResult<()>;
 
     /// Returns a unique string constant identifying the solver implementation.
     ///

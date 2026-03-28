@@ -1,6 +1,6 @@
 use router::{CongestionReportExtern, IterationResult, RouteNet};
 
-use crate::cli::{CreateTestArgs, FasmArgs, RouteArgs, RouteStaArgs};
+use crate::cli::{CreateTestArgs, RouteArgs, RouteStaArgs};
 
 pub fn display_results(results: &[IterationResult]) {
     println!("{:-<110}", "");
@@ -38,20 +38,11 @@ pub fn display_run_metadata_route<T: RouteNet>(config: &RouteArgs, solver: &T) {
     println!("{:<20}: {}", "Max Iterations", config.max_iterations);
     println!("{:<20}: {}", "History Factor", config.hist_factor);
 
-    if let Some(ref slack) = config.slack_report {
-        println!("{:<20}: {}", "Slack Report", slack);
+    if let Some(ref ffs) = config.ffs {
+        println!("{:<20}: {}", "Flip-Flop file", ffs);
     } else {
-        println!("{:<20}: [No Slack Report Provided]", "Slack Report");
+        println!("{:<20}: [No Flip Flop Provided]", "FF");
     }
-    println!("{:=<60}\n", "");
-}
-pub fn display_run_create_fasm(config: &FasmArgs) {
-    println!("{:=<60}", "");
-    println!(" FPGA CREATE FASM CONFIGURATION");
-    println!("{:-<60}", "");
-    println!("{:<20}: {}", "Output File", config.net_list);
-    println!("{:<20}: {}", "Output File", config.output);
-
     println!("{:=<60}\n", "");
 }
 pub fn display_run_create_test(config: &CreateTestArgs) {
@@ -74,14 +65,8 @@ pub fn display_run_metadata_route_sta<T: RouteNet>(config: &RouteStaArgs, solver
     println!("{:<20}: {}", "Netlist File", config.net_list);
     println!("{:<20}: {}", "Max Iterations", config.max_iterations);
     println!("{:<20}: {}", "History Factor", config.hist_factor);
-    println!("{:<20}: {}", "Max STA Iterations", config.max_sta_cycles);
     println!("{:<20}: {}", "Target Clock Period", config.target_ps);
 
-    if let Some(ref slack) = config.slack_report {
-        println!("{:<20}: {}", "Slack Report", slack);
-    } else {
-        println!("{:<20}: [No Slack Report Provided]", "Slack Report");
-    }
     println!("{:=<60}\n", "");
 }
 

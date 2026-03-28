@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand, ValueEnum};
-use router::{FabricGraph, NetInternal, RouteNet, SimpleSolver, SimpleSteinerSolver, SteinerSolver};
+use router::{Fabric, FabricGraph, NetInternal, RouteNet, SimpleSolver, SimpleSteinerSolver, SteinerSolver};
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum SolverType {
@@ -47,15 +47,10 @@ pub struct RouteArgs {
     pub log_file: Option<String>,
     #[arg(short = 'i', long, default_value_t = 2000)]
     pub max_iterations: usize,
-    #[arg(short = 's', long)]
-    pub slack_report: Option<String>,
-}
-#[derive(Parser, Debug)]
-pub struct FasmArgs {
     #[arg(short, long)]
-    pub output: String,
+    pub ffs: Option<String>,
     #[arg(short, long)]
-    pub net_list: String,
+    pub timing_model: Option<String>,
 }
 
 #[derive(Parser, Debug)]
@@ -70,6 +65,8 @@ pub struct ValidateArgs {
 pub struct RouteStaArgs {
     #[arg(short, long)]
     pub graph: String,
+    #[arg(short, long)]
+    pub bel: String,
     #[arg(short, long)]
     pub net_list: String,
     #[arg(short, long)]
@@ -86,10 +83,10 @@ pub struct RouteStaArgs {
     pub max_iterations: usize,
     #[arg(long, default_value = "5000")]
     pub target_ps: u32,
-    #[arg(long, default_value = "10")]
-    pub max_sta_cycles: usize,
-    #[arg(short = 's', long)]
-    pub slack_report: Option<String>,
+    #[arg(short, long)]
+    pub ffs: String,
+    #[arg(short, long)]
+    pub timings: String,
 }
 
 // --- CLI Structure ---
@@ -107,8 +104,6 @@ pub enum Commands {
     CreateTest(CreateTestArgs),
     /// Starts the router
     Route(RouteArgs),
-    /// parses the router output to fasm
-    Fasm(FasmArgs),
 
     Validate(ValidateArgs),
 
@@ -122,7 +117,7 @@ pub enum Solver {
 }
 
 impl RouteNet for Solver {
-    fn solve(&self, graph: &FabricGraph, routing: &mut NetInternal) -> router::FabricResult<()> {
+    fn solve(&self, graph: &Fabric, routing: &mut NetInternal) -> router::FabricResult<()> {
         match self {
             Self::Simple(simple_solver) => simple_solver.solve(graph, routing),
             Self::SimpleSteiner(simple_steiner_solver) => simple_steiner_solver.solve(graph, routing),
@@ -130,7 +125,7 @@ impl RouteNet for Solver {
         }
     }
 
-    fn pre_process(&self, graph: &mut FabricGraph, route_plan: &mut [NetInternal]) -> router::FabricResult<()> {
+    fn pre_process(&self, graph: &mut Fabric, route_plan: &mut [NetInternal]) -> router::FabricResult<()> {
         match self {
             Self::Simple(simple_solver) => simple_solver.pre_process(graph, route_plan),
             Self::SimpleSteiner(simple_steiner_solver) => simple_steiner_solver.pre_process(graph, route_plan),

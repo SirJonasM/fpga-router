@@ -5,7 +5,7 @@
 //! and computing distances and reversed maps.
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs::File,
     io::{BufRead, BufReader},
     path::Path,
@@ -14,11 +14,10 @@ use std::{
 use sha2::{Digest, Sha256};
 
 use crate::{
-    FabricError, FabricResult,
-    graph::{
+    FabricError, FabricResult, NetInternal, NetListInternal, SlackReport, graph::{
         node::{Costs, Edge, Node, NodeId, from_str_coords},
-        parser::Parser,
-    },
+        parser::{Parser, TimingModel},
+    }
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -38,7 +37,7 @@ pub struct Lut {
     bel_index: char,
     state: LutState,
     output_pin: String,
-    input_pin: [String; 4],
+    _input_pin: [String; 4],
 }
 #[derive(Debug)]
 pub struct Tile {
@@ -86,7 +85,7 @@ impl TileManager {
                 // parts[12] is the output pin (e.g., "LA_O")
                 output_pin: parts[12].to_string(),
                 // parts[5..9] are I0, I1, I2, I3
-                input_pin: [
+                _input_pin: [
                     parts[5].to_string(),
                     parts[6].to_string(),
                     parts[7].to_string(),
@@ -126,7 +125,7 @@ impl TileManager {
         None
     }
 
-    pub fn request_constant(&mut self, start_tile: TileId, state: State) -> Option<(TileId,String)> {
+    pub fn request_constant(&mut self, start_tile: TileId, state: State) -> Option<(TileId, String)> {
         // 1. Define the search radius (Starting Tile, then Neighbors)
         let search_order = [
             start_tile,
@@ -175,14 +174,8 @@ impl TileManager {
                     };
 
                     // We use the bel_index (e.g., 'A', 'B') to specify which LUT in the tile
-                    let line = format!(
-                        "X{}Y{}.{}.INIT[15:0] = {}",
-                        tile_id.0, 
-                        tile_id.1, 
-                        lut.bel_index, 
-                        init_val
-                    );
-                    
+                    let line = format!("X{}Y{}.{}.INIT[15:0] = {}", tile_id.0, tile_id.1, lut.bel_index, init_val);
+
                     fasm_lines.push(line);
                 }
             }
@@ -192,16 +185,85 @@ impl TileManager {
 }
 
 impl Fabric {
-    pub fn new(bel: &str, pips: &str) -> FabricResult<Self> {
-        let graph = FabricGraph::from_file(pips)?;
-        let tile_manager = TileManager::from_file(bel);
-        Ok(Self { tile_manager, graph })
+    pub fn new(graph: FabricGraph, tile_manager: TileManager) -> Self {
+        Self { tile_manager, graph , slack_report: None}
+    }
+
+    pub(crate) fn check_pathing(&mut self, net_list: &mut NetListInternal) -> FabricResult<()> {
+        let net_list_flatten = net_list
+            .plan
+            .iter()
+            .flat_map(|a| a.sinks.iter().map(|v| (a.signal, *v)))
+            .collect::<HashSet<(NodeId, NodeId)>>();
+
+        for (signal, sink) in &net_list_flatten {
+            // Check the Source
+            self.check_and_mark_node(*signal);
+            self.check_and_mark_node(*sink);
+        }
+
+        let mut optimized_net = HashSet::new();
+        for (signal, sink) in &net_list_flatten {
+            let signal_node = self.graph.get_node(*signal);
+            if self.graph.dijkstra(*signal, *sink, 0.0).is_some() {
+                optimized_net.insert((*signal, *sink));
+                continue;
+            }
+            let state = match signal_node.id.as_str() {
+                "VCC0" => Some(State::High),
+                "GND0" => Some(State::Low),
+                _ => None,
+            };
+            let sink_node = self.graph.get_node(*sink);
+            let state = state.ok_or(FabricError::Other(format!(
+                "Cannot find a routing for net {} -> {}",
+                sink_node.id(),
+                signal_node.id()
+            )))?;
+            let tile = TileId(sink_node.x, sink_node.y);
+            let new_source_name = self
+                .tile_manager
+                .request_constant(tile, state)
+                .ok_or(FabricError::Other("Fabric exhausted: No free LUTs for constants".into()))?;
+
+            let node_id_str = format!("X{}Y{}.{}", new_source_name.0.0, new_source_name.0.1, new_source_name.1);
+            let node = self.graph.get_node_id(&node_id_str).unwrap();
+            // 4. Re-run Dijkstra with the new local source
+            let _ = self.graph.dijkstra(*node, *sink, 0.0).ok_or(FabricError::Other(format!(
+                "Even local constant {:?} couldn't reach sink",
+                new_source_name
+            )))?;
+            optimized_net.insert((*node, *sink));
+        }
+
+        // 1. Group sinks by their signal (source)
+        let mut grouped_nets: HashMap<NodeId, Vec<NodeId>> = HashMap::new();
+
+        for (signal, sink) in optimized_net {
+            grouped_nets.entry(signal).or_default().push(sink);
+        }
+
+        // 2. Map the groups back into NetInternal structures
+        let new_plan: Vec<NetInternal> = grouped_nets
+            .into_iter()
+            .map(|(signal, sinks)| NetInternal {
+                signal,
+                sinks,
+                result: None,
+                intermediate_nodes: None,
+                priority: None,    // Set to default as requested
+                criticallity: 0.0, // Set to default as requested
+            })
+            .collect();
+        *net_list = NetListInternal { plan: new_plan };
+        Ok(())
     }
 }
 
 pub struct Fabric {
     pub tile_manager: TileManager,
     pub graph: FabricGraph,
+    pub slack_report: Option<SlackReport>,
 }
 
 impl Fabric {
@@ -210,11 +272,12 @@ impl Fabric {
 
         // FABulous naming convention: LA_I0, LB_O, LC_EN...
         // They all start with 'L' and a char [A-H], then an underscore
-        if node.id.starts_with('L') && node.id.chars().nth(2) == Some('_') {
-            if let Some(bel_char) = node.id.chars().nth(1) {
-                let tile_id = TileId(node.x, node.y);
-                self.tile_manager.mark_lut_used(tile_id, bel_char);
-            }
+        if node.id.starts_with('L')
+            && node.id.chars().nth(2) == Some('_')
+            && let Some(bel_char) = node.id.chars().nth(1)
+        {
+            let tile_id = TileId(node.x, node.y);
+            self.tile_manager.mark_lut_used(tile_id, bel_char);
         }
     }
 }
@@ -287,13 +350,16 @@ impl FabricGraph {
     /// let test_file = get_test_data_path("pips_8x8.txt");
     /// let graph = FabricGraph::from_file(test_file).unwrap();
     /// ```
-    pub fn from_file<P: AsRef<Path>>(path: P) -> FabricResult<Self> {
+    pub fn from_file<P: AsRef<Path>>(path: P, timing_model: Option<TimingModel>) -> FabricResult<Self> {
         let path_ref = path.as_ref();
         let file = File::open(path_ref).map_err(|e| FabricError::Io {
             path: path_ref.to_path_buf(),
             source: e,
         })?;
         let mut pips_parser = Parser::new();
+        if let Some(timing_model) = timing_model {
+            pips_parser.set_timing_model(timing_model);
+        }
         let reader = BufReader::new(file);
 
         let reader = reader.lines().enumerate();
@@ -313,7 +379,7 @@ impl FabricGraph {
         self.costs.iter_mut().for_each(|a| a.usage = 0);
     }
 
-    pub(crate) fn get_node_id(&self, id: &str) -> Option<&NodeId> {
+    pub fn get_node_id(&self, id: &str) -> Option<&NodeId> {
         self.index.get(id)
     }
 
@@ -369,14 +435,15 @@ mod test {
     #[test]
     fn test_parse_pips_file() {
         let test_file = get_test_data_path("pips_8x8.txt");
+        let timing_model = TimingModel::default();
 
-        let graph = FabricGraph::from_file(test_file).unwrap();
+        let graph = FabricGraph::from_file(test_file, Some(timing_model)).unwrap();
         assert_eq!(graph.nodes[0], Node::parse("N1END3", "X1Y0").unwrap());
     }
     #[test]
     fn test_parse_pips_file_error_accessing_file() {
         let test_file = "some_file_that_does_not_exist.txt";
-        let error = FabricGraph::from_file(test_file).unwrap_err().to_string();
+        let error = FabricGraph::from_file(test_file, None).unwrap_err().to_string();
         assert_eq!("IO error while accessing 'some_file_that_does_not_exist.txt'", error);
     }
     #[test]
@@ -394,6 +461,6 @@ mod test {
     fn test_mark_borrowed() {
         let test_file = get_test_data_path("bel.txt");
         let mut tile_manager = TileManager::from_file(test_file);
-        let _ = tile_manager.request_constant(TileId(1, 1),  State::High).unwrap();
+        let _ = tile_manager.request_constant(TileId(1, 1), State::High).unwrap();
     }
 }

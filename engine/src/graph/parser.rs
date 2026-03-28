@@ -15,13 +15,27 @@ struct PipsLine {
 
 pub struct Parser {
     graph: FabricGraph,
+    timing_model: Option<TimingModel>,
+}
+
+#[derive(Debug, Default)]
+pub struct TimingModel {
+    pub lut_delay: f32,
+    pub pip_delay: f32,
+    pub fanout_delay: f32,
+    pub clock_to_output_delay: f32,
+    pub clock_tree_delay: f32,
 }
 
 impl Parser {
     pub fn new() -> Self {
         Self {
             graph: FabricGraph::default(),
+            timing_model: None,
         }
+    }
+    pub fn set_timing_model(&mut self, timing_model: TimingModel){
+        self.timing_model = Some(timing_model);
     }
     pub fn parse_line(&mut self, line: &str) -> Result<(), ParseError> {
         let line = line.trim();
@@ -37,7 +51,12 @@ impl Parser {
             source: Box::new(e),
         })?;
 
-        let cost = distance(&start_node, &end_node);
+        let cost = self
+            .timing_model
+            .as_ref()
+            .map(|a| a.pip_delay)
+            .unwrap_or(distance(&start_node, &end_node));
+
         let sid = self.get_or_create_node(&start_node);
         let eid = self.get_or_create_node(&end_node);
 

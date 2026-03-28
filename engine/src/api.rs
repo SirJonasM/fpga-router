@@ -1,8 +1,6 @@
-use std::collections::{HashMap, HashSet};
-
 use rand::seq::SliceRandom;
 
-use crate::graph::fabric_graph::{Fabric, State, Tile, TileId, TileManager};
+use crate::graph::fabric_graph::{Fabric, TileManager};
 use crate::path_finder::{TimingAnalysis, timing_driven_path_finder};
 use crate::{
     FabricError, FabricResult, Logging,
@@ -17,7 +15,7 @@ use crate::{
 use crate::{IterationResult, SimpleLogging, SimpleSolver};
 
 pub struct TimingDrivenRoutingConfig<R: RouteNet, L: Logging, T: TimingAnalysis> {
-    pub graph: FabricGraph,
+    pub fabric: Fabric,
     pub net_list: NetListExternal,
     pub hist_factor: f32,
     pub max_iterations: usize,
@@ -66,72 +64,7 @@ where
     }
     let mut net_list = NetListInternal::from_external(&fabric.graph, net_list_external)?;
 
-    for net in &net_list.plan {
-        // Check the Source
-        fabric.check_and_mark_node(net.signal);
-
-        // Check all Sinks
-        for sink_id in &net.sinks {
-            fabric.check_and_mark_node(*sink_id);
-        }
-    }
-
-    let net_list_flatten = net_list
-        .plan
-        .iter()
-        .flat_map(|a| a.sinks.iter().map(|v| (a.signal, *v)))
-        .collect::<HashSet<(NodeId, NodeId)>>();
-
-    let mut optimized_net = HashSet::new();
-    for (signal, sink) in &net_list_flatten {
-        let signal_node = fabric.graph.get_node(*signal);
-        if fabric.graph.dijkstra(*signal, *sink, 0.0).is_some() {
-            optimized_net.insert((*signal, *sink));
-            continue;
-        }
-        let state = match signal_node.id.as_str() {
-            "VCC0" => Some(State::High),
-            "GND0" => Some(State::Low),
-            _ => None,
-        };
-        let sink_node = fabric.graph.get_node(*sink);
-        let state = state.ok_or(FabricError::Other(format!("Cannot find a routing for net {} -> {}",sink_node.id(),signal_node.id())))?;
-        let tile = TileId(sink_node.x, sink_node.y);
-        let new_source_name = fabric
-            .tile_manager
-            .request_constant(tile, state)
-            .ok_or(FabricError::Other("Fabric exhausted: No free LUTs for constants".into()))?;
-
-        let node_id_str = format!("X{}Y{}.{}", new_source_name.0.0, new_source_name.0.1, new_source_name.1);
-        let node = fabric.graph.get_node_id(&node_id_str).unwrap();
-        // 4. Re-run Dijkstra with the new local source
-        let _ = fabric.graph.dijkstra(*node, *sink, 0.0).ok_or(FabricError::Other(format!(
-            "Even local constant {:?} couldn't reach sink",
-            new_source_name
-        )))?;
-        optimized_net.insert((*node, *sink));
-    }
-
-    // 1. Group sinks by their signal (source)
-    let mut grouped_nets: HashMap<NodeId, Vec<NodeId>> = HashMap::new();
-
-    for (signal, sink) in optimized_net {
-        grouped_nets.entry(signal).or_default().push(sink);
-    }
-
-    // 2. Map the groups back into NetInternal structures
-    let new_plan: Vec<NetInternal> = grouped_nets
-        .into_iter()
-        .map(|(signal, sinks)| NetInternal {
-            signal,
-            sinks,
-            result: None,
-            intermediate_nodes: None,
-            priority: None,    // Set to default as requested
-            criticallity: 0.0, // Set to default as requested
-        })
-        .collect();
-    net_list = NetListInternal { plan: new_plan };
+    fabric.check_pathing(&mut net_list)?;
 
     let router_config = Config::new(config.hist_factor, config.max_iterations);
 
@@ -148,8 +81,10 @@ where
 /// # Errors
 /// This errors when the provided `NetListExternal` is not solved meaning it has a result field
 /// being `None`
-pub fn create_fasm(netlist: &NetListExternal) -> FabricResult<String> {
-    net_to_fasm(netlist)
+pub fn create_fasm(netlist: &NetListExternal, tile_manager: &TileManager) -> FabricResult<String> {
+    let fasm_routing = net_to_fasm(netlist)?;
+    let constants = tile_manager.generate_constant_fasm().join("\n");
+    Ok(format!("{fasm_routing}\n{constants}"))
 }
 
 /// Creates a Test Netlist by using a `percentage` of all Lut-Outputs and for each `destinations`
@@ -215,27 +150,30 @@ where
     T: TimingAnalysis,
 {
     let net_list_external = &mut config.net_list;
-    let graph = &mut config.graph;
+    let fabric = &mut config.fabric;
     if let Some(hash) = &net_list_external.hash {
-        if hash != &graph.calculate_structure_hash() {
+        if hash != &fabric.graph.calculate_structure_hash() {
             eprintln!("Warning: The net-list was not created with this graph.");
         }
     } else {
         eprintln!("Warning: Cannot determine if the net-list was created with this graph. Missing field in net-list.");
     }
-    let mut net_list = NetListInternal::from_external(graph, net_list_external)?;
+
+    let mut net_list = NetListInternal::from_external(&fabric.graph, net_list_external)?;
+    fabric.check_pathing(&mut net_list)?;
+
     let router_config = Config::new(config.hist_factor, config.max_iterations);
 
     let x = timing_driven_path_finder(
         &mut net_list,
-        graph,
+        fabric,
         &router_config,
         &config.solver,
         &config.logger,
         &config.sta,
     );
     if x.is_ok() {
-        *net_list_external = net_list.to_external(graph);
+        *net_list_external = net_list.to_external(&fabric.graph);
     }
     x
 }
@@ -353,7 +291,7 @@ impl<R: RouteNet, L: Logging> RoutingConfigBuilder<R, L> {
     pub fn build(self) -> FabricResult<RoutingConfig<R, L>> {
         let graph = self.graph.ok_or("Graph is required to build RoutingConfig")?;
         let tile_manager = self.tile_manager.ok_or("Graph is required to build RoutingConfig")?;
-        let fabric = Fabric { tile_manager, graph };
+        let fabric = Fabric::new(graph, tile_manager);
 
         // If net_list is still None, we could either error or try a default.
         // Given your instructions, we'll error if neither manual nor test netlist was provided.
@@ -376,12 +314,14 @@ impl<R: RouteNet, L: Logging> RoutingConfigBuilder<R, L> {
     /// if no graoh or netlist was provided
     pub fn build_timing_driven<T: TimingAnalysis>(self, sta: T) -> FabricResult<TimingDrivenRoutingConfig<R, L, T>> {
         let graph = self.graph.ok_or("Graph is required to build RoutingConfig")?;
+        let tile_manager = self.tile_manager.ok_or("Graph is required to build RoutingConfig")?;
+        let fabric = Fabric::new(graph, tile_manager);
         let net_list = self
             .net_list
             .ok_or("NetList is required (provide manually or use with_test_netlist)")?;
 
         Ok(TimingDrivenRoutingConfig {
-            graph,
+            fabric,
             net_list,
             hist_factor: self.hist_factor,
             max_iterations: self.max_iterations,

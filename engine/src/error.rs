@@ -53,7 +53,7 @@ pub enum FabricError {
     Json(#[from] serde_json::Error),
 
     #[error("Serialization error: {0}")]
-    Csv(#[from] csv::Error),
+    Csv(#[from] Box<FabricError>),
 
     #[error("Failed to Map External Net to Internal representaion.")]
     MapExternalNet(#[from] MapExternalError),

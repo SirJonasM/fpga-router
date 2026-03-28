@@ -26,5 +26,18 @@ fn terminal_log(log_instance: &LogInstance) {
             );
             std::io::stdout().flush().unwrap();
         }
+        LogInstance::RouterStaIteration(sta_iteration_result) => {
+            let worst_slack = if let Some(worst_slack) = sta_iteration_result.worst_slack {
+                format!("{:.3}", worst_slack)
+            }else {"".to_string()};
+            print!(
+                "\rIteration: {: >3}, Conflicts: {: >4}, Wire Efficiency: {:.3}, Worst Slack: {}\r",
+                sta_iteration_result.iteration_result.iteration,
+                sta_iteration_result.iteration_result.conflicts,
+                sta_iteration_result.iteration_result.wire_reuse,
+                worst_slack
+            );
+            std::io::stdout().flush().unwrap();
+        }
     }
 }

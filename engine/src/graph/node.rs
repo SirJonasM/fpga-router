@@ -30,6 +30,7 @@ impl<T> std::ops::Index<NodeId> for Vec<T> {
     type Output = T;
     fn index(&self, index: NodeId) -> &Self::Output {
         #[allow(clippy::cast_possible_truncation)]
+        #[allow(clippy::unnecessary_cast)]
         let index = index.0 as usize;
         &self[index]
     }
@@ -38,6 +39,7 @@ impl<T> std::ops::Index<NodeId> for Vec<T> {
 impl<T> std::ops::IndexMut<NodeId> for Vec<T> {
     fn index_mut(&mut self, index: NodeId) -> &mut Self::Output {
         #[allow(clippy::cast_possible_truncation)]
+        #[allow(clippy::unnecessary_cast)]
         let index = index.0 as usize;
         &mut self[index]
     }
@@ -143,9 +145,9 @@ impl Costs {
     pub fn calc_costs(&self, base_cost: f32, criticallity: f32) -> f32 {
         #[allow(clippy::cast_precision_loss)]
         let casted_usage = f32::from(self.usage);
-        let congestion_cost = (1.0 + self.historic_cost) * (1.0 + casted_usage);
+        let congestion_cost =  (1.0 + self.historic_cost) * (1.0 + casted_usage);
 
-        criticallity.mul_add(base_cost, (1.0 - criticallity) * congestion_cost)
+        criticallity.mul_add(base_cost,(1.0 - criticallity) *  congestion_cost)
     }
 
     /// Create a new `Costs` object

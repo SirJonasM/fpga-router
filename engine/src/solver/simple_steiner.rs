@@ -5,7 +5,7 @@ use std::{
 
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::{FabricError, FabricGraph, FabricResult, netlist::NetInternal, RouteNet, graph::node::NodeId, netlist::NetResultInternal};
+use crate::{Fabric, FabricError, FabricGraph, FabricResult, RouteNet, graph::node::NodeId, netlist::{NetInternal, NetResultInternal}};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SimpleSteinerSolver;
@@ -17,12 +17,12 @@ struct SteinerTreeCandidate {
 }
 
 impl RouteNet for SimpleSteinerSolver {
-    fn pre_process(&self, graph: &mut FabricGraph, route_plan: &mut [NetInternal]) -> FabricResult<()> {
+    fn pre_process(&self, fabric: &mut Fabric, route_plan: &mut [NetInternal]) -> FabricResult<()> {
         let mut used_nodes = HashSet::new();
         for route in route_plan.iter_mut() {
             let signal_id = route.signal;
-            let steiner_tree = pre_calc_steiner_tree(graph, route).map_err(|e| {
-                let signal_id_name = graph.get_node(signal_id).id();
+            let steiner_tree = pre_calc_steiner_tree(&mut fabric.graph, route).map_err(|e| {
+                let signal_id_name = fabric.graph.get_node(signal_id).id();
                 FabricError::RoutePreProcessing {
                     signal: signal_id_name,
                     source: e.into(),
@@ -31,8 +31,8 @@ impl RouteNet for SimpleSteinerSolver {
 
             for &node_id in &steiner_tree.values().flatten().copied().collect::<HashSet<NodeId>>() {
                 if !used_nodes.insert(node_id) {
-                    let signal_id_name = graph.get_node(signal_id).id();
-                    let node_id_name = graph.get_node(node_id).id();
+                    let signal_id_name = fabric.graph.get_node(signal_id).id();
+                    let node_id_name = fabric.graph.get_node(node_id).id();
                     return Err(FabricError::RoutePreProcessing {
                         signal: signal_id_name,
                         source: Box::new(FabricError::ResourceConflict { node_id: node_id_name }),
@@ -41,10 +41,10 @@ impl RouteNet for SimpleSteinerSolver {
             }
             route.intermediate_nodes = Some(steiner_tree);
         }
-        graph.reset_usage();
+        fabric.graph.reset_usage();
         Ok(())
     }
-    fn solve(&self, graph: &FabricGraph, net: &mut NetInternal) -> FabricResult<()> {
+    fn solve(&self, fabric: &Fabric, net: &mut NetInternal) -> FabricResult<()> {
         let criticallity = net.criticallity;
         if let Some(steiner_tree) = &net.intermediate_nodes {
             let mut paths = HashMap::new();
@@ -53,9 +53,9 @@ impl RouteNet for SimpleSteinerSolver {
                 let mut path = Vec::new();
                 for steiner_node in route.windows(2) {
                     let (start, end) = (steiner_node[0], steiner_node[1]);
-                    let Some((a, _b)) = graph.dijkstra(start, end, criticallity) else {
-                        let start_name = graph.get_node(start).id();
-                        let end_name = graph.get_node(end).id();
+                    let Some((a, _b)) = fabric.graph.dijkstra(start, end, criticallity) else {
+                        let start_name = fabric.graph.get_node(start).id();
+                        let end_name = fabric.graph.get_node(end).id();
                         return Err(format!("Could not find path between steiner nodes: {start_name}->{end_name}").into());
                     };
                     nodes.extend(&a);
@@ -77,11 +77,10 @@ impl RouteNet for SimpleSteinerSolver {
 }
 
 fn pre_calc_steiner_tree(graph: &mut FabricGraph, net: &NetInternal) -> FabricResult<HashMap<NodeId, Vec<NodeId>>> {
-    let criticallity = net.criticallity;
     let dists = net
         .sinks
         .par_iter()
-        .map(|sink| (*sink, graph.dijkstra_all(*sink, criticallity)))
+        .map(|sink| (*sink, graph.dijkstra_all(*sink, 0.0)))
         .collect::<HashMap<NodeId, Vec<f32>>>();
     let signal = net.signal;
     let base_paths: Vec<(NodeId, NodeId)> = net.sinks.iter().map(|&sink| (signal, sink)).collect();
@@ -91,7 +90,7 @@ fn pre_calc_steiner_tree(graph: &mut FabricGraph, net: &NetInternal) -> FabricRe
         .into_par_iter()
         .map(|(start, base_sink)| {
             let (base_path, mut costs) = graph
-                .dijkstra(start, base_sink, criticallity)
+                .dijkstra(start, base_sink, 0.0)
                 .ok_or_else(||{
                     let start_name = graph.get_node(start).clone();
                     let sink_name = graph.get_node(base_sink).clone();

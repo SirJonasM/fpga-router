@@ -49,7 +49,7 @@ pub trait TimingAnalysis {
     /// This runs the timing analysis that is called by the `timing_driven_path_finder` and returns the Slack Report
     /// # Errors
     ///
-    fn timing_analysis(&self, graph: &FabricGraph, net_list: &NetListInternal) -> FabricResult<SlackReport>;
+    fn timing_analysis(&self, graph: &Fabric, net_list: &NetListInternal) -> FabricResult<SlackReport>;
 }
 
 /// Execute routing using the `path_finder` algorihm
@@ -80,12 +80,12 @@ where
     let mut i = 0;
     let mut last_conflicts = 0;
     let mut same_conflicts = 0;
-    solver.pre_process(&mut fabric.graph, &mut net_list.plan)?;
+    solver.pre_process(fabric, &mut net_list.plan)?;
     let max_iterations = config.max_iterations;
 
     loop {
         let time1 = Instant::now();
-        let conflicts = iteration(&mut fabric.graph, &mut net_list.plan, solver, hist_fac)
+        let conflicts = iteration(fabric, &mut net_list.plan, solver, hist_fac)
             .map_err(|e| FabricError::IterationError { source: e.into() })?;
         let duration = time1.elapsed();
         let result = analyze_result(i, conflicts, duration, &fabric.graph, net_list, config);
@@ -112,7 +112,7 @@ where
         }
 
         if same_conflicts == 200 {
-            solver.pre_process(&mut fabric.graph, &mut net_list.plan)?;
+            solver.pre_process(fabric, &mut net_list.plan)?;
         }
         logger.log(&LogInstance::RouterIteration(&result))?;
         iteration_report.push(result);
@@ -122,7 +122,7 @@ where
 
 pub fn timing_driven_path_finder<R, L, T>(
     net_list: &mut NetListInternal,
-    graph: &mut FabricGraph,
+    fabric: &mut Fabric,
     config: &Config,
     solver: &R,
     logger: &L,
@@ -139,18 +139,17 @@ where
     let mut i = 0;
     let mut last_conflicts = 0;
     let mut same_conflicts = 0;
-    solver.pre_process(graph, &mut net_list.plan)?;
+    solver.pre_process(fabric, &mut net_list.plan)?;
     let max_iterations = config.max_iterations;
 
     loop {
         let time1 = Instant::now();
-        let conflicts = iteration(graph, &mut net_list.plan, solver, hist_fac)
+        let conflicts = iteration(fabric, &mut net_list.plan, solver, hist_fac)
             .map_err(|e| FabricError::IterationError { source: e.into() })?;
         let duration = time1.elapsed();
-        let result = analyze_result(i, conflicts, duration, graph, net_list, config);
 
-        let slack_report = sta.timing_analysis(graph, net_list)?;
-        net_list.set_slack(&slack_report);
+        iteration_report.push(analyze_result(i, conflicts, duration, &fabric.graph, net_list, config));
+        let result = iteration_report.last().unwrap();
 
         if result.conflicts == last_conflicts {
             same_conflicts += 1;
@@ -158,15 +157,25 @@ where
         last_conflicts = result.conflicts;
 
         if result.conflicts == 0 {
-            logger.log(&LogInstance::RouterIteration(&result))?;
-            iteration_report.push(result);
-            return Ok(iteration_report);
+            let slack_report = sta.timing_analysis(fabric, net_list)?;
+            logger.log(&LogInstance::RouterStaIteration(&StaIterationResult {
+                iteration_result: result,
+                worst_slack: Some(slack_report.worst_slack.1),
+            }))?;
+            if slack_report.worst_slack.1 >= 0.0 {
+                return Ok(iteration_report);
+            }
+            fabric.slack_report = Some(slack_report);
+        } else {
+            logger.log(&LogInstance::RouterStaIteration(&StaIterationResult {
+                iteration_result: result,
+                worst_slack: None,
+            }))?;
         }
 
         if i == max_iterations {
-            logger.log(&LogInstance::RouterIteration(&result))?;
             let congestion_report = congestion_report(net_list);
-            let congestion_report = CongestionReportExtern::from_intern(&congestion_report, graph);
+            let congestion_report = CongestionReportExtern::from_intern(&congestion_report, &fabric.graph);
             return Err(FabricError::RoutingMaxIterationsReached {
                 congestion_report,
                 iteration_report,
@@ -174,10 +183,8 @@ where
         }
 
         if same_conflicts == 200 {
-            solver.pre_process(graph, &mut net_list.plan)?;
+            solver.pre_process(fabric, &mut net_list.plan)?;
         }
-        logger.log(&LogInstance::RouterIteration(&result))?;
-        iteration_report.push(result);
         i += 1;
     }
 }
@@ -261,22 +268,17 @@ pub struct CongestionReportExtern {
 /// Perform a single iteration of routing for all routing requests.
 ///
 /// Updates node usages and calculates conflicts
-pub fn iteration(
-    graph: &mut FabricGraph,
-    routing: &mut [NetInternal],
-    solver: &dyn RouteNet,
-    hist_fac: f32,
-) -> FabricResult<usize> {
+pub fn iteration(fabric: &mut Fabric, routing: &mut [NetInternal], solver: &dyn RouteNet, hist_fac: f32) -> FabricResult<usize> {
     let mut routing_failed = vec![];
     for net in &mut *routing {
-        if let Err(e) = solver.solve(graph, net)
+        if let Err(e) = solver.solve(fabric, net)
             && let FabricError::PathfindingFailed { start, sink } = e
         {
             routing_failed.push((start, sink));
         }
         if let Some(result) = &net.result {
             result.nodes.iter().for_each(|index| {
-                graph.get_costs_mut(*index).usage += 1;
+                fabric.graph.get_costs_mut(*index).usage += 1;
             });
         }
     }
@@ -284,13 +286,13 @@ pub fn iteration(
         return Err(FabricError::Other(
             routing_failed
                 .iter()
-                .map(|(a, b)| format!("{} -> {}",a.id(), b.id()))
+                .map(|(a, b)| format!("{} -> {}", a.id(), b.id()))
                 .collect::<Vec<String>>()
                 .join("\n"),
         ));
     }
     let mut conflicts = 0;
-    for node in &mut graph.costs {
+    for node in &mut fabric.graph.costs {
         if node.update(hist_fac) {
             conflicts += 1;
         }
@@ -378,6 +380,12 @@ fn analyze_result(
         duration,
         test_case: config.clone(),
     }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct StaIterationResult<'a> {
+    pub iteration_result: &'a IterationResult,
+    pub worst_slack: Option<f32>,
 }
 
 #[derive(Deserialize, Debug, Clone, Serialize, Default)]

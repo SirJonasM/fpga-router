@@ -5,7 +5,7 @@ use std::{
 
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::{FabricGraph, FabricResult, netlist::NetInternal, RouteNet, graph::node::NodeId, netlist::NetResultInternal};
+use crate::{Fabric, FabricGraph, FabricResult, RouteNet, graph::node::NodeId, netlist::{NetInternal, NetResultInternal}};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SteinerSolver;
@@ -21,15 +21,15 @@ impl RouteNet for SteinerSolver {
     fn identifier(&self) -> &'static str {
         "Steiner Solver"
     }
-    fn pre_process(&self, _graph: &mut FabricGraph, _route_plan: &mut [NetInternal]) -> FabricResult<()> {
+    fn pre_process(&self, _graph: &mut Fabric, _route_plan: &mut [NetInternal]) -> FabricResult<()> {
         Ok(())
     }
-    fn solve(&self, graph: &FabricGraph, net: &mut NetInternal) -> FabricResult<()> {
+    fn solve(&self, fabric: &Fabric, net: &mut NetInternal) -> FabricResult<()> {
         let criticallity = net.criticallity;
         let dists = net
             .sinks
             .par_iter()
-            .map(|sink| (*sink, graph.dijkstra_all(*sink, criticallity)))
+            .map(|sink| (*sink, fabric.graph.dijkstra_all(*sink, criticallity)))
             .collect::<HashMap<NodeId, Vec<f32>>>();
         let signal = net.signal;
         let base_paths: Vec<(NodeId, NodeId)> = net.sinks.iter().map(|&sink| (signal, sink)).collect();
@@ -40,9 +40,9 @@ impl RouteNet for SteinerSolver {
             .map(|(start, base_sink)| {
                 // --- Computation to find the MINIMUM COST ---
                 // Calculate the cost of the base path (Dijkstra is still necessary here)
-                let Some((base_path, mut costs)) = graph.dijkstra(start, base_sink, criticallity) else {
-                    let start_name = graph.get_node(start).id();
-                    let base_sink_name = graph.get_node(base_sink).id();
+                let Some((base_path, mut costs)) = fabric.graph.dijkstra(start, base_sink, criticallity) else {
+                    let start_name = fabric.graph.get_node(start).id();
+                    let base_sink_name = fabric.graph.get_node(base_sink).id();
                     return Err(format!("Could not find a base path start: {start_name}, base sink: {base_sink_name}"));
                 };
 
@@ -52,7 +52,7 @@ impl RouteNet for SteinerSolver {
                     .iter()
                     .map(|sink| {
                         let Some(terminal_distances) = dists.get(sink) else {
-                            let sink_name = graph.get_node(*sink).id();
+                            let sink_name = fabric.graph.get_node(*sink).id();
                             return Err(format!("No precalculated distances for the sink: {sink_name}"));
                         };
 
@@ -102,12 +102,12 @@ impl RouteNet for SteinerSolver {
             let mut paths = HashMap::new();
 
             for (sink, mid_point) in &best_candidate.mid_points {
-                let Some((mut path_to_mid, _cost)) = graph.dijkstra(signal, *mid_point, criticallity) else {
-                    let sink_name = graph.get_node(*sink).id();
+                let Some((mut path_to_mid, _cost)) = fabric.graph.dijkstra(signal, *mid_point, criticallity) else {
+                    let sink_name = fabric.graph.get_node(*sink).id();
                     return Err(format!("Could not find a route for sink: {sink_name}").into());
                 };
-                let Some((path_from_mid, _cost)) = graph.dijkstra(*mid_point, *sink, criticallity) else {
-                    let sink_name = graph.get_node(*sink).id();
+                let Some((path_from_mid, _cost)) = fabric.graph.dijkstra(*mid_point, *sink, criticallity) else {
+                    let sink_name = fabric.graph.get_node(*sink).id();
                     return Err(format!("Could not find a route for sink: {sink_name}").into());
                 };
                 nodes.extend(&path_from_mid);
