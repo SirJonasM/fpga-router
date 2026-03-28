@@ -108,5 +108,5 @@ fn test_create_fasm() {
         .unwrap();
     let _ = route(&mut config).unwrap();
     let net_list = config.net_list;
-    let result = create_fasm(&net_list).unwrap();
+    let _ = create_fasm(&net_list).unwrap();
 }

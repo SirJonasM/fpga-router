@@ -1,5 +1,5 @@
-#![deny(clippy::nursery)]
-#![deny(clippy::pedantic)]
+// #![deny(clippy::nursery)]
+// #![deny(clippy::pedantic)]
 
 //! # FPGA Path Finder
 //!
@@ -23,14 +23,13 @@ pub use error::{FabricError, FabricResult};
 
 // Public API
 pub use api::*;
-pub use graph::fabric_graph::FabricGraph;
-pub use netlist::{NetExternal, NetListExternal, NetInternal, NetResultExternal};
-pub use path_finder::{IterationResult, CongestionReportExtern};
+pub use graph::fabric_graph::{FabricGraph, Fabric, TileManager};
+pub use netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal, NetResultExternal, NetResultInternal};
+pub use path_finder::{CongestionReportExtern, IterationResult, TimingAnalysis};
 pub use slack::SlackReport;
 
 use serde::Serialize;
 pub use solver::{RouteNet, SimpleSolver, SimpleSteinerSolver, SteinerSolver};
-
 
 /// Trait for logging pathfinding iterations.
 pub trait Logging {

@@ -1,17 +1,22 @@
 use std::{io, path::PathBuf};
 use thiserror::Error;
 
-use crate::{IterationResult, graph::error::ParseError, netlist::error::MapExternalError, path_finder::CongestionReportExtern};
+use crate::{IterationResult, graph::{error::ParseError, node::Node}, netlist::error::MapExternalError, path_finder::CongestionReportExtern};
 
 // A shorthand for results in your library
 pub type FabricResult<T> = Result<T, FabricError>;
 
 #[derive(Error, Debug)]
 pub enum FabricError {
+    #[error("The STA Tool returned an error.")]
+    STAInternalError,
+
     #[error("The String does not represent a valid Node Id '{0}'.")]
     InvalidStringNodeId(String),
+    
     #[error("Tried to unwrap the result field in Net but it was none.")]
     NetNotSolved,
+
     #[error("IO error while accessing '{path}'")]
     Io {
         path: PathBuf,
@@ -66,8 +71,8 @@ pub enum FabricError {
         source: Box<Self>,
     },
 
-    #[error("Path finding for Start: {start} and Sink: {sink} failed.")]
-    PathfindingFailed { start: String, sink: String },
+    #[error("Path finding for Start: {start:?} and Sink: {sink:?} failed.")]
+    PathfindingFailed { start: Node, sink: Node },
 
     #[error("Steiner tree conflict: Node {node_id} is already in use by another route.")]
     ResourceConflict { node_id: String },

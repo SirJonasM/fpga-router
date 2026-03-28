@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use super::error::{MapExternalError, MapExternalResult};
-use crate::{FabricGraph, NetExternal, NetListExternal, NetResultExternal, graph::node::NodeId};
+use crate::{FabricGraph, NetExternal, NetListExternal, NetResultExternal, SlackReport, graph::node::NodeId};
 
 pub struct NetListInternal {
     pub plan: Vec<NetInternal>,
@@ -53,6 +53,12 @@ impl NetListInternal {
         let plan = self.plan.iter().map(|x| x.to_external(graph)).collect::<Vec<_>>();
         let hash = Some(graph.calculate_structure_hash());
         NetListExternal { hash, plan }
+    }
+
+    pub(crate) fn set_slack(&mut self, slack_report: &SlackReport) {
+        for net in &mut self.plan {
+            net.criticallity = slack_report.calculate_criticality(&net.signal);
+        }
     }
 }
 impl NetInternal {
@@ -137,6 +143,7 @@ impl NetResultInternal {
         Ok(Self { paths, nodes })
     }
 
+    #[must_use]
     pub fn to_external(&self, graph: &FabricGraph) -> NetResultExternal {
         let nodes = self.nodes.iter().map(|a| graph.nodes[*a].id()).collect::<HashSet<String>>();
         let paths = self

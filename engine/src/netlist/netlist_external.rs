@@ -2,7 +2,7 @@ use std::{collections::{HashMap, HashSet}, fs, path::Path};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{FabricError, FabricResult, SlackReport};
+use crate::{FabricError, FabricResult};
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,11 +49,5 @@ impl NetListExternal {
         })?;
         let x: Self = serde_json::de::from_str(&data)?;
         Ok(x)
-    }
-
-    pub(crate) fn add_slack(&mut self, slack_report: &SlackReport) {
-        for net in &mut self.plan {
-            net.criticallity = slack_report.calculate_criticality(&net.signal);
-        }
     }
 }

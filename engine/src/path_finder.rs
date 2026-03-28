@@ -10,11 +10,12 @@ use std::fmt::{Display, Formatter};
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 
-use crate::LogInstance;
+use crate::graph::fabric_graph::Fabric;
 use crate::graph::{fabric_graph::FabricGraph, node::NodeId};
 use crate::netlist::NetInternal;
 use crate::solver::RouteNet;
 use crate::{FabricError, FabricResult, Logging, netlist::NetListInternal};
+use crate::{LogInstance, SlackReport};
 
 /// Test case parameters for running a routing algorithm.
 #[derive(Deserialize, Debug, Clone, Serialize)]
@@ -44,6 +45,13 @@ impl Default for Config {
     }
 }
 
+pub trait TimingAnalysis {
+    /// This runs the timing analysis that is called by the `timing_driven_path_finder` and returns the Slack Report
+    /// # Errors
+    ///
+    fn timing_analysis(&self, graph: &FabricGraph, net_list: &NetListInternal) -> FabricResult<SlackReport>;
+}
+
 /// Execute routing using the `path_finder` algorihm
 ///
 /// # Arguments
@@ -55,16 +63,75 @@ impl Default for Config {
 ///
 /// # Errors
 ///
-pub fn path_finder<T, L>(
+pub fn path_finder<R, L>(
     net_list: &mut NetListInternal,
-    graph: &mut FabricGraph,
+    fabric: &mut Fabric,
     config: &Config,
-    solver: &T,
+    solver: &R,
     logger: &L,
 ) -> FabricResult<Vec<IterationResult>>
 where
-    T: RouteNet,
+    R: RouteNet,
     L: Logging,
+{
+    let hist_fac = config.hist_factor;
+    let mut iteration_report = Vec::new();
+
+    let mut i = 0;
+    let mut last_conflicts = 0;
+    let mut same_conflicts = 0;
+    solver.pre_process(&mut fabric.graph, &mut net_list.plan)?;
+    let max_iterations = config.max_iterations;
+
+    loop {
+        let time1 = Instant::now();
+        let conflicts = iteration(&mut fabric.graph, &mut net_list.plan, solver, hist_fac)
+            .map_err(|e| FabricError::IterationError { source: e.into() })?;
+        let duration = time1.elapsed();
+        let result = analyze_result(i, conflicts, duration, &fabric.graph, net_list, config);
+
+        if result.conflicts == last_conflicts {
+            same_conflicts += 1;
+        }
+        last_conflicts = result.conflicts;
+
+        if result.conflicts == 0 {
+            logger.log(&LogInstance::RouterIteration(&result))?;
+            iteration_report.push(result);
+            return Ok(iteration_report);
+        }
+
+        if i == max_iterations {
+            logger.log(&LogInstance::RouterIteration(&result))?;
+            let congestion_report = congestion_report(net_list);
+            let congestion_report = CongestionReportExtern::from_intern(&congestion_report, &fabric.graph);
+            return Err(FabricError::RoutingMaxIterationsReached {
+                congestion_report,
+                iteration_report,
+            });
+        }
+
+        if same_conflicts == 200 {
+            solver.pre_process(&mut fabric.graph, &mut net_list.plan)?;
+        }
+        logger.log(&LogInstance::RouterIteration(&result))?;
+        iteration_report.push(result);
+        i += 1;
+    }
+}
+
+pub fn timing_driven_path_finder<R, L, T>(
+    net_list: &mut NetListInternal,
+    graph: &mut FabricGraph,
+    config: &Config,
+    solver: &R,
+    logger: &L,
+    sta: &T,
+) -> FabricResult<Vec<IterationResult>>
+where
+    R: RouteNet,
+    L: Logging,
+    T: TimingAnalysis,
 {
     let hist_fac = config.hist_factor;
     let mut iteration_report = Vec::new();
@@ -74,12 +141,16 @@ where
     let mut same_conflicts = 0;
     solver.pre_process(graph, &mut net_list.plan)?;
     let max_iterations = config.max_iterations;
+
     loop {
         let time1 = Instant::now();
         let conflicts = iteration(graph, &mut net_list.plan, solver, hist_fac)
             .map_err(|e| FabricError::IterationError { source: e.into() })?;
         let duration = time1.elapsed();
         let result = analyze_result(i, conflicts, duration, graph, net_list, config);
+
+        let slack_report = sta.timing_analysis(graph, net_list)?;
+        net_list.set_slack(&slack_report);
 
         if result.conflicts == last_conflicts {
             same_conflicts += 1;
@@ -196,13 +267,27 @@ pub fn iteration(
     solver: &dyn RouteNet,
     hist_fac: f32,
 ) -> FabricResult<usize> {
+    let mut routing_failed = vec![];
     for net in &mut *routing {
-        solver.solve(graph, net).map_err(|_e| "Test")?;
+        if let Err(e) = solver.solve(graph, net)
+            && let FabricError::PathfindingFailed { start, sink } = e
+        {
+            routing_failed.push((start, sink));
+        }
         if let Some(result) = &net.result {
             result.nodes.iter().for_each(|index| {
                 graph.get_costs_mut(*index).usage += 1;
             });
         }
+    }
+    if !routing_failed.is_empty() {
+        return Err(FabricError::Other(
+            routing_failed
+                .iter()
+                .map(|(a, b)| format!("{} -> {}",a.id(), b.id()))
+                .collect::<Vec<String>>()
+                .join("\n"),
+        ));
     }
     let mut conflicts = 0;
     for node in &mut graph.costs {

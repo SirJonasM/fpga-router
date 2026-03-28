@@ -35,6 +35,8 @@ pub struct RouteArgs {
     pub net_list: String,
     #[arg(short, long)]
     pub graph: String,
+    #[arg(short, long)]
+    pub bel: String,
     #[arg(short = 'S', long, value_enum, default_value_t = SolverType::Simple)]
     pub solver: SolverType,
     #[arg(long, default_value_t = 0.1)]

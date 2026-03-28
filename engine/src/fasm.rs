@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet};
 
 use crate::{FabricError, FabricResult, netlist::NetListExternal};
 
@@ -13,7 +13,8 @@ pub fn net_to_fasm(expanded_nets: &NetListExternal) -> FabricResult<String> {
         .flat_map(|a| a.windows(2))
         .map(|pair| nodes_to_fasm_line(&pair[0], &pair[1]))
         .collect::<FabricResult<HashSet<Option<String>>>>()?
-        .into_iter().flatten()
+        .into_iter()
+        .flatten()
         .collect::<Vec<String>>();
     fasm_lines.sort();
     Ok(fasm_lines.join("\n"))
@@ -38,3 +39,5 @@ fn nodes_to_fasm_line(u_id: &str, v_id: &str) -> FabricResult<Option<String>> {
         Ok(None)
     }
 }
+
+

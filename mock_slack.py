@@ -31,6 +31,7 @@ def generate_mock_slack(fasm_path, output_path, target_ps):
             actual_delay = random.randint(2, 15) * 600
             slack = target_ps - actual_delay
             slack += random.randint(-500, 500)
+            print(wire)
             
             writer.writerow({'source_wire': wire, 'slack_ps': float(slack)})
             

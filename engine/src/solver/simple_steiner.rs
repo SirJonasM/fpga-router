@@ -93,8 +93,8 @@ fn pre_calc_steiner_tree(graph: &mut FabricGraph, net: &NetInternal) -> FabricRe
             let (base_path, mut costs) = graph
                 .dijkstra(start, base_sink, criticallity)
                 .ok_or_else(||{
-                    let start_name = graph.get_node(start).id();
-                    let sink_name = graph.get_node(base_sink).id();
+                    let start_name = graph.get_node(start).clone();
+                    let sink_name = graph.get_node(base_sink).clone();
                     FabricError::PathfindingFailed { start: start_name, sink: sink_name }
                 })?;
 

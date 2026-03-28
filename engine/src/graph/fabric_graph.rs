@@ -15,8 +15,209 @@ use sha2::{Digest, Sha256};
 
 use crate::{
     FabricError, FabricResult,
-    graph::{node::{Costs, Edge, Node, NodeId}, parser::Parser},
+    graph::{
+        node::{Costs, Edge, Node, NodeId, from_str_coords},
+        parser::Parser,
+    },
 };
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum State {
+    High,
+    Low,
+}
+#[derive(Debug)]
+pub enum LutState {
+    Free,
+    Used,
+    Borrowed(State),
+}
+
+#[derive(Debug)]
+pub struct Lut {
+    bel_index: char,
+    state: LutState,
+    output_pin: String,
+    input_pin: [String; 4],
+}
+#[derive(Debug)]
+pub struct Tile {
+    id: TileId,
+    luts: Vec<Lut>,
+}
+
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
+pub struct TileId(pub u8, pub u8);
+
+#[derive(Debug)]
+pub struct TileManager(pub HashMap<TileId, Tile>);
+
+impl TileManager {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Self {
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let mut tiles: HashMap<TileId, Tile> = HashMap::new();
+
+        for line in reader.lines() {
+            let line = line.unwrap();
+            // Skip comments and empty lines
+            if line.starts_with('#') || line.trim().is_empty() {
+                continue;
+            }
+
+            let parts: Vec<&str> = line.split(',').collect();
+
+            // Basic validation for the FABULOUS_LC rows
+            if parts.len() < 13 || parts[4] != "FABULOUS_LC" {
+                continue;
+            }
+
+            // Parse Coordinates: Expecting "X1Y1" format in parts[0]
+            // Or use parts[1] and parts[2] if they are raw integers
+
+            let (x, y) = from_str_coords(parts[0]).unwrap();
+            let tile_id = TileId(x, y);
+
+            // Construct the LUT
+            let lut = Lut {
+                // parts[3] is "A", "B", etc.
+                bel_index: parts[3].chars().next().unwrap_or('?'),
+                state: LutState::Free,
+                // parts[12] is the output pin (e.g., "LA_O")
+                output_pin: parts[12].to_string(),
+                // parts[5..9] are I0, I1, I2, I3
+                input_pin: [
+                    parts[5].to_string(),
+                    parts[6].to_string(),
+                    parts[7].to_string(),
+                    parts[8].to_string(),
+                ],
+            };
+
+            // Insert into the tile manager
+            tiles
+                .entry(tile_id)
+                .or_insert_with(|| Tile {
+                    id: tile_id,
+                    luts: Vec::new(),
+                })
+                .luts
+                .push(lut);
+        }
+
+        Self(tiles)
+    }
+    /// Internal helper to find a LUT by index within a specific tile
+    fn find_lut_mut(&mut self, tile_id: TileId, bel_index: char) -> Option<&mut Lut> {
+        self.0
+            .get_mut(&tile_id)
+            .and_then(|tile| tile.luts.iter_mut().find(|lut| lut.bel_index == bel_index))
+    }
+
+    /// Marks a LUT as 'Used' (called during placement parsing)
+    pub fn mark_lut_used(&mut self, tile: TileId, bel_index: char) -> Option<String> {
+        if let Some(lut) = self.find_lut_mut(tile, bel_index) {
+            // Safety check: only borrow if it's actually free
+            if matches!(lut.state, LutState::Free) {
+                lut.state = LutState::Used;
+                return Some(lut.output_pin.clone());
+            }
+        }
+        None
+    }
+
+    pub fn request_constant(&mut self, start_tile: TileId, state: State) -> Option<(TileId,String)> {
+        // 1. Define the search radius (Starting Tile, then Neighbors)
+        let search_order = [
+            start_tile,
+            TileId(start_tile.0 + 1, start_tile.1), // East
+            TileId(start_tile.0, start_tile.1 + 1), // North
+                                                    // ... add more as needed
+        ];
+
+        for &tid in &search_order {
+            if let Some(tile) = self.0.get_mut(&tid) {
+                // STEP A: Check if this tile ALREADY has a LUT borrowed for this state
+                // This implements your "If it matches, use that" logic
+                let existing = tile
+                    .luts
+                    .iter()
+                    .find(|l| matches!(&l.state, LutState::Borrowed(s) if s == &state));
+
+                if let Some(lut) = existing {
+                    return Some((tile.id, lut.output_pin.clone()));
+                }
+
+                // STEP B: If no existing match, find the first FREE lut in this tile to borrow
+                let free_lut_index = tile.luts.iter().position(|l| matches!(l.state, LutState::Free));
+
+                if let Some(idx) = free_lut_index {
+                    let lut = &mut tile.luts[idx];
+                    lut.state = LutState::Borrowed(state);
+                    return Some((tile.id, lut.output_pin.clone()));
+                }
+            }
+        }
+        None
+    }
+    /// Iterates through all tiles and generates FASM configuration strings
+    /// for LUTs that were borrowed as constant drivers.
+    pub fn generate_constant_fasm(&self) -> Vec<String> {
+        let mut fasm_lines = Vec::new();
+
+        for (tile_id, tile) in &self.0 {
+            for lut in &tile.luts {
+                if let LutState::Borrowed(state) = &lut.state {
+                    // Example FASM Format: Tile_X1Y1.LC_A.INIT[15:0] = 16'h0000
+                    let init_val = match state {
+                        State::Low => "16'b0000000000000000",
+                        State::High => "16'h1111111111111111",
+                    };
+
+                    // We use the bel_index (e.g., 'A', 'B') to specify which LUT in the tile
+                    let line = format!(
+                        "X{}Y{}.{}.INIT[15:0] = {}",
+                        tile_id.0, 
+                        tile_id.1, 
+                        lut.bel_index, 
+                        init_val
+                    );
+                    
+                    fasm_lines.push(line);
+                }
+            }
+        }
+        fasm_lines
+    }
+}
+
+impl Fabric {
+    pub fn new(bel: &str, pips: &str) -> FabricResult<Self> {
+        let graph = FabricGraph::from_file(pips)?;
+        let tile_manager = TileManager::from_file(bel);
+        Ok(Self { tile_manager, graph })
+    }
+}
+
+pub struct Fabric {
+    pub tile_manager: TileManager,
+    pub graph: FabricGraph,
+}
+
+impl Fabric {
+    pub fn check_and_mark_node(&mut self, node_id: NodeId) {
+        let node = self.graph.get_node(node_id);
+
+        // FABulous naming convention: LA_I0, LB_O, LC_EN...
+        // They all start with 'L' and a char [A-H], then an underscore
+        if node.id.starts_with('L') && node.id.chars().nth(2) == Some('_') {
+            if let Some(bel_char) = node.id.chars().nth(1) {
+                let tile_id = TileId(node.x, node.y);
+                self.tile_manager.mark_lut_used(tile_id, bel_char);
+            }
+        }
+    }
+}
 
 /// Representation of the FPGA fabric graph
 #[derive(Debug, Clone, Default)]
@@ -31,7 +232,6 @@ pub struct FabricGraph {
     /// Index of String ids from PIPS file to internal `NodeId`
     pub index: HashMap<String, NodeId>,
 }
-
 
 impl FabricGraph {
     #[must_use]
@@ -102,7 +302,9 @@ impl FabricGraph {
                 path: path_ref.to_path_buf(),
                 source: e,
             })?;
-            pips_parser.parse_line(&line).map_err(|source| FabricError::ParseError {line_number, source})?;
+            pips_parser
+                .parse_line(&line)
+                .map_err(|source| FabricError::ParseError { line_number, source })?;
         }
         Ok(pips_parser.build())
     }
@@ -160,7 +362,6 @@ pub fn bucket_luts(graph: &FabricGraph) -> (Vec<NodeId>, Vec<NodeId>) {
     (lut_inputs, lut_outputs)
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -176,10 +377,23 @@ mod test {
     fn test_parse_pips_file_error_accessing_file() {
         let test_file = "some_file_that_does_not_exist.txt";
         let error = FabricGraph::from_file(test_file).unwrap_err().to_string();
-        assert_eq!(
-            "IO error while accessing 'some_file_that_does_not_exist.txt'",
-            error
-        );
+        assert_eq!("IO error while accessing 'some_file_that_does_not_exist.txt'", error);
     }
-
+    #[test]
+    fn test_parse_bels_file() {
+        let test_file = get_test_data_path("bel.txt");
+        let _ = TileManager::from_file(test_file);
+    }
+    #[test]
+    fn test_mark_used() {
+        let test_file = get_test_data_path("bel.txt");
+        let mut tile_manager = TileManager::from_file(test_file);
+        let _ = tile_manager.mark_lut_used(TileId(1, 1), 'A').unwrap();
+    }
+    #[test]
+    fn test_mark_borrowed() {
+        let test_file = get_test_data_path("bel.txt");
+        let mut tile_manager = TileManager::from_file(test_file);
+        let _ = tile_manager.request_constant(TileId(1, 1),  State::High).unwrap();
+    }
 }

@@ -22,8 +22,8 @@ impl RouteNet for SimpleSolver {
                     graph
                         .dijkstra(signal, *sink, criticallity)
                         .ok_or_else(|| FabricError::PathfindingFailed {
-                            start: signal.name(graph),
-                            sink: sink.name(graph),
+                            start: signal.as_node(graph),
+                            sink: sink.as_node(graph),
                         })?;
                 Ok((*sink, path))
             })

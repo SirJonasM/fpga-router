@@ -6,7 +6,7 @@
 use crate::FabricGraph;
 use super::error::ParseError;
 
-type NodeIdType = u16;
+type NodeIdType = usize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NodeId(pub(super) NodeIdType);
@@ -16,6 +16,9 @@ impl NodeId {
     pub(super) fn new(id: usize) -> Self {
         let x = NodeIdType::try_from(id).expect("The id space is too small to create this NodeId. Try building the engine with a internal NodeId");
         Self(x)
+    }
+    pub(crate) fn as_node(self, graph: &FabricGraph) -> Node {
+        graph.get_node(self).clone()
     }
     pub(crate) fn name(self, graph: &FabricGraph) -> String {
         graph.get_node(self).id()
@@ -85,7 +88,7 @@ impl Node {
 }
 
 /// Parse coordinates from a string of the form "X<num>Y<num>"
-fn from_str_coords(s: &str) -> std::result::Result<(u8, u8), ParseError> {
+pub fn from_str_coords(s: &str) -> std::result::Result<(u8, u8), ParseError> {
     if !s.starts_with('X') {
         return Err(ParseError::MissingPrefix {
             prefix: 'X',
