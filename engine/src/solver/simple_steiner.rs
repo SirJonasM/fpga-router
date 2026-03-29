@@ -44,7 +44,7 @@ impl RouteNet for SimpleSteinerSolver {
         fabric.graph.reset_usage();
         Ok(())
     }
-    fn solve(&self, fabric: &Fabric, net: &mut NetInternal) -> FabricResult<()> {
+    fn solve(&self, fabric: &mut Fabric, net: &mut NetInternal) -> FabricResult<()> {
         let criticallity = net.criticallity;
         if let Some(steiner_tree) = &net.intermediate_nodes {
             let mut paths = HashMap::new();

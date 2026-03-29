@@ -271,10 +271,12 @@ pub struct CongestionReportExtern {
 pub fn iteration(fabric: &mut Fabric, routing: &mut [NetInternal], solver: &dyn RouteNet, hist_fac: f32) -> FabricResult<usize> {
     let mut routing_failed = vec![];
     for net in &mut *routing {
-        if let Err(e) = solver.solve(fabric, net)
-            && let FabricError::PathfindingFailed { start, sink } = e
-        {
-            routing_failed.push((start, sink));
+        if let Err(e) = solver.solve(fabric, net) {
+            if let FabricError::PathfindingFailed { start, sink } = e {
+                routing_failed.push((start, sink));
+            } else {
+                return Err(e);
+            }
         }
         if let Some(result) = &net.result {
             result.nodes.iter().for_each(|index| {

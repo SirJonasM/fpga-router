@@ -24,7 +24,7 @@ impl RouteNet for SteinerSolver {
     fn pre_process(&self, _graph: &mut Fabric, _route_plan: &mut [NetInternal]) -> FabricResult<()> {
         Ok(())
     }
-    fn solve(&self, fabric: &Fabric, net: &mut NetInternal) -> FabricResult<()> {
+    fn solve(&self, fabric: &mut Fabric, net: &mut NetInternal) -> FabricResult<()> {
         let criticallity = net.criticallity;
         let dists = net
             .sinks

@@ -117,7 +117,7 @@ pub enum Solver {
 }
 
 impl RouteNet for Solver {
-    fn solve(&self, graph: &Fabric, routing: &mut NetInternal) -> router::FabricResult<()> {
+    fn solve(&self, graph: &mut Fabric, routing: &mut NetInternal) -> router::FabricResult<()> {
         match self {
             Self::Simple(simple_solver) => simple_solver.solve(graph, routing),
             Self::SimpleSteiner(simple_steiner_solver) => simple_steiner_solver.solve(graph, routing),

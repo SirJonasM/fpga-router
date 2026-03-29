@@ -1,13 +1,19 @@
-use std::{io, path::PathBuf};
+use std::{collections::HashSet, io, path::PathBuf};
 use thiserror::Error;
 
-use crate::{IterationResult, fabric::{error::ParseError, node::Node}, netlist::error::MapExternalError, path_finder::CongestionReportExtern};
+use crate::{IterationResult, fabric::{error::ParseError, node::{Node, TileId}}, netlist::error::MapExternalError, path_finder::CongestionReportExtern};
 
 // A shorthand for results in your library
 pub type FabricResult<T> = Result<T, FabricError>;
 
 #[derive(Error, Debug)]
 pub enum FabricError {
+    #[error("Tile: '{tile}' does not contain a Lut with bel_index: '{bel_index}'.")]
+    LutDoesNotExist { tile: TileId, bel_index: char },
+
+    #[error("The Input node: '{input}' does not exist on the Lut: tile: '{tile}' bel_index: '{bel_index}'")]
+    LutInputDoesNotExist { tile: TileId, bel_index: char, input: String },
+
     #[error("The STA Tool returned an error.")]
     STAInternalError,
 
@@ -73,6 +79,9 @@ pub enum FabricError {
 
     #[error("Path finding for Start: {start:?} and Sink: {sink:?} failed.")]
     PathfindingFailed { start: Node, sink: Node },
+
+    #[error("Path finding for Start: {start:?} and Sink: {sink:?} failed.")]
+    FindOnePathfindingFailed { start: Node, sink: HashSet<Node> },
 
     #[error("Steiner tree conflict: Node {node_id} is already in use by another route.")]
     ResourceConflict { node_id: String },

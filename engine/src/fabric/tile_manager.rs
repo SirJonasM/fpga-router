@@ -1,4 +1,9 @@
-use std::{collections::HashMap, fs::File, io::{BufRead, BufReader}, path::Path};
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{BufRead, BufReader},
+    path::Path,
+};
 
 use crate::{FabricError, FabricResult, fabric::node::TileId};
 
@@ -7,11 +12,17 @@ pub enum State {
     High,
     Low,
 }
+
 #[derive(Debug)]
 pub enum LutState {
     Free,
     Used,
     Borrowed(State),
+}
+#[derive(Debug, Eq, PartialEq)]
+pub enum LutInputState {
+    Free,
+    Used,
 }
 
 #[derive(Debug)]
@@ -19,8 +30,9 @@ pub struct Lut {
     bel_index: char,
     state: LutState,
     output_pin: String,
-    _input_pin: [String; 4],
+    input_pin: [(String, LutInputState); 4],
 }
+
 #[derive(Debug)]
 pub struct Tile {
     id: TileId,
@@ -62,7 +74,7 @@ impl TileManager {
             // Parse Coordinates: Expecting "X1Y1" format in parts[0]
             // Or use parts[1] and parts[2] if they are raw integers
 
-            let tile_id  = TileId::from_str_coords(parts[0]).map_err(|e| FabricError::ParseError { line_number, source: e })?;
+            let tile_id = TileId::from_str_coords(parts[0]).map_err(|e| FabricError::ParseError { line_number, source: e })?;
 
             // Construct the LUT
             let lut = Lut {
@@ -72,11 +84,11 @@ impl TileManager {
                 // parts[12] is the output pin (e.g., "LA_O")
                 output_pin: parts[12].to_string(),
                 // parts[5..9] are I0, I1, I2, I3
-                _input_pin: [
-                    parts[5].to_string(),
-                    parts[6].to_string(),
-                    parts[7].to_string(),
-                    parts[8].to_string(),
+                input_pin: [
+                    (parts[5].to_string(), LutInputState::Free),
+                    (parts[6].to_string(), LutInputState::Free),
+                    (parts[7].to_string(), LutInputState::Free),
+                    (parts[8].to_string(), LutInputState::Free),
                 ],
             };
 
@@ -112,19 +124,72 @@ impl TileManager {
         None
     }
 
+    /// Sets the lut input to used
+    /// # Returns
+    /// true: the lut input state was changed
+    /// false: the lut input was already in the requested state
+    /// # Errors
+    /// `LutDoesNotExist`: if there is no Lut in the requested tile
+    /// `LutInputDoesNotExist`: if the lut does not contain the requested input.
+    pub fn mark_lut_input_used(&mut self, tile: TileId, bel_index: char, input: &str) -> FabricResult<bool> {
+        let lut = self
+            .find_lut_mut(tile, bel_index)
+            .ok_or(FabricError::LutDoesNotExist { tile, bel_index })?;
+        let input = lut
+            .input_pin
+            .iter_mut()
+            .find(|a| a.0 == input)
+            .ok_or_else(|| FabricError::LutInputDoesNotExist {
+                tile,
+                bel_index,
+                input: input.to_string(),
+            })?;
+        if input.1 == LutInputState::Free {
+            input.1 = LutInputState::Used;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+    /// Sets the lut input to free
+    /// # Returns
+    /// true: the lut input state was changed
+    /// false: the lut input was already in the requested state
+    /// # Errors
+    /// `LutDoesNotExist`: if there is no Lut in the requested tile
+    /// `LutInputDoesNotExist`: if the lut does not contain the requested input.
+    pub fn free_lut_input(&mut self, tile: TileId, bel_index: char, input: &str) -> FabricResult<bool> {
+        let lut = self
+            .find_lut_mut(tile, bel_index)
+            .ok_or(FabricError::LutDoesNotExist { tile, bel_index })?;
+        let input = lut
+            .input_pin
+            .iter_mut()
+            .find(|a| a.0 == input)
+            .ok_or_else(|| FabricError::LutInputDoesNotExist {
+                tile,
+                bel_index,
+                input: input.to_string(),
+            })?;
+        if input.1 == LutInputState::Used {
+            input.1 = LutInputState::Free;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    /// Searched the tile for a lut that can be set to either all 0's or 1's to produce a *VCC* or
+    /// *GND* signal
     pub fn request_constant(&mut self, start_tile: TileId, state: State) -> Option<(TileId, String)> {
-        // 1. Define the search radius (Starting Tile, then Neighbors)
         let search_order = [
             start_tile,
             TileId(start_tile.0 + 1, start_tile.1), // East
             TileId(start_tile.0, start_tile.1 + 1), // North
-                                                    // ... add more as needed
         ];
 
         for &tid in &search_order {
             if let Some(tile) = self.0.get_mut(&tid) {
-                // STEP A: Check if this tile ALREADY has a LUT borrowed for this state
-                // This implements your "If it matches, use that" logic
                 let existing = tile
                     .luts
                     .iter()
@@ -134,7 +199,6 @@ impl TileManager {
                     return Some((tile.id, lut.output_pin.clone()));
                 }
 
-                // STEP B: If no existing match, find the first FREE lut in this tile to borrow
                 let free_lut_index = tile.luts.iter().position(|l| matches!(l.state, LutState::Free));
 
                 if let Some(idx) = free_lut_index {
@@ -169,5 +233,24 @@ impl TileManager {
             }
         }
         fasm_lines
+    }
+
+    /// Returns the free lut inputs of a specified lut and sets them as used.
+    pub(crate) fn get_free_lut_inputs(&mut self, tile: TileId, bel_index: char) -> FabricResult<Vec<String>> {
+        let lut = self
+            .find_lut_mut(tile, bel_index)
+            .ok_or(FabricError::LutDoesNotExist { tile, bel_index })?;
+        let result = lut
+            .input_pin
+            .iter_mut()
+            .filter_map(|(a, b)| {
+                if b == &LutInputState::Used {
+                    return None;
+                }
+                *b = LutInputState::Used;
+                Some(a.clone())
+            })
+            .collect();
+        Ok(result)
     }
 }

@@ -116,7 +116,7 @@ const fn distance(a: &Node, b: &Node) -> f32 {
 
 #[cfg(test)]
 mod test {
-    use crate::fabric::node::TileId;
+    use crate::fabric::node::{NodeType, TileId};
 
     use super::*;
 
@@ -125,11 +125,13 @@ mod test {
         let test_case = "X1Y0,N1END3,X1Y0,S1BEG0,8,N1END3.S1BEG0".to_string();
         let node1_expected = Node {
             id: "N1END3".to_string(),
-            tile: TileId(1,0)
+            tile: TileId(1,0),
+            typ: NodeType::Other,
         };
         let node2_expected = Node {
             id: "S1BEG0".to_string(),
-            tile: TileId(1,0)
+            tile: TileId(1,0),
+            typ: NodeType::Other,
         };
         let PipsLine {
             start_node, end_node, ..

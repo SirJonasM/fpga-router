@@ -46,7 +46,7 @@ impl<T> std::ops::IndexMut<NodeId> for Vec<T> {
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
 pub struct TileId(pub u8, pub u8);
-type NodeIdType = usize;
+type NodeIdType = u32;
 
 /// Programmable Connectio between nodes
 #[derive(Debug, Clone)]
@@ -64,6 +64,14 @@ pub struct Node {
     pub id: String,
     /// X coordinate on the FPGA fabric
     pub tile: TileId,
+    pub typ: NodeType,
+}
+
+#[derive(Hash, Eq, PartialEq, Clone, Debug)]
+pub enum NodeType {
+    LutInput(char),
+    LutOutput(char),
+    Other,
 }
 
 /// Structure representing costs associated with routing through a node
@@ -77,16 +85,35 @@ pub struct Costs {
     pub usage: u16,
 }
 
+impl From<&str> for NodeType {
+    fn from(value: &str) -> Self {
+
+        let mut typ = Self::Other;
+        let mut bel_index = '0';
+        for (index, char) in value.char_indices(){
+            match (index, char){
+                (0, 'L') | (2, '_') | (3, 'I') => {}
+                (1, a) => bel_index = a,
+                (3, 'O') => typ = Self::LutOutput(bel_index),
+                (4, a) if a.is_ascii_digit() => typ = Self::LutInput(bel_index),
+                (0 | 2 | 3 | _, _) => return Self::Other,
+            } 
+        }
+        typ
+    }
+}
+
 impl Node {
-    pub const fn new(id: String, tile: TileId) -> Self {
-        Self { id, tile }
+    pub const fn new(id: String, tile: TileId, typ: NodeType) -> Self {
+        Self { id, tile, typ }
     }
     pub fn parse(id: &str, coords: &str) -> Result<Self, ParseError> {
         let tile = TileId::from_str_coords(coords)?;
-        Ok(Self::new(id.to_string(), tile))
+        let typ = id.into();
+        Ok(Self::new(id.to_string(), tile, typ))
     }
     pub fn id(&self) -> String {
-        format!("{}.{}",self.tile, self.id)
+        format!("{}.{}", self.tile, self.id)
     }
 }
 
@@ -216,7 +243,8 @@ mod test {
         let node_cords = "X1Y2";
         let node_expected = Node {
             id: "Test".to_string(),
-            tile: TileId(1,2),
+            tile: TileId(1, 2),
+            typ: NodeType::Other,
         };
         let node = Node::parse(node_id, node_cords).unwrap();
         assert_eq!(node, node_expected);

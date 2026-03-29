@@ -22,7 +22,7 @@ pub trait RouteNet {
     ///
     /// Returns [`FabricError::PathfindingFailed`] if a valid route cannot be found
     /// given the current graph constraints.
-    fn solve(&self, graph: &Fabric, routing: &mut NetInternal) -> FabricResult<()>;
+    fn solve(&self, graph: &mut Fabric, routing: &mut NetInternal) -> FabricResult<()>;
 
     /// Prepares the graph or the route plan before the main solving phase.
     ///
