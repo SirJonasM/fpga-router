@@ -21,23 +21,16 @@ impl RouteNet for SimpleSolver {
             .sinks
             .par_iter()
             .map(|sink| {
-                let crit = if let Some(slack_report) = &fabric.slack_report {
-                    if let Some(crit) = slack_report.criticalities.get(&(signal, *sink)) {
-                        *crit
-                    } else {
-                        0.0
-                    }
-                } else {
-                    0.0
-                };
-                let (path, _cost) =
-                    fabric
-                        .graph
-                        .dijkstra(signal, *sink, crit)
-                        .ok_or_else(|| FabricError::PathfindingFailed {
-                            start: signal.as_node(&fabric.graph),
-                            sink: sink.as_node(&fabric.graph),
-                        })?;
+                let crit = fabric.slack_report.as_ref().map_or(0.0, |slack_report| {
+                    slack_report.criticalities.get(&(signal, *sink)).map_or(0.0, |crit| *crit)
+                });
+                let (path, _cost) = fabric
+                    .graph
+                    .dijkstra(signal, *sink, crit)
+                    .ok_or_else(|| FabricError::PathfindingFailed {
+                        start: signal.as_node(&fabric.graph),
+                        sink: sink.as_node(&fabric.graph),
+                    })?;
                 Ok((*sink, path))
             })
             .collect::<Result<HashMap<NodeId, Vec<NodeId>>, FabricError>>()?;

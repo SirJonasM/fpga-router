@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand, ValueEnum};
-use router::{Fabric, FabricGraph, NetInternal, RouteNet, SimpleSolver, SimpleSteinerSolver, SteinerSolver};
+use router::{Fabric, NetInternal, RouteNet, SimpleSolver, SimpleSteinerSolver, SteinerSolver};
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum SolverType {

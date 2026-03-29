@@ -14,10 +14,11 @@ use std::{
 use sha2::{Digest, Sha256};
 
 use crate::{
-    FabricError, FabricResult, NetInternal, NetListInternal, SlackReport, graph::{
+    FabricError, FabricResult, NetInternal, NetListInternal, SlackReport,
+    graph::{
         node::{Costs, Edge, Node, NodeId, from_str_coords},
         parser::{Parser, TimingModel},
-    }
+    },
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -52,13 +53,22 @@ pub struct TileId(pub u8, pub u8);
 pub struct TileManager(pub HashMap<TileId, Tile>);
 
 impl TileManager {
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Self {
-        let file = File::open(path).unwrap();
+    /// Reads from the bel.txt file and creates a `TileManager`
+    /// # Errors
+    /// Io errors
+    pub fn from_file<P: AsRef<Path>>(path: &P) -> FabricResult<Self> {
+        let file = File::open(path).map_err(|source| FabricError::Io {
+            path: path.as_ref().to_path_buf(),
+            source,
+        })?;
         let reader = BufReader::new(file);
         let mut tiles: HashMap<TileId, Tile> = HashMap::new();
 
-        for line in reader.lines() {
-            let line = line.unwrap();
+        for (line_number, line) in reader.lines().enumerate() {
+            let line = line.map_err(|source| FabricError::Io {
+                path: path.as_ref().to_path_buf(),
+                source,
+            })?;
             // Skip comments and empty lines
             if line.starts_with('#') || line.trim().is_empty() {
                 continue;
@@ -74,7 +84,7 @@ impl TileManager {
             // Parse Coordinates: Expecting "X1Y1" format in parts[0]
             // Or use parts[1] and parts[2] if they are raw integers
 
-            let (x, y) = from_str_coords(parts[0]).unwrap();
+            let (x, y) = from_str_coords(parts[0]).map_err(|e| FabricError::ParseError { line_number, source: e })?;
             let tile_id = TileId(x, y);
 
             // Construct the LUT
@@ -104,7 +114,7 @@ impl TileManager {
                 .push(lut);
         }
 
-        Self(tiles)
+        Ok(Self(tiles))
     }
     /// Internal helper to find a LUT by index within a specific tile
     fn find_lut_mut(&mut self, tile_id: TileId, bel_index: char) -> Option<&mut Lut> {
@@ -161,6 +171,7 @@ impl TileManager {
     }
     /// Iterates through all tiles and generates FASM configuration strings
     /// for LUTs that were borrowed as constant drivers.
+    #[must_use]
     pub fn generate_constant_fasm(&self) -> Vec<String> {
         let mut fasm_lines = Vec::new();
 
@@ -185,8 +196,13 @@ impl TileManager {
 }
 
 impl Fabric {
-    pub fn new(graph: FabricGraph, tile_manager: TileManager) -> Self {
-        Self { tile_manager, graph , slack_report: None}
+    #[must_use]
+    pub const fn new(graph: FabricGraph, tile_manager: TileManager) -> Self {
+        Self {
+            tile_manager,
+            graph,
+            slack_report: None,
+        }
     }
 
     pub(crate) fn check_pathing(&mut self, net_list: &mut NetListInternal) -> FabricResult<()> {
@@ -215,24 +231,26 @@ impl Fabric {
                 _ => None,
             };
             let sink_node = self.graph.get_node(*sink);
-            let state = state.ok_or(FabricError::Other(format!(
-                "Cannot find a routing for net {} -> {}",
-                sink_node.id(),
-                signal_node.id()
-            )))?;
+            let state = state.ok_or_else(|| {
+                FabricError::Other(format!(
+                    "Cannot find a routing for net {} -> {}",
+                    sink_node.id(),
+                    signal_node.id()
+                ))
+            })?;
             let tile = TileId(sink_node.x, sink_node.y);
             let new_source_name = self
                 .tile_manager
                 .request_constant(tile, state)
-                .ok_or(FabricError::Other("Fabric exhausted: No free LUTs for constants".into()))?;
+                .ok_or_else(|| FabricError::Other("Fabric exhausted: No free LUTs for constants".into()))?;
 
             let node_id_str = format!("X{}Y{}.{}", new_source_name.0.0, new_source_name.0.1, new_source_name.1);
             let node = self.graph.get_node_id(&node_id_str).unwrap();
             // 4. Re-run Dijkstra with the new local source
-            let _ = self.graph.dijkstra(*node, *sink, 0.0).ok_or(FabricError::Other(format!(
-                "Even local constant {:?} couldn't reach sink",
-                new_source_name
-            )))?;
+            let _ = self
+                .graph
+                .dijkstra(*node, *sink, 0.0)
+                .ok_or_else(|| FabricError::Other(format!("Even local constant {new_source_name:?} couldn't reach sink")))?;
             optimized_net.insert((*node, *sink));
         }
 
@@ -379,6 +397,7 @@ impl FabricGraph {
         self.costs.iter_mut().for_each(|a| a.usage = 0);
     }
 
+    #[must_use]
     pub fn get_node_id(&self, id: &str) -> Option<&NodeId> {
         self.index.get(id)
     }
@@ -449,18 +468,18 @@ mod test {
     #[test]
     fn test_parse_bels_file() {
         let test_file = get_test_data_path("bel.txt");
-        let _ = TileManager::from_file(test_file);
+        let _ = TileManager::from_file(&test_file);
     }
     #[test]
     fn test_mark_used() {
         let test_file = get_test_data_path("bel.txt");
-        let mut tile_manager = TileManager::from_file(test_file);
+        let mut tile_manager = TileManager::from_file(&test_file).unwrap();
         let _ = tile_manager.mark_lut_used(TileId(1, 1), 'A').unwrap();
     }
     #[test]
     fn test_mark_borrowed() {
         let test_file = get_test_data_path("bel.txt");
-        let mut tile_manager = TileManager::from_file(test_file);
+        let mut tile_manager = TileManager::from_file(&test_file).unwrap();
         let _ = tile_manager.request_constant(TileId(1, 1), State::High).unwrap();
     }
 }

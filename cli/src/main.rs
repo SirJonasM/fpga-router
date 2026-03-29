@@ -87,7 +87,7 @@ fn command_route(args: &cli::RouteArgs) -> Result<()> {
     let net_list = NetListExternal::from_file(&args.net_list)
         .with_context(|| format!("Router initialization failed: unable to load net-list {}", args.net_list))?;
 
-    let tile_manager = TileManager::from_file(&args.bel);
+    let tile_manager = TileManager::from_file(&args.bel)?;
     let mut config = RoutingConfigBuilder::default()
         .hist_factor(args.hist_factor)
         .max_iterations(args.max_iterations)
@@ -176,7 +176,7 @@ fn command_route_sta(args: &cli::RouteStaArgs) -> Result<()> {
     let net_list = NetListExternal::from_file(&args.net_list)
         .with_context(|| format!("Router initialization failed: unable to load net-list {}", args.net_list))?;
 
-    let tile_manager = TileManager::from_file(&args.bel);
+    let tile_manager = TileManager::from_file(&args.bel)?;
 
     let mut config = RoutingConfigBuilder::default()
         .hist_factor(args.hist_factor)

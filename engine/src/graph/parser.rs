@@ -34,7 +34,7 @@ impl Parser {
             timing_model: None,
         }
     }
-    pub fn set_timing_model(&mut self, timing_model: TimingModel){
+    pub const fn set_timing_model(&mut self, timing_model: TimingModel){
         self.timing_model = Some(timing_model);
     }
     pub fn parse_line(&mut self, line: &str) -> Result<(), ParseError> {
@@ -54,8 +54,7 @@ impl Parser {
         let cost = self
             .timing_model
             .as_ref()
-            .map(|a| a.pip_delay)
-            .unwrap_or(distance(&start_node, &end_node));
+            .map_or_else(|| distance(&start_node, &end_node), |a| a.pip_delay, );
 
         let sid = self.get_or_create_node(&start_node);
         let eid = self.get_or_create_node(&end_node);

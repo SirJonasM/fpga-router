@@ -6,7 +6,7 @@ pub use simple::SimpleSolver;
 pub use simple_steiner::SimpleSteinerSolver;
 pub use steiner::SteinerSolver;
 
-use crate::{Fabric, FabricResult, graph::fabric_graph::FabricGraph, netlist::NetInternal};
+use crate::{Fabric, FabricResult, NetInternal};
 
 /// A trait for implementing custom routing algorithms within the fabric.
 ///

@@ -1,5 +1,5 @@
-// #![deny(clippy::nursery)]
-// #![deny(clippy::pedantic)]
+#![deny(clippy::nursery)]
+#![deny(clippy::pedantic)]
 
 //! # FPGA Path Finder
 //!
