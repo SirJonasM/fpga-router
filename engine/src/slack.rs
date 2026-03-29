@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::graph::node::NodeId;
+use crate::fabric::node::NodeId;
 
 pub struct SlackReport {
     /// Mapping of `NodeId` -> Slack in picoseconds

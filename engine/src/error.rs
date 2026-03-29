@@ -1,7 +1,7 @@
 use std::{io, path::PathBuf};
 use thiserror::Error;
 
-use crate::{IterationResult, graph::{error::ParseError, node::Node}, netlist::error::MapExternalError, path_finder::CongestionReportExtern};
+use crate::{IterationResult, fabric::{error::ParseError, node::Node}, netlist::error::MapExternalError, path_finder::CongestionReportExtern};
 
 // A shorthand for results in your library
 pub type FabricResult<T> = Result<T, FabricError>;

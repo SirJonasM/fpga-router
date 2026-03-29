@@ -1,12 +1,13 @@
 use rand::seq::SliceRandom;
 
-use crate::graph::fabric_graph::{Fabric, TileManager};
+use crate::fabric::graph::{Fabric};
+use crate::fabric::tile_manager::TileManager;
 use crate::path_finder::{TimingAnalysis, timing_driven_path_finder};
 use crate::{
     FabricError, FabricResult, Logging,
     fasm::net_to_fasm,
-    graph::fabric_graph::{FabricGraph, bucket_luts},
-    graph::node::NodeId,
+    fabric::graph::{FabricGraph, bucket_luts},
+    fabric::node::NodeId,
     netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal},
     path_finder::{Config, path_finder},
     solver::RouteNet,
@@ -36,12 +37,15 @@ pub struct RoutingConfig<R: RouteNet, L: Logging> {
 /// Tries to solve a `NetList`
 /// # Example
 /// ```
-/// use router::{FabricGraph, route, NetListExternal, create_test, RoutingConfigBuilder};
+/// use router::{FabricGraph, route, NetListExternal, create_test, RoutingConfigBuilder,
+/// TileManager};
 ///
-/// let path = testing_utils::get_test_data_path("pips_4x4.txt");
-/// let graph = FabricGraph::from_file(path).unwrap();
+/// let path_pips = testing_utils::get_test_data_path("pips_4x4.txt");
+/// let path_bel = testing_utils::get_test_data_path("pips_4x4.txt");
+/// let graph = FabricGraph::from_file(&path_pips, None).unwrap();
+/// let tile_manager = TileManager::from_file(&path_bel).unwrap();
 ///
-/// let mut config = RoutingConfigBuilder::default().graph(graph).with_test_netlist(0.1,2).unwrap().build().unwrap();
+/// let mut config = RoutingConfigBuilder::default().graph(graph).tile_manager(tile_manager).with_test_netlist(0.1,2).unwrap().build().unwrap();
 ///
 /// let _ = route(&mut config).unwrap();
 /// ```

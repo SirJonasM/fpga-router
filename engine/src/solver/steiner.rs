@@ -5,7 +5,7 @@ use std::{
 
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::{Fabric, FabricResult, RouteNet, graph::node::NodeId, netlist::{NetInternal, NetResultInternal}};
+use crate::{Fabric, FabricResult, RouteNet, fabric::node::NodeId, netlist::{NetInternal, NetResultInternal}};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SteinerSolver;

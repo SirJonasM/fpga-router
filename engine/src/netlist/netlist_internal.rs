@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use super::error::{MapExternalError, MapExternalResult};
-use crate::{FabricGraph, NetExternal, NetListExternal, NetResultExternal, graph::node::NodeId};
+use crate::{FabricGraph, NetExternal, NetListExternal, NetResultExternal, fabric::node::NodeId};
 
 pub struct NetListInternal {
     pub plan: Vec<NetInternal>,

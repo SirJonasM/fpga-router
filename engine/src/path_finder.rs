@@ -10,8 +10,8 @@ use std::fmt::{Display, Formatter};
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 
-use crate::graph::fabric_graph::Fabric;
-use crate::graph::{fabric_graph::FabricGraph, node::NodeId};
+use crate::fabric::graph::Fabric;
+use crate::fabric::{graph::FabricGraph, node::NodeId};
 use crate::netlist::NetInternal;
 use crate::solver::RouteNet;
 use crate::{FabricError, FabricResult, Logging, netlist::NetListInternal};

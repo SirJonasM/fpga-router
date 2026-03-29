@@ -2,7 +2,7 @@ use std::collections::{HashSet, VecDeque};
 
 use crate::{
     netlist::NetListInternal,
-    graph::{fabric_graph::FabricGraph, node::NodeId},
+    fabric::{graph::FabricGraph, node::NodeId},
 };
 
 pub fn validate(net_list: &NetListInternal, graph: &FabricGraph) -> Result<(), String> {

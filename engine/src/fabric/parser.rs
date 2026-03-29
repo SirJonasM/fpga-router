@@ -1,6 +1,6 @@
 use crate::{
     FabricGraph,
-    graph::{
+    fabric::{
         error::ParseError,
         node::{Costs, Edge, Node, NodeId},
     },
@@ -20,11 +20,11 @@ pub struct Parser {
 
 #[derive(Debug, Default)]
 pub struct TimingModel {
-    pub lut_delay: f32,
-    pub pip_delay: f32,
-    pub fanout_delay: f32,
-    pub clock_to_output_delay: f32,
-    pub clock_tree_delay: f32,
+    pub lut_delay: f64,
+    pub pip_delay: f64,
+    pub fanout_delay: f64,
+    pub clock_to_output_delay: f64,
+    pub clock_tree_delay: f64,
 }
 
 impl Parser {
@@ -51,10 +51,11 @@ impl Parser {
             source: Box::new(e),
         })?;
 
+        #[allow(clippy::cast_possible_truncation)]
         let cost = self
             .timing_model
             .as_ref()
-            .map_or_else(|| distance(&start_node, &end_node), |a| a.pip_delay);
+            .map_or_else(|| distance(&start_node, &end_node), |a| a.pip_delay as f32);
 
         let sid = self.get_or_create_node(&start_node);
         let eid = self.get_or_create_node(&end_node);
@@ -110,11 +111,13 @@ fn parse_pips_line(line: &str) -> Result<PipsLine, ParseError> {
 /// Distance function between nodes (Manhatten Distance)
 /// Will be our base costs
 const fn distance(a: &Node, b: &Node) -> f32 {
-    (1 + a.x.abs_diff(b.x) + a.y.abs_diff(b.y)) as f32
+    (1 + a.tile.0.abs_diff(b.tile.0) + a.tile.1.abs_diff(b.tile.1)) as f32
 }
 
 #[cfg(test)]
 mod test {
+    use crate::fabric::node::TileId;
+
     use super::*;
 
     #[test]
@@ -122,13 +125,11 @@ mod test {
         let test_case = "X1Y0,N1END3,X1Y0,S1BEG0,8,N1END3.S1BEG0".to_string();
         let node1_expected = Node {
             id: "N1END3".to_string(),
-            x: 1,
-            y: 0,
+            tile: TileId(1,0)
         };
         let node2_expected = Node {
             id: "S1BEG0".to_string(),
-            x: 1,
-            y: 0,
+            tile: TileId(1,0)
         };
         let PipsLine {
             start_node, end_node, ..

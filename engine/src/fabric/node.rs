@@ -3,18 +3,18 @@
 //! This module defines the building blocks of the FPGA fabric graph:
 //! nodes, their types, and associated costs for routing algorithms.
 
-use crate::FabricGraph;
-use super::error::ParseError;
+use std::fmt::Display;
 
-type NodeIdType = usize;
+use super::error::ParseError;
+use crate::FabricGraph;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NodeId(pub(super) NodeIdType);
 
-
 impl NodeId {
     pub(super) fn new(id: usize) -> Self {
-        let x = NodeIdType::try_from(id).expect("The id space is too small to create this NodeId. Try building the engine with a internal NodeId");
+        let x = NodeIdType::try_from(id)
+            .expect("The id space is too small to create this NodeId. Try building the engine with a internal NodeId");
         Self(x)
     }
     pub(crate) fn as_node(self, graph: &FabricGraph) -> Node {
@@ -24,7 +24,6 @@ impl NodeId {
         graph.get_node(self).id()
     }
 }
-
 
 impl<T> std::ops::Index<NodeId> for Vec<T> {
     type Output = T;
@@ -45,6 +44,10 @@ impl<T> std::ops::IndexMut<NodeId> for Vec<T> {
     }
 }
 
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
+pub struct TileId(pub u8, pub u8);
+type NodeIdType = usize;
+
 /// Programmable Connectio between nodes
 #[derive(Debug, Clone)]
 pub struct Edge {
@@ -60,9 +63,7 @@ pub struct Node {
     /// Unique identifier of the node
     pub id: String,
     /// X coordinate on the FPGA fabric
-    pub x: u8,
-    /// Y coordinate on the FPGA fabric
-    pub y: u8,
+    pub tile: TileId,
 }
 
 /// Structure representing costs associated with routing through a node
@@ -77,41 +78,49 @@ pub struct Costs {
 }
 
 impl Node {
-    pub const fn new(id: String, x: u8, y: u8) -> Self {
-        Self { id, x, y }
+    pub const fn new(id: String, tile: TileId) -> Self {
+        Self { id, tile }
     }
     pub fn parse(id: &str, coords: &str) -> Result<Self, ParseError> {
-        let (x, y) = from_str_coords(coords)?;
-        Ok(Self::new(id.to_string(), x, y))
+        let tile = TileId::from_str_coords(coords)?;
+        Ok(Self::new(id.to_string(), tile))
     }
     pub fn id(&self) -> String {
-        format!("X{}Y{}.{}", self.x, self.y, self.id)
+        format!("{}.{}",self.tile, self.id)
     }
 }
 
-/// Parse coordinates from a string of the form "X<num>Y<num>"
-pub fn from_str_coords(s: &str) -> std::result::Result<(u8, u8), ParseError> {
-    if !s.starts_with('X') {
-        return Err(ParseError::MissingPrefix {
-            prefix: 'X',
-            token: s.to_string(),
-        });
+impl Display for TileId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "X{}Y{}", self.0, self.1)
     }
-    let (x_part, y_part) = s.split_once('Y').ok_or_else(|| ParseError::MissingPrefix {
-        prefix: 'Y',
-        token: s.to_string(),
-    })?;
-    let x = x_part[1..].parse::<u8>().map_err(|e| ParseError::InvalidCoordinate {
-        component: "X",
-        token: x_part[1..].to_string(),
-        source: e,
-    })?;
-    let y = y_part.parse::<u8>().map_err(|e| ParseError::InvalidCoordinate {
-        component: "Y",
-        token: y_part.to_string(),
-        source: e,
-    })?;
-    Ok((x, y))
+}
+
+impl TileId {
+    /// Parse coordinates from a string of the form "X<num>Y<num>"
+    pub fn from_str_coords(s: &str) -> std::result::Result<Self, ParseError> {
+        if !s.starts_with('X') {
+            return Err(ParseError::MissingPrefix {
+                prefix: 'X',
+                token: s.to_string(),
+            });
+        }
+        let (x_part, y_part) = s.split_once('Y').ok_or_else(|| ParseError::MissingPrefix {
+            prefix: 'Y',
+            token: s.to_string(),
+        })?;
+        let x = x_part[1..].parse::<u8>().map_err(|e| ParseError::InvalidCoordinate {
+            component: "X",
+            token: x_part[1..].to_string(),
+            source: e,
+        })?;
+        let y = y_part.parse::<u8>().map_err(|e| ParseError::InvalidCoordinate {
+            component: "Y",
+            token: y_part.to_string(),
+            source: e,
+        })?;
+        Ok(Self(x, y))
+    }
 }
 
 impl Default for Costs {
@@ -145,9 +154,9 @@ impl Costs {
     pub fn calc_costs(&self, base_cost: f32, criticallity: f32) -> f32 {
         #[allow(clippy::cast_precision_loss)]
         let casted_usage = f32::from(self.usage);
-        let congestion_cost =  (1.0 + self.historic_cost) * (1.0 + casted_usage);
+        let congestion_cost = (1.0 + self.historic_cost) * (1.0 + casted_usage);
 
-        criticallity.mul_add(base_cost,(1.0 - criticallity) *  congestion_cost)
+        criticallity.mul_add(base_cost, (1.0 - criticallity) * congestion_cost)
     }
 
     /// Create a new `Costs` object
@@ -207,8 +216,7 @@ mod test {
         let node_cords = "X1Y2";
         let node_expected = Node {
             id: "Test".to_string(),
-            x: 1,
-            y: 2,
+            tile: TileId(1,2),
         };
         let node = Node::parse(node_id, node_cords).unwrap();
         assert_eq!(node, node_expected);

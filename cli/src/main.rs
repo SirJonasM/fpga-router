@@ -1,5 +1,5 @@
-// #![deny(clippy::nursery)]
-// #![deny(clippy::pedantic)]
+#![deny(clippy::nursery)]
+#![deny(clippy::pedantic)]
 
 mod cli;
 mod display_helper;
@@ -68,13 +68,13 @@ fn command_route(args: &cli::RouteArgs) -> Result<()> {
         Some(path) => {
             let file = File::open(path)?;
             let reader = BufReader::new(file);
-            let sta:Sta = serde_json::from_reader(reader)?;
+            let sta: Sta = serde_json::from_reader(reader)?;
             let grap_timing_model = router::TimingModel {
-                lut_delay: sta.timing_model.lut_delay as f32,
-                pip_delay: sta.timing_model.pip_delay as f32,
-                fanout_delay: sta.timing_model.fanout_delay as f32,
-                clock_to_output_delay: sta.timing_model.clock_to_output_delay as f32,
-                clock_tree_delay: sta.timing_model.clock_tree_delay as f32,
+                lut_delay: sta.timing_model.lut_delay,
+                pip_delay: sta.timing_model.pip_delay,
+                fanout_delay: sta.timing_model.fanout_delay,
+                clock_to_output_delay: sta.timing_model.clock_to_output_delay,
+                clock_tree_delay: sta.timing_model.clock_tree_delay,
             };
 
             // Read the JSON contents of the file as an instance of `User`.
@@ -119,11 +119,10 @@ fn command_route(args: &cli::RouteArgs) -> Result<()> {
     let path = Path::new(&args.output);
     let serialized_net_list = match path.extension().and_then(|s| s.to_str()) {
         Some("fasm") => {
-            let ffs = if let Some(ffs) = &args.ffs {
-                fs::read_to_string(ffs).unwrap()
-            } else {
-                "".to_string()
-            };
+            let ffs = args
+                .ffs
+                .as_ref()
+                .map_or_else(String::new, |ffs| fs::read_to_string(ffs).unwrap());
             let fasm = create_fasm(&config.net_list, &config.fabric.tile_manager)
                 .with_context(|| "Failed to generate FASM output from the routed net-list")?;
             format!("{fasm}\n{ffs}")
@@ -133,11 +132,10 @@ fn command_route(args: &cli::RouteArgs) -> Result<()> {
         }
         _ => {
             println!("Unknown file extension defaulting to fasm.");
-            let ffs = if let Some(ffs) = &args.ffs {
-                fs::read_to_string(ffs).unwrap()
-            } else {
-                "".to_string()
-            };
+            let ffs = args
+                .ffs
+                .as_ref()
+                .map_or_else(String::new, |ffs| fs::read_to_string(ffs).unwrap());
             let fasm = create_fasm(&config.net_list, &config.fabric.tile_manager)
                 .with_context(|| "Failed to generate FASM output from the routed net-list")?;
             format!("{fasm}\n{ffs}")
@@ -165,11 +163,11 @@ fn command_route_sta(args: &cli::RouteStaArgs) -> Result<()> {
     timing_model.graph = Some(fpga_timing_analyzer::pips_parser(&args.graph));
 
     let grap_timing_model = router::TimingModel {
-        lut_delay: timing_model.timing_model.lut_delay as f32,
-        pip_delay: timing_model.timing_model.pip_delay as f32,
-        fanout_delay: timing_model.timing_model.fanout_delay as f32,
-        clock_to_output_delay: timing_model.timing_model.clock_to_output_delay as f32,
-        clock_tree_delay: timing_model.timing_model.clock_tree_delay as f32,
+        lut_delay: timing_model.timing_model.lut_delay,
+        pip_delay: timing_model.timing_model.pip_delay,
+        fanout_delay: timing_model.timing_model.fanout_delay,
+        clock_to_output_delay: timing_model.timing_model.clock_to_output_delay,
+        clock_tree_delay: timing_model.timing_model.clock_tree_delay,
     };
     let graph = FabricGraph::from_file(&args.graph, Some(grap_timing_model))
         .with_context(|| format!("Router initialization failed: unable to load graph {}", args.graph))?;
@@ -254,17 +252,20 @@ impl TimingAnalysis for Sta {
         let ffs = fs::read_to_string("ffs.fasm").unwrap();
         fasm.push('\n');
         fasm.push_str(&ffs);
-        let graph = self.graph.as_ref().ok_or(FabricError::Other("Graph was none".into()))?;
+        let graph = self
+            .graph
+            .as_ref()
+            .ok_or_else(|| FabricError::Other("Graph was none".into()))?;
         let timing_analyisis_report = generate_slack_report(&fasm, graph, &self.timing_model).unwrap();
         let slack_report =
-            slack_report_from_timing_analyis(timing_analyisis_report, &fabric.graph, self.timing_constraints.clk_period)
+            slack_report_from_timing_analyis(&timing_analyisis_report, &fabric.graph, self.timing_constraints.clk_period)
                 .map_err(|e| FabricError::Csv(Box::new(e)))?;
         Ok(slack_report)
     }
 }
 
 fn slack_report_from_timing_analyis(
-    timing_analyisis: TimingAnalysisResult,
+    timing_analyisis: &TimingAnalysisResult,
     graph: &FabricGraph,
     target_period_ps: f64,
 ) -> FabricResult<SlackReport> {
@@ -284,11 +285,10 @@ fn slack_report_from_timing_analyis(
         // the wire-end (the LUT input) that fed it.
         let router_sink = if sink.pin.contains("FF_SINK") {
             // Get the node immediately BEFORE the FF_SINK in the timing path
-            path.iter()
-                .rev()
-                .nth(2)
-                .map(|tn| format!("X{}Y{}.{}", tn.tile.0, tn.tile.1, tn.pin))
-                .unwrap_or_else(|| format!("X{}Y{}.{}", sink.tile.0, sink.tile.1, sink.pin))
+            path.iter().rev().nth(2).map_or_else(
+                || format!("X{}Y{}.{}", sink.tile.0, sink.tile.1, sink.pin),
+                |tn| format!("X{}Y{}.{}", tn.tile.0, tn.tile.1, tn.pin),
+            )
         } else {
             format!("X{}Y{}.{}", sink.tile.0, sink.tile.1, sink.pin)
         };
@@ -296,20 +296,24 @@ fn slack_report_from_timing_analyis(
         let source_str = format!("X{}Y{}.{}", src.tile.0, src.tile.1, src.pin);
         let source_id = *graph
             .get_node_id(&source_str)
-            .ok_or(FabricError::InvalidStringNodeId(source_str.clone()))?;
+            .ok_or_else(|| FabricError::InvalidStringNodeId(source_str.clone()))?;
 
         let sink_id = *graph
             .get_node_id(&router_sink)
-            .ok_or(FabricError::InvalidStringNodeId(router_sink.clone()))?;
+            .ok_or_else(|| FabricError::InvalidStringNodeId(router_sink.clone()))?;
 
         if min_slack_val > slack {
             min_slack_val = slack;
             worst_node_str = (source_str, router_sink);
         }
 
-        criticalities.insert((source_id, sink_id), criticality as f32);
-        slacks.insert((source_id, sink_id), slack as f32);
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            criticalities.insert((source_id, sink_id), criticality as f32);
+            slacks.insert((source_id, sink_id), slack as f32);
+        }
     }
+    #[allow(clippy::cast_possible_truncation)]
     let worst_slack = (
         (
             *graph

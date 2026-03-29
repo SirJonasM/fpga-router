@@ -4,7 +4,7 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
     Fabric, FabricError, FabricResult, RouteNet,
-    graph::node::NodeId,
+    fabric::node::NodeId,
     netlist::{NetInternal, NetResultInternal},
 };
 

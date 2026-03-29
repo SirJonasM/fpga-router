@@ -15,185 +15,12 @@ use sha2::{Digest, Sha256};
 
 use crate::{
     FabricError, FabricResult, NetInternal, NetListInternal, SlackReport,
-    graph::{
-        node::{Costs, Edge, Node, NodeId, from_str_coords},
-        parser::{Parser, TimingModel},
+    fabric::{
+        node::{Costs, Edge, Node, NodeId},
+        parser::{Parser, TimingModel}, tile_manager::{State, TileManager, },
     },
 };
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum State {
-    High,
-    Low,
-}
-#[derive(Debug)]
-pub enum LutState {
-    Free,
-    Used,
-    Borrowed(State),
-}
-
-#[derive(Debug)]
-pub struct Lut {
-    bel_index: char,
-    state: LutState,
-    output_pin: String,
-    _input_pin: [String; 4],
-}
-#[derive(Debug)]
-pub struct Tile {
-    id: TileId,
-    luts: Vec<Lut>,
-}
-
-#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
-pub struct TileId(pub u8, pub u8);
-
-#[derive(Debug)]
-pub struct TileManager(pub HashMap<TileId, Tile>);
-
-impl TileManager {
-    /// Reads from the bel.txt file and creates a `TileManager`
-    /// # Errors
-    /// Io errors
-    pub fn from_file<P: AsRef<Path>>(path: &P) -> FabricResult<Self> {
-        let file = File::open(path).map_err(|source| FabricError::Io {
-            path: path.as_ref().to_path_buf(),
-            source,
-        })?;
-        let reader = BufReader::new(file);
-        let mut tiles: HashMap<TileId, Tile> = HashMap::new();
-
-        for (line_number, line) in reader.lines().enumerate() {
-            let line = line.map_err(|source| FabricError::Io {
-                path: path.as_ref().to_path_buf(),
-                source,
-            })?;
-            // Skip comments and empty lines
-            if line.starts_with('#') || line.trim().is_empty() {
-                continue;
-            }
-
-            let parts: Vec<&str> = line.split(',').collect();
-
-            // Basic validation for the FABULOUS_LC rows
-            if parts.len() < 13 || parts[4] != "FABULOUS_LC" {
-                continue;
-            }
-
-            // Parse Coordinates: Expecting "X1Y1" format in parts[0]
-            // Or use parts[1] and parts[2] if they are raw integers
-
-            let (x, y) = from_str_coords(parts[0]).map_err(|e| FabricError::ParseError { line_number, source: e })?;
-            let tile_id = TileId(x, y);
-
-            // Construct the LUT
-            let lut = Lut {
-                // parts[3] is "A", "B", etc.
-                bel_index: parts[3].chars().next().unwrap_or('?'),
-                state: LutState::Free,
-                // parts[12] is the output pin (e.g., "LA_O")
-                output_pin: parts[12].to_string(),
-                // parts[5..9] are I0, I1, I2, I3
-                _input_pin: [
-                    parts[5].to_string(),
-                    parts[6].to_string(),
-                    parts[7].to_string(),
-                    parts[8].to_string(),
-                ],
-            };
-
-            // Insert into the tile manager
-            tiles
-                .entry(tile_id)
-                .or_insert_with(|| Tile {
-                    id: tile_id,
-                    luts: Vec::new(),
-                })
-                .luts
-                .push(lut);
-        }
-
-        Ok(Self(tiles))
-    }
-    /// Internal helper to find a LUT by index within a specific tile
-    fn find_lut_mut(&mut self, tile_id: TileId, bel_index: char) -> Option<&mut Lut> {
-        self.0
-            .get_mut(&tile_id)
-            .and_then(|tile| tile.luts.iter_mut().find(|lut| lut.bel_index == bel_index))
-    }
-
-    /// Marks a LUT as 'Used' (called during placement parsing)
-    pub fn mark_lut_used(&mut self, tile: TileId, bel_index: char) -> Option<String> {
-        if let Some(lut) = self.find_lut_mut(tile, bel_index) {
-            // Safety check: only borrow if it's actually free
-            if matches!(lut.state, LutState::Free) {
-                lut.state = LutState::Used;
-                return Some(lut.output_pin.clone());
-            }
-        }
-        None
-    }
-
-    pub fn request_constant(&mut self, start_tile: TileId, state: State) -> Option<(TileId, String)> {
-        // 1. Define the search radius (Starting Tile, then Neighbors)
-        let search_order = [
-            start_tile,
-            TileId(start_tile.0 + 1, start_tile.1), // East
-            TileId(start_tile.0, start_tile.1 + 1), // North
-                                                    // ... add more as needed
-        ];
-
-        for &tid in &search_order {
-            if let Some(tile) = self.0.get_mut(&tid) {
-                // STEP A: Check if this tile ALREADY has a LUT borrowed for this state
-                // This implements your "If it matches, use that" logic
-                let existing = tile
-                    .luts
-                    .iter()
-                    .find(|l| matches!(&l.state, LutState::Borrowed(s) if s == &state));
-
-                if let Some(lut) = existing {
-                    return Some((tile.id, lut.output_pin.clone()));
-                }
-
-                // STEP B: If no existing match, find the first FREE lut in this tile to borrow
-                let free_lut_index = tile.luts.iter().position(|l| matches!(l.state, LutState::Free));
-
-                if let Some(idx) = free_lut_index {
-                    let lut = &mut tile.luts[idx];
-                    lut.state = LutState::Borrowed(state);
-                    return Some((tile.id, lut.output_pin.clone()));
-                }
-            }
-        }
-        None
-    }
-    /// Iterates through all tiles and generates FASM configuration strings
-    /// for LUTs that were borrowed as constant drivers.
-    #[must_use]
-    pub fn generate_constant_fasm(&self) -> Vec<String> {
-        let mut fasm_lines = Vec::new();
-
-        for (tile_id, tile) in &self.0 {
-            for lut in &tile.luts {
-                if let LutState::Borrowed(state) = &lut.state {
-                    // Example FASM Format: Tile_X1Y1.LC_A.INIT[15:0] = 16'h0000
-                    let init_val = match state {
-                        State::Low => "16'b0000000000000000",
-                        State::High => "16'h1111111111111111",
-                    };
-
-                    // We use the bel_index (e.g., 'A', 'B') to specify which LUT in the tile
-                    let line = format!("X{}Y{}.{}.INIT[15:0] = {}", tile_id.0, tile_id.1, lut.bel_index, init_val);
-
-                    fasm_lines.push(line);
-                }
-            }
-        }
-        fasm_lines
-    }
-}
 
 impl Fabric {
     #[must_use]
@@ -238,7 +65,7 @@ impl Fabric {
                     signal_node.id()
                 ))
             })?;
-            let tile = TileId(sink_node.x, sink_node.y);
+            let tile = sink_node.tile;
             let new_source_name = self
                 .tile_manager
                 .request_constant(tile, state)
@@ -294,8 +121,7 @@ impl Fabric {
             && node.id.chars().nth(2) == Some('_')
             && let Some(bel_char) = node.id.chars().nth(1)
         {
-            let tile_id = TileId(node.x, node.y);
-            self.tile_manager.mark_lut_used(tile_id, bel_char);
+            self.tile_manager.mark_lut_used(node.tile, bel_char);
         }
     }
 }
@@ -366,9 +192,9 @@ impl FabricGraph {
     /// use router::FabricGraph;
     ///
     /// let test_file = get_test_data_path("pips_8x8.txt");
-    /// let graph = FabricGraph::from_file(test_file).unwrap();
+    /// let graph = FabricGraph::from_file(&test_file, None).unwrap();
     /// ```
-    pub fn from_file<P: AsRef<Path>>(path: P, timing_model: Option<TimingModel>) -> FabricResult<Self> {
+    pub fn from_file<P: AsRef<Path>>(path: &P, timing_model: Option<TimingModel>) -> FabricResult<Self> {
         let path_ref = path.as_ref();
         let file = File::open(path_ref).map_err(|e| FabricError::Io {
             path: path_ref.to_path_buf(),
@@ -449,6 +275,8 @@ pub fn bucket_luts(graph: &FabricGraph) -> (Vec<NodeId>, Vec<NodeId>) {
 
 #[cfg(test)]
 mod test {
+    use crate::fabric::node::TileId;
+
     use super::*;
     use testing_utils::get_test_data_path;
     #[test]
@@ -456,13 +284,13 @@ mod test {
         let test_file = get_test_data_path("pips_8x8.txt");
         let timing_model = TimingModel::default();
 
-        let graph = FabricGraph::from_file(test_file, Some(timing_model)).unwrap();
+        let graph = FabricGraph::from_file(&test_file, Some(timing_model)).unwrap();
         assert_eq!(graph.nodes[0], Node::parse("N1END3", "X1Y0").unwrap());
     }
     #[test]
     fn test_parse_pips_file_error_accessing_file() {
         let test_file = "some_file_that_does_not_exist.txt";
-        let error = FabricGraph::from_file(test_file, None).unwrap_err().to_string();
+        let error = FabricGraph::from_file(&test_file, None).unwrap_err().to_string();
         assert_eq!("IO error while accessing 'some_file_that_does_not_exist.txt'", error);
     }
     #[test]

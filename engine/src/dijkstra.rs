@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::BinaryHeap};
 
-use crate::graph::{fabric_graph::FabricGraph, node::NodeId};
+use crate::fabric::{graph::FabricGraph, node::NodeId};
 
 impl FabricGraph {
     #[must_use]
