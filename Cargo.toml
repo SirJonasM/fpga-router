@@ -2,6 +2,7 @@
   members = [
 	"engine",
 	"cli",
-	"testing_utils"
+	"testing_utils",
+	"sta"
   ]
   resolver = "3"
