@@ -101,7 +101,7 @@ fn test_routing_simple_logging() {
 #[test]
 fn test_create_fasm() {
     let graph = FabricGraph::from_file(get_test_data_path("pips_4x4.txt"), None).unwrap();
-    let tile_manager = TileManager::from_file(get_test_data_path("bel.txt"));
+    let tile_manager = TileManager::from_file(&get_test_data_path("bel.txt")).unwrap();
     let mut config = RoutingConfigBuilder::default()
         .graph(graph)
         .tile_manager(tile_manager)
