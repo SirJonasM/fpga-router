@@ -53,10 +53,9 @@ impl RouteNet for SimpleSteinerSolver {
             let mut paths = HashMap::new();
             let mut nodes = HashSet::new();
             for (terminal, route) in steiner_tree {
-                let criticallity = fabric
-                    .slack_report
-                    .as_ref()
-                    .map_or(0.0, |slack_report| *slack_report.criticalities.get(&(net.signal, *terminal)).unwrap_or(&0.0));
+                let criticallity = fabric.slack_report.as_ref().map_or(0.0, |slack_report| {
+                    *slack_report.criticalities.get(&(net.signal, *terminal)).unwrap_or(&0.0)
+                });
                 let mut path = Vec::new();
                 for steiner_node in route.windows(2) {
                     let (start, end) = (steiner_node[0], steiner_node[1]);

@@ -27,13 +27,6 @@ pub struct CreateTestArgs {
 }
 
 
-#[derive(Parser, Debug)]
-pub struct ValidateArgs {
-    #[arg(short, long)]
-    pub graph: String,
-    #[arg(short, long)]
-    pub net_list: String,
-}
 
 #[derive(Parser, Debug)]
 pub struct RouteArgs {
@@ -49,10 +42,6 @@ pub struct RouteArgs {
     pub solver: SolverType,
     #[arg(long, default_value_t = 0.1)]
     pub hist_factor: f32,
-    #[arg(short='L', long, value_enum, default_value_t=LoggerType::Terminal )]
-    pub logger: LoggerType,
-    #[arg(short='l', long, value_enum, default_value=None )]
-    pub log_file: Option<String>,
     #[arg(short = 'i', long, default_value_t = 2000)]
     pub max_iterations: usize,
     #[arg(short, long)]
@@ -74,12 +63,10 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Creates a test `route_plan`
+    /// Creates a test `net-list.json`
     CreateTest(CreateTestArgs),
-    /// Starts the router
+    /// Runs the router
     Route(RouteArgs),
-
-    Validate(ValidateArgs),
 }
 
 pub enum Solver {

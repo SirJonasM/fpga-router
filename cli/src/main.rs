@@ -18,11 +18,11 @@ use clap::Parser;
 use router::{
     Fabric, FabricError, FabricGraph, FabricResult, NetListExternal, RoutingConfig, RoutingConfigBuilder, SimpleSolver,
     SimpleSteinerSolver, SlackReport, SteinerSolver, TileManager, TimingAnalysis, create_fasm, create_test, route,
-    route_timing_driven, validate_routing,
+    route_timing_driven,
 };
 
 use crate::{
-    cli::{Cli, Commands, CreateTestArgs, LoggerType, Solver, SolverType, ValidateArgs},
+    cli::{Cli, Commands, CreateTestArgs, LoggerType, Solver, SolverType},
     display_helper::{display_failed_routing, display_results, display_run_create_test, display_metadata_route},
     logger::Loggers,
 };
@@ -31,7 +31,6 @@ fn main() -> Result<()> {
     match Cli::parse().command {
         Commands::CreateTest(args) => command_create_test(&args),
         Commands::Route(args) => command_route(&args),
-        Commands::Validate(args) => command_validate(&args),
     }?;
     Ok(())
 }
@@ -103,17 +102,6 @@ fn command_route(args: &cli::RouteArgs) -> Result<()> {
         }
     };
     fs::write(path, serialized_net_list).with_context(|| format!("Failed to write routing results to {}", args.output))?;
-    Ok(())
-}
-
-fn command_validate(args: &ValidateArgs) -> Result<()> {
-    let graph =
-        FabricGraph::from_file(&args.graph, None).with_context(|| format!("Failed to load graph from file: {}", args.graph))?;
-    let route_plan = NetListExternal::from_file(&args.net_list)
-        .with_context(|| format!("Validation aborted: could not load net-list {}", args.net_list))?;
-    validate_routing(&graph, &route_plan).with_context(|| "Routing is invalid due to")?;
-
-    println!("Routing is valid.");
     Ok(())
 }
 
@@ -218,10 +206,6 @@ fn parse_arguments(args: &cli::RouteArgs) -> Result<(RoutingConfig<Solver, Logge
         SolverType::Steiner => Solver::Steiner(SteinerSolver),
         SolverType::SimpleSteiner => Solver::SimpleSteiner(SimpleSteinerSolver),
     };
-    let logger = match &args.logger {
-        LoggerType::No => Loggers::No,
-        LoggerType::Terminal => Loggers::Terminal,
-    };
     let file = File::open(&args.timings)?;
     let reader = BufReader::new(file);
     let mut sta: Sta = serde_json::from_reader(reader)?;
@@ -247,7 +231,7 @@ fn parse_arguments(args: &cli::RouteArgs) -> Result<(RoutingConfig<Solver, Logge
         .max_iterations(args.max_iterations)
         .net_list(net_list)
         .solver(solver)
-        .logger(logger)
+        .logger(Loggers::Terminal)
         .graph(graph)
         .tile_manager(tile_manager)
         .build()
