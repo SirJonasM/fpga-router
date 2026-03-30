@@ -26,7 +26,7 @@ pub use api::*;
 pub use fabric::graph::{FabricGraph, Fabric};
 pub use fabric::tile_manager::TileManager;
 pub use fabric::parser::TimingModel;
-pub use netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal, NetResultExternal, NetResultInternal};
+pub use netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal, NetResultExternal, NetResultInternal, Swap};
 pub use path_finder::{CongestionReportExtern, IterationResult, TimingAnalysis};
 pub use slack::SlackReport;
 

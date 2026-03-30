@@ -1,7 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
 use super::error::{MapExternalError, MapExternalResult};
-use crate::{FabricGraph, NetExternal, NetListExternal, NetResultExternal, fabric::node::NodeId};
+use crate::{
+    FabricGraph, NetExternal, NetListExternal, NetResultExternal,
+    fabric::node::{Node, NodeId},
+};
 
 pub struct NetListInternal {
     pub plan: Vec<NetInternal>,
@@ -61,12 +64,12 @@ impl NetInternal {
     /// # Errors
     /// Fails if mapping is not possible
     pub fn from_external(external: &NetExternal, graph: &FabricGraph) -> MapExternalResult<Self> {
-        let map_id = |name: &String| {
+        let map_id = |name: &Node| {
             graph
                 .index
-                .get(name)
+                .get(&name.id())
                 .copied()
-                .ok_or_else(|| MapExternalError::Id(name.clone()))
+                .ok_or_else(|| MapExternalError::Id(name.id()))
         };
         let signal = map_id(&external.signal).map_err(|_| MapExternalError::Signal)?;
         let sinks = external
@@ -96,8 +99,8 @@ impl NetInternal {
 
     #[must_use]
     pub fn to_external(&self, graph: &FabricGraph) -> NetExternal {
-        let signal = graph.get_node(self.signal).id();
-        let sinks = self.sinks.iter().map(|a| graph.get_node(*a).id()).collect();
+        let signal = graph.get_node(self.signal).clone();
+        let sinks = self.sinks.iter().map(|a| graph.get_node(*a).clone()).collect();
         let result = self.result.as_ref().map(|r| r.to_external(graph));
 
         NetExternal {
@@ -122,15 +125,18 @@ impl NetResultInternal {
         let nodes = result
             .nodes
             .iter()
-            .map(map_id)
+            .map(|a| map_id(&a.id()))
             .collect::<MapExternalResult<HashSet<NodeId>>>()
             .map_err(|e| MapExternalError::NetResultNodes(Box::new(e)))?;
         let paths = result
             .paths
             .iter()
             .map(|(key, value)| {
-                let sink = map_id(key)?;
-                let path = value.iter().map(map_id).collect::<MapExternalResult<Vec<NodeId>>>()?;
+                let sink = map_id(&key.id())?;
+                let path = value
+                    .iter()
+                    .map(|a| map_id(&a.id()))
+                    .collect::<MapExternalResult<Vec<NodeId>>>()?;
                 Ok((sink, path))
             })
             .collect::<MapExternalResult<HashMap<NodeId, Vec<NodeId>>>>()
@@ -140,17 +146,22 @@ impl NetResultInternal {
 
     #[must_use]
     pub fn to_external(&self, graph: &FabricGraph) -> NetResultExternal {
-        let nodes = self.nodes.iter().map(|a| graph.nodes[*a].id()).collect::<HashSet<String>>();
+        let nodes = self
+            .nodes
+            .iter()
+            .map(|a| graph.get_node(*a))
+            .cloned()
+            .collect::<HashSet<Node>>();
         let paths = self
             .paths
             .iter()
             .map(|(sink, path)| {
                 (
-                    graph.nodes[*sink].id(),
-                    path.iter().map(|c| graph.nodes[*c].id()).collect::<Vec<String>>(),
+                    graph.nodes[*sink].clone(),
+                    path.iter().map(|c| graph.get_node(*c)).cloned().collect::<Vec<Node>>(),
                 )
             })
-            .collect::<HashMap<String, Vec<String>>>();
+            .collect::<HashMap<Node, Vec<Node>>>();
 
         NetResultExternal { paths, nodes }
     }

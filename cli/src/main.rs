@@ -23,10 +23,7 @@ use router::{
 
 use crate::{
     cli::{Cli, Commands, CreateTestArgs, LoggerType, Solver, SolverType, ValidateArgs},
-    display_helper::{
-        display_failed_routing, display_results, display_run_create_test, display_run_metadata_route,
-        display_run_metadata_route_sta,
-    },
+    display_helper::{display_failed_routing, display_results, display_run_create_test, display_run_metadata_route},
     logger::Loggers,
 };
 
@@ -34,7 +31,6 @@ fn main() -> Result<()> {
     match Cli::parse().command {
         Commands::CreateTest(args) => command_create_test(&args),
         Commands::Route(args) => command_route(&args),
-        Commands::RouteSta(args) => command_route_sta(&args),
         Commands::Validate(args) => command_validate(&args),
     }?;
     Ok(())
@@ -64,25 +60,20 @@ fn command_route(args: &cli::RouteArgs) -> Result<()> {
         LoggerType::No => Loggers::No,
         LoggerType::Terminal => Loggers::Terminal,
     };
-    let (_, graph_timing_model) = match &args.timing_model {
-        Some(path) => {
-            let file = File::open(path)?;
-            let reader = BufReader::new(file);
-            let sta: Sta = serde_json::from_reader(reader)?;
-            let grap_timing_model = router::TimingModel {
-                lut_delay: sta.timing_model.lut_delay,
-                pip_delay: sta.timing_model.pip_delay,
-                fanout_delay: sta.timing_model.fanout_delay,
-                clock_to_output_delay: sta.timing_model.clock_to_output_delay,
-                clock_tree_delay: sta.timing_model.clock_tree_delay,
-            };
+    let file = File::open(&args.timings)?;
+    let reader = BufReader::new(file);
+    let mut sta: Sta = serde_json::from_reader(reader)?;
+    sta.graph = Some(fpga_timing_analyzer::pips_parser(&args.graph));
 
-            // Read the JSON contents of the file as an instance of `User`.
-            (Some(sta), Some(grap_timing_model))
-        }
-        None => (None, None),
+    let graph_timing_model = router::TimingModel {
+        lut_delay: sta.timing_model.lut_delay,
+        pip_delay: sta.timing_model.pip_delay,
+        fanout_delay: sta.timing_model.fanout_delay,
+        clock_to_output_delay: sta.timing_model.clock_to_output_delay,
+        clock_tree_delay: sta.timing_model.clock_tree_delay,
     };
-    let graph = FabricGraph::from_file(&args.graph, graph_timing_model)
+
+    let graph = FabricGraph::from_file(&args.graph, Some(graph_timing_model))
         .with_context(|| format!("Router initialization failed: unable to load graph {}", args.graph))?;
     let net_list = NetListExternal::from_file(&args.net_list)
         .with_context(|| format!("Router initialization failed: unable to load net-list {}", args.net_list))?;
@@ -100,7 +91,12 @@ fn command_route(args: &cli::RouteArgs) -> Result<()> {
 
     let _ = clearscreen::clear();
     display_run_metadata_route(args, &config.solver);
-    let result = match route(&mut config) {
+    let routing_result = if args.timing_driven {
+        route_timing_driven(&mut config, &sta)
+    } else {
+        route(&mut config)
+    };
+    let result = match routing_result {
         Ok(result) => result,
 
         Err(router::FabricError::RoutingMaxIterationsReached {
@@ -115,99 +111,13 @@ fn command_route(args: &cli::RouteArgs) -> Result<()> {
         }
     };
 
-    display_results(&result);
-    let path = Path::new(&args.output);
-    let serialized_net_list = match path.extension().and_then(|s| s.to_str()) {
-        Some("fasm") => {
-            let ffs = args
-                .ffs
-                .as_ref()
-                .map_or_else(String::new, |ffs| fs::read_to_string(ffs).unwrap());
-            let fasm = create_fasm(&config.net_list, &config.fabric.tile_manager)
-                .with_context(|| "Failed to generate FASM output from the routed net-list")?;
-            format!("{fasm}\n{ffs}")
-        }
-        Some("json") => {
-            serde_json::to_string_pretty(&config.net_list).with_context(|| "Failed to serialize net-list for FASM generation")?
-        }
-        _ => {
-            println!("Unknown file extension defaulting to fasm.");
-            let ffs = args
-                .ffs
-                .as_ref()
-                .map_or_else(String::new, |ffs| fs::read_to_string(ffs).unwrap());
-            let fasm = create_fasm(&config.net_list, &config.fabric.tile_manager)
-                .with_context(|| "Failed to generate FASM output from the routed net-list")?;
-            format!("{fasm}\n{ffs}")
-        }
-    };
-    fs::write(path, serialized_net_list).with_context(|| format!("Failed to write routing results to {}", args.output))?;
-    Ok(())
-}
-
-fn command_route_sta(args: &cli::RouteStaArgs) -> Result<()> {
-    let solver = match args.solver {
-        SolverType::Simple => Solver::Simple(SimpleSolver),
-        SolverType::Steiner => Solver::Steiner(SteinerSolver),
-        SolverType::SimpleSteiner => Solver::SimpleSteiner(SimpleSteinerSolver),
-    };
-    let logger = match &args.logger {
-        LoggerType::No => Loggers::No,
-        LoggerType::Terminal => Loggers::Terminal,
-    };
-    let file = File::open(&args.timings)?;
-    let reader = BufReader::new(file);
-    // Read the JSON contents of the file as an instance of `User`.
-
-    let mut timing_model: Sta = serde_json::from_reader(reader)?;
-    timing_model.graph = Some(fpga_timing_analyzer::pips_parser(&args.graph));
-
-    let grap_timing_model = router::TimingModel {
-        lut_delay: timing_model.timing_model.lut_delay,
-        pip_delay: timing_model.timing_model.pip_delay,
-        fanout_delay: timing_model.timing_model.fanout_delay,
-        clock_to_output_delay: timing_model.timing_model.clock_to_output_delay,
-        clock_tree_delay: timing_model.timing_model.clock_tree_delay,
-    };
-    let graph = FabricGraph::from_file(&args.graph, Some(grap_timing_model))
-        .with_context(|| format!("Router initialization failed: unable to load graph {}", args.graph))?;
-    let net_list = NetListExternal::from_file(&args.net_list)
-        .with_context(|| format!("Router initialization failed: unable to load net-list {}", args.net_list))?;
-
-    let tile_manager = TileManager::from_file(&args.bel)?;
-
-    let mut config = RoutingConfigBuilder::default()
-        .hist_factor(args.hist_factor)
-        .max_iterations(args.max_iterations)
-        .net_list(net_list)
-        .solver(solver)
-        .logger(logger)
-        .graph(graph)
-        .tile_manager(tile_manager)
-        .build_timing_driven(timing_model)?;
-
-    let _ = clearscreen::clear();
-    display_run_metadata_route_sta(args, &config.solver);
-    let result = match route_timing_driven(&mut config) {
-        Ok(result) => result,
-        Err(router::FabricError::RoutingMaxIterationsReached {
-            congestion_report,
-            iteration_report,
-        }) => {
-            display_failed_routing(&congestion_report, &iteration_report);
-            return Err(anyhow!("Routing Failed: Maximum iterations reached."));
-        }
-        Err(err) => {
-            return Err(err).with_context(|| "Routing engine encounterd critical error.");
-        }
-    };
-
-    display_results(&result);
+    let swapped_inputs = result.0.swapped_inputs(&config.net_list);
+    display_results(&result.1, &swapped_inputs);
     let path = Path::new(&args.output);
     let serialized_net_list = match path.extension().and_then(|s| s.to_str()) {
         Some("fasm") => {
             let ffs = fs::read_to_string(&args.ffs).unwrap();
-            let fasm = create_fasm(&config.net_list, &config.fabric.tile_manager)
+            let fasm = create_fasm(&result.0, &config.fabric.tile_manager)
                 .with_context(|| "Failed to generate FASM output from the routed net-list")?;
             format!("{fasm}\n{ffs}")
         }

@@ -1,11 +1,13 @@
 use thiserror::Error;
 
+use crate::fabric::node::Node;
+
 pub type MapExternalResult<T> = Result<T, MapExternalError>;
 
 #[derive(Error, Debug)]
 pub enum MapExternalError {
     #[error("Mapping expanded Net with signal '{signal}' to internal Net failed.")]
-    Net {signal: String, #[source]source: Box<Self>},
+    Net {signal: Node, #[source]source: Box<Self>},
     #[error("Mapping the signal failed.")]
     Signal,
     #[error("Mapping the signal failed.")]

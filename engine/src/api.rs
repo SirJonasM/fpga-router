@@ -1,29 +1,19 @@
 use rand::seq::SliceRandom;
 
-use crate::fabric::graph::{Fabric};
+use crate::fabric::graph::Fabric;
 use crate::fabric::tile_manager::TileManager;
 use crate::path_finder::{TimingAnalysis, timing_driven_path_finder};
 use crate::{
     FabricError, FabricResult, Logging,
-    fasm::net_to_fasm,
     fabric::graph::{FabricGraph, bucket_luts},
     fabric::node::NodeId,
+    fasm::net_to_fasm,
     netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal},
     path_finder::{Config, path_finder},
     solver::RouteNet,
     validate,
 };
 use crate::{IterationResult, SimpleLogging, SimpleSolver};
-
-pub struct TimingDrivenRoutingConfig<R: RouteNet, L: Logging, T: TimingAnalysis> {
-    pub fabric: Fabric,
-    pub net_list: NetListExternal,
-    pub hist_factor: f32,
-    pub max_iterations: usize,
-    pub solver: R,
-    pub logger: L,
-    pub sta: T,
-}
 
 pub struct RoutingConfig<R: RouteNet, L: Logging> {
     pub fabric: Fabric,
@@ -52,10 +42,30 @@ pub struct RoutingConfig<R: RouteNet, L: Logging> {
 /// # Errors
 /// Fails if files cannot be read or cannot be parsed or it cannot write to the output file.
 /// Fails if the `max_iterations` are reached
-pub fn route<R, L>(config: &mut RoutingConfig<R, L>) -> FabricResult<Vec<IterationResult>>
+pub fn route<R, L>(config: &mut RoutingConfig<R, L>) -> FabricResult<(NetListExternal,Vec<IterationResult>)>
 where
     R: RouteNet,
     L: Logging,
+{
+    let net_list_external = &mut config.net_list;
+    let fabric = &mut config.fabric;
+    let mut net_list = NetListInternal::from_external(&fabric.graph, net_list_external)?;
+
+    fabric.check_pathing(&mut net_list)?;
+
+    let router_config = Config::new(config.hist_factor, config.max_iterations);
+    path_finder(&mut net_list, fabric, &router_config, &config.solver, &config.logger).map(|a| {
+        let new_net_list = net_list.to_external(&fabric.graph);
+        (new_net_list, a)
+    })
+}
+/// # Errors
+///
+pub fn route_timing_driven<R, L, T>(config: &mut RoutingConfig<R, L>, sta: &T) -> FabricResult<(NetListExternal, Vec<IterationResult>)>
+where
+    R: RouteNet,
+    L: Logging,
+    T: TimingAnalysis,
 {
     let net_list_external = &mut config.net_list;
     let fabric = &mut config.fabric;
@@ -72,13 +82,10 @@ where
 
     let router_config = Config::new(config.hist_factor, config.max_iterations);
 
-    let x = path_finder(&mut net_list, fabric, &router_config, &config.solver, &config.logger);
-    if x.is_ok() {
-        *net_list_external = net_list.to_external(&fabric.graph);
-    }
-    let luts_borrowed_fasm = fabric.tile_manager.generate_constant_fasm();
-    println!("{}", luts_borrowed_fasm.join("\n"));
-    x
+    timing_driven_path_finder(&mut net_list, fabric, &router_config, &config.solver, &config.logger, sta).map(|a| {
+        let new_net_list = net_list.to_external(&fabric.graph);
+        (new_net_list, a)
+    })
 }
 
 /// Converts Expanded JSON-like structure to a FASM string
@@ -142,44 +149,6 @@ pub fn create_test(graph: &FabricGraph, percentage: f32, destinations: usize) ->
     };
 
     Ok(net_list)
-}
-
-/// Tries to route the given netlist in timing driven appraoch
-/// # Errors
-///
-pub fn route_timing_driven<R, L, T>(config: &mut TimingDrivenRoutingConfig<R, L, T>) -> FabricResult<Vec<IterationResult>>
-where
-    R: RouteNet,
-    L: Logging,
-    T: TimingAnalysis,
-{
-    let net_list_external = &mut config.net_list;
-    let fabric = &mut config.fabric;
-    if let Some(hash) = &net_list_external.hash {
-        if hash != &fabric.graph.calculate_structure_hash() {
-            eprintln!("Warning: The net-list was not created with this graph.");
-        }
-    } else {
-        eprintln!("Warning: Cannot determine if the net-list was created with this graph. Missing field in net-list.");
-    }
-
-    let mut net_list = NetListInternal::from_external(&fabric.graph, net_list_external)?;
-    fabric.check_pathing(&mut net_list)?;
-
-    let router_config = Config::new(config.hist_factor, config.max_iterations);
-
-    let x = timing_driven_path_finder(
-        &mut net_list,
-        fabric,
-        &router_config,
-        &config.solver,
-        &config.logger,
-        &config.sta,
-    );
-    if x.is_ok() {
-        *net_list_external = net_list.to_external(&fabric.graph);
-    }
-    x
 }
 
 /// Validates a routing for a given `FabricGraph`
@@ -310,28 +279,6 @@ impl<R: RouteNet, L: Logging> RoutingConfigBuilder<R, L> {
             max_iterations: self.max_iterations,
             solver: self.solver,
             logger: self.logger,
-        })
-    }
-
-    /// Builds the Routing Config
-    /// # Errors
-    /// if no graoh or netlist was provided
-    pub fn build_timing_driven<T: TimingAnalysis>(self, sta: T) -> FabricResult<TimingDrivenRoutingConfig<R, L, T>> {
-        let graph = self.graph.ok_or("Graph is required to build RoutingConfig")?;
-        let tile_manager = self.tile_manager.ok_or("Graph is required to build RoutingConfig")?;
-        let fabric = Fabric::new(graph, tile_manager);
-        let net_list = self
-            .net_list
-            .ok_or("NetList is required (provide manually or use with_test_netlist)")?;
-
-        Ok(TimingDrivenRoutingConfig {
-            fabric,
-            net_list,
-            hist_factor: self.hist_factor,
-            max_iterations: self.max_iterations,
-            solver: self.solver,
-            logger: self.logger,
-            sta,
         })
     }
 }

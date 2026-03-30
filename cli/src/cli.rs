@@ -26,32 +26,6 @@ pub struct CreateTestArgs {
     pub percentage: f32,
 }
 
-#[derive(Parser, Debug)]
-pub struct RouteArgs {
-    #[arg(short, long)]
-    /// Can be `json` or `fasm`
-    pub output: String,
-    #[arg(short, long)]
-    pub net_list: String,
-    #[arg(short, long)]
-    pub graph: String,
-    #[arg(short, long)]
-    pub bel: String,
-    #[arg(short = 'S', long, value_enum, default_value_t = SolverType::Simple)]
-    pub solver: SolverType,
-    #[arg(long, default_value_t = 0.1)]
-    pub hist_factor: f32,
-    #[arg(short='L', long, value_enum, default_value_t=LoggerType::Terminal )]
-    pub logger: LoggerType,
-    #[arg(short='l', long, value_enum, default_value=None )]
-    pub log_file: Option<String>,
-    #[arg(short = 'i', long, default_value_t = 2000)]
-    pub max_iterations: usize,
-    #[arg(short, long)]
-    pub ffs: Option<String>,
-    #[arg(short, long)]
-    pub timing_model: Option<String>,
-}
 
 #[derive(Parser, Debug)]
 pub struct ValidateArgs {
@@ -62,7 +36,7 @@ pub struct ValidateArgs {
 }
 
 #[derive(Parser, Debug)]
-pub struct RouteStaArgs {
+pub struct RouteArgs {
     #[arg(short, long)]
     pub graph: String,
     #[arg(short, long)]
@@ -81,12 +55,12 @@ pub struct RouteStaArgs {
     pub log_file: Option<String>,
     #[arg(short = 'i', long, default_value_t = 2000)]
     pub max_iterations: usize,
-    #[arg(long, default_value = "5000")]
-    pub target_ps: u32,
     #[arg(short, long)]
     pub ffs: String,
     #[arg(short, long)]
     pub timings: String,
+    #[arg(short, long, default_value_t = false)]
+    pub timing_driven: bool,
 }
 
 // --- CLI Structure ---
@@ -106,8 +80,6 @@ pub enum Commands {
     Route(RouteArgs),
 
     Validate(ValidateArgs),
-
-    RouteSta(RouteStaArgs),
 }
 
 pub enum Solver {

@@ -17,10 +17,10 @@ use crate::{
     FabricError, FabricResult, NetInternal, NetListInternal, SlackReport,
     fabric::{
         node::{Costs, Edge, Node, NodeId},
-        parser::{Parser, TimingModel}, tile_manager::{State, TileManager, },
+        parser::{Parser, TimingModel},
+        tile_manager::{State, TileManager},
     },
 };
-
 
 impl Fabric {
     #[must_use]
@@ -112,7 +112,7 @@ pub struct Fabric {
 }
 
 impl Fabric {
-#[allow(clippy::missing_panics_doc)]
+    #[allow(clippy::missing_panics_doc)]
     pub fn check_and_mark_node(&mut self, node_id: NodeId) {
         let node = self.graph.get_node(node_id);
 
@@ -123,7 +123,7 @@ impl Fabric {
             && let Some(bel_char) = node.id.chars().nth(1)
         {
             self.tile_manager.mark_lut_used(node.tile, bel_char);
-            if node.id.chars().nth(3) == Some('I'){
+            if node.id.chars().nth(3) == Some('I') {
                 self.tile_manager.mark_lut_input_used(node.tile, bel_char, &node.id).unwrap();
             }
         }

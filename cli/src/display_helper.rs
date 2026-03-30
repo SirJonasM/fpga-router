@@ -1,8 +1,29 @@
-use router::{CongestionReportExtern, IterationResult, RouteNet};
+use router::{CongestionReportExtern, IterationResult, RouteNet, Swap};
 
-use crate::cli::{CreateTestArgs, RouteArgs, RouteStaArgs};
+use crate::cli::{CreateTestArgs, RouteArgs};
 
-pub fn display_results(results: &[IterationResult]) {
+pub fn display_results(results: &[IterationResult], swaps: &[Swap]) {
+    if !swaps.is_empty() {
+        println!("\nInput Swaps Performed:");
+        println!("{:-<110}", "");
+        println!(
+            "{:<20} | {:<40} -> {:<40}",
+            "Signal", "Old Sink (Input)", "New Sink (Input)"
+        );
+        println!("{:-<110}", "");
+        
+        for swap in swaps {
+            println!(
+                "{:<20} | {:<40} -> {:<40}",
+                swap.signal.id, 
+                swap.sink_old.id, 
+                swap.sink_new.id
+            );
+        }
+        println!("{:-<110}\n", "");
+    }
+
+    // 2. Print Iteration Results
     println!("{:-<110}", "");
     println!(
         "{:<4} | {:<10} | {:<10} | {:<10} | {:<10} | {:<10} | {:<10}",
@@ -18,7 +39,7 @@ pub fn display_results(results: &[IterationResult]) {
             res.longest_path_cost,
             res.average_path_cost,
             res.total_wire_use,
-            res.wire_reuse * 100.0, // Convert to percentage
+            res.wire_reuse * 100.0,
             res.duration
         );
     }
@@ -28,21 +49,20 @@ pub fn display_results(results: &[IterationResult]) {
         println!("Critical Path: {} -> {}", last.longest_path.0, last.longest_path.1);
     }
 }
+
 pub fn display_run_metadata_route<T: RouteNet>(config: &RouteArgs, solver: &T) {
     println!("{:=<60}", "");
     println!(" FPGA ROUTER CONFIGURATION");
     println!("{:-<60}", "");
     println!("{:<20}: {}", "Solver Engine", solver.identifier());
     println!("{:<20}: {}", "Graph File", config.graph);
+    println!("{:<20}: {}", "Bel File", config.bel);
     println!("{:<20}: {}", "Netlist File", config.net_list);
     println!("{:<20}: {}", "Max Iterations", config.max_iterations);
     println!("{:<20}: {}", "History Factor", config.hist_factor);
-
-    if let Some(ref ffs) = config.ffs {
-        println!("{:<20}: {}", "Flip-Flop file", ffs);
-    } else {
-        println!("{:<20}: [No Flip Flop Provided]", "FF");
-    }
+    println!("{:<20}: {}", "Flip-Flop file", config.ffs);
+    println!("{:<20}: {}", "Timings file", config.timings);
+    println!("{:<20}: {}", "Timing Driven", if config.timing_driven {"Yes"} else {"No"});
     println!("{:=<60}\n", "");
 }
 pub fn display_run_create_test(config: &CreateTestArgs) {
@@ -53,19 +73,6 @@ pub fn display_run_create_test(config: &CreateTestArgs) {
     println!("{:<20}: {}", "Output File", config.output);
     println!("{:<20}: {}", "LUT Percentage", config.percentage);
     println!("{:<20}: {}", "LUT Destinations", config.destinations);
-
-    println!("{:=<60}\n", "");
-}
-pub fn display_run_metadata_route_sta<T: RouteNet>(config: &RouteStaArgs, solver: &T) {
-    println!("{:=<60}", "");
-    println!(" FPGA ROUTER CONFIGURATION");
-    println!("{:-<60}", "");
-    println!("{:<20}: {}", "Solver Engine", solver.identifier());
-    println!("{:<20}: {}", "Graph File", config.graph);
-    println!("{:<20}: {}", "Netlist File", config.net_list);
-    println!("{:<20}: {}", "Max Iterations", config.max_iterations);
-    println!("{:<20}: {}", "History Factor", config.hist_factor);
-    println!("{:<20}: {}", "Target Clock Period", config.target_ps);
 
     println!("{:=<60}\n", "");
 }

@@ -1,43 +1,39 @@
-use std::{collections::HashSet};
+use std::collections::HashSet;
 
-use crate::{FabricError, FabricResult, netlist::NetListExternal};
+use crate::{FabricError, FabricResult, fabric::node::Node, netlist::NetListExternal};
 
 pub fn net_to_fasm(expanded_nets: &NetListExternal) -> FabricResult<String> {
-    let mut fasm_lines = expanded_nets
-        .plan
-        .iter()
-        .map(|a| a.result.as_ref().ok_or(FabricError::NetNotSolved))
-        .collect::<FabricResult<Vec<_>>>()?
-        .into_iter()
-        .flat_map(|a| a.paths.values())
-        .flat_map(|a| a.windows(2))
-        .map(|pair| nodes_to_fasm_line(&pair[0], &pair[1]))
-        .collect::<FabricResult<HashSet<Option<String>>>>()?
-        .into_iter()
-        .flatten()
-        .collect::<Vec<String>>();
-    fasm_lines.sort();
-    Ok(fasm_lines.join("\n"))
+    let mut fasm_output = Vec::new();
+
+    for net in &expanded_nets.plan {
+        let result = net.result.as_ref().ok_or(FabricError::NetNotSolved)?;
+
+        let mut net_lines = Vec::new();
+        net_lines.push(format!("# Net {}", net.signal));
+
+        let mut unique_segments = HashSet::new();
+        for path in result.paths.values() {
+            for pair in path.windows(2) {
+                if let Some(line) = nodes_to_fasm_line(&pair[0], &pair[1]) {
+                    unique_segments.insert(line);
+                }
+            }
+        }
+
+        net_lines.extend(unique_segments);
+
+        fasm_output.push(net_lines.join("\n"));
+    }
+
+    Ok(fasm_output.join("\n\n")) // Double newline for readability between nets
 }
 
 /// Helper: Extracts ``TILE.WIRE_IN.WIRE_OUT`` from two node IDs
-fn nodes_to_fasm_line(u_id: &str, v_id: &str) -> FabricResult<Option<String>> {
-    let u_parts: Vec<&str> = u_id.split('.').collect();
-    let v_parts: Vec<&str> = v_id.split('.').collect();
-
-    if u_parts.len() < 2 {
-        return Err(FabricError::InvalidStringNodeId(u_id.to_string()));
-    }
-    if v_parts.len() < 2 {
-        return Err(FabricError::InvalidStringNodeId(v_id.to_string()));
-    }
-
+fn nodes_to_fasm_line(node_a: &Node, node_b: &Node) -> Option<String> {
     // u_parts[0] = Wire Name, u_parts[1] = Coordinate (X1Y1)
-    if u_parts[0] == v_parts[0] {
-        Ok(Some(format!("{}.{}.{}", u_parts[0], u_parts[1], v_parts[1])))
+    if node_a.tile == node_b.tile {
+        Some(format!("{}.{}.{}", node_a.tile, node_a.id, node_b.id))
     } else {
-        Ok(None)
+        None
     }
 }
-
-

@@ -4,6 +4,9 @@
 //! nodes, their types, and associated costs for routing algorithms.
 
 use std::fmt::Display;
+use std::cmp::Ordering;
+
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use super::error::ParseError;
 use crate::FabricGraph;
@@ -65,6 +68,69 @@ pub struct Node {
     /// X coordinate on the FPGA fabric
     pub tile: TileId,
     pub typ: NodeType,
+}
+
+impl Ord for Node {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // 1. Compare X coordinate (tile.0)
+        self.tile.0.cmp(&other.tile.0)
+            // 2. If X is equal, compare Y coordinate (tile.1)
+            .then_with(|| self.tile.1.cmp(&other.tile.1))
+            // 3. If both coordinates are equal, compare by id
+            .then_with(|| self.id.cmp(&other.id))
+    }
+}
+
+impl PartialOrd for Node {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Serialize for Node {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Leverage the Display trait as you mentioned
+        // Format: X{tile.0}Y{tile.1}.{id}
+        serializer.serialize_str(&format!("{}.{}", self.tile, self.id))
+    }
+}
+
+impl<'de> Deserialize<'de> for Node {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // 1. Get the string from the deserializer
+        let s = String::deserialize(deserializer)?;
+
+        // 2. Split into "XnYn" and "NodeId" parts via the '.'
+        let (tile_part, id_part) = s.split_once('.').ok_or_else(|| {
+            de::Error::custom(format!("Expected '.' separator in node string: {s}"))
+        })?;
+
+        // 3. Parse TileId using your helper
+        let tile = TileId::from_str_coords(tile_part).map_err(de::Error::custom)?;
+
+        // 4. Parse NodeType using your From<&str> implementation
+        // Note: From<&str> is used here; if you need to handle errors, 
+        // consider TryFrom instead.
+        let typ = NodeType::from(id_part);
+
+        Ok(Self {
+            id: id_part.to_string(),
+            tile,
+            typ,
+        })
+    }
+}
+
+impl Display for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}", self.tile, self.id)
+    }
 }
 
 #[derive(Hash, Eq, PartialEq, Clone, Debug)]
