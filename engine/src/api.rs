@@ -136,8 +136,6 @@ pub fn create_test(graph: &FabricGraph, percentage: f32, destinations: usize) ->
                 signal,
                 result: None,
                 intermediate_nodes: None,
-                priority: None,
-                criticallity: 0.0,
             }
             .to_external(graph)
         })

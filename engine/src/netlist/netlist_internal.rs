@@ -20,8 +20,6 @@ pub struct NetInternal {
     /// Optional routing result after computation
     pub result: Option<NetResultInternal>,
     pub intermediate_nodes: Option<HashMap<NodeId, Vec<NodeId>>>,
-    pub priority: Option<NodeId>,
-    pub criticallity: f32,
 }
 
 /// Routing result for a routing request
@@ -90,8 +88,6 @@ impl NetInternal {
             sinks,
             result,
             intermediate_nodes: Option::default(),
-            priority: Option::default(),
-            criticallity: 0.0,
         };
 
         Ok(x)
@@ -107,7 +103,6 @@ impl NetInternal {
             sinks,
             signal,
             result,
-            criticallity: Some(self.criticallity),
         }
     }
 }

@@ -25,11 +25,10 @@ impl RouteNet for SteinerSolver {
         Ok(())
     }
     fn solve(&self, fabric: &mut Fabric, net: &mut NetInternal) -> FabricResult<()> {
-        let criticallity = net.criticallity;
         let dists = net
             .sinks
             .par_iter()
-            .map(|sink| (*sink, fabric.graph.dijkstra_all(*sink, criticallity)))
+            .map(|sink| (*sink, fabric.graph.dijkstra_all(*sink)))
             .collect::<HashMap<NodeId, Vec<f32>>>();
         let signal = net.signal;
         let base_paths: Vec<(NodeId, NodeId)> = net.sinks.iter().map(|&sink| (signal, sink)).collect();
@@ -40,7 +39,7 @@ impl RouteNet for SteinerSolver {
             .map(|(start, base_sink)| {
                 // --- Computation to find the MINIMUM COST ---
                 // Calculate the cost of the base path (Dijkstra is still necessary here)
-                let Some((base_path, mut costs)) = fabric.graph.dijkstra(start, base_sink, criticallity) else {
+                let Some((base_path, mut costs)) = fabric.graph.dijkstra(start, base_sink, 0.0) else {
                     let start_name = fabric.graph.get_node(start).id();
                     let base_sink_name = fabric.graph.get_node(base_sink).id();
                     return Err(format!("Could not find a base path start: {start_name}, base sink: {base_sink_name}"));
@@ -102,11 +101,11 @@ impl RouteNet for SteinerSolver {
             let mut paths = HashMap::new();
 
             for (sink, mid_point) in &best_candidate.mid_points {
-                let Some((mut path_to_mid, _cost)) = fabric.graph.dijkstra(signal, *mid_point, criticallity) else {
+                let Some((mut path_to_mid, _cost)) = fabric.graph.dijkstra(signal, *mid_point, 0.0) else {
                     let sink_name = fabric.graph.get_node(*sink).id();
                     return Err(format!("Could not find a route for sink: {sink_name}").into());
                 };
-                let Some((path_from_mid, _cost)) = fabric.graph.dijkstra(*mid_point, *sink, criticallity) else {
+                let Some((path_from_mid, _cost)) = fabric.graph.dijkstra(*mid_point, *sink, 0.0) else {
                     let sink_name = fabric.graph.get_node(*sink).id();
                     return Err(format!("Could not find a route for sink: {sink_name}").into());
                 };

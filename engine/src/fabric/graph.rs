@@ -96,22 +96,11 @@ impl Fabric {
                 sinks,
                 result: None,
                 intermediate_nodes: None,
-                priority: None,    // Set to default as requested
-                criticallity: 0.0, // Set to default as requested
             })
             .collect();
         *net_list = NetListInternal { plan: new_plan };
         Ok(())
     }
-}
-
-pub struct Fabric {
-    pub tile_manager: TileManager,
-    pub graph: FabricGraph,
-    pub slack_report: Option<SlackReport>,
-}
-
-impl Fabric {
     #[allow(clippy::missing_panics_doc)]
     pub fn check_and_mark_node(&mut self, node_id: NodeId) {
         let node = self.graph.get_node(node_id);
@@ -129,6 +118,13 @@ impl Fabric {
         }
     }
 }
+
+pub struct Fabric {
+    pub tile_manager: TileManager,
+    pub graph: FabricGraph,
+    pub slack_report: Option<SlackReport>,
+}
+
 
 /// Representation of the FPGA fabric graph
 #[derive(Debug, Clone, Default)]

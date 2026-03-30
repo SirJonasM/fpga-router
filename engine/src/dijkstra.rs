@@ -71,7 +71,7 @@ impl FabricGraph {
         let n = self.nodes.len();
 
         let mut dist: Vec<f32> = vec![f32::MAX; n];
-        let mut prev: Vec<Option<NodeId>> = vec![None; n]; // <-- store predecessors
+        let mut prev: Vec<Option<NodeId>> = vec![None; n]; 
 
         let mut heap = BinaryHeap::new();
 
@@ -130,7 +130,7 @@ impl FabricGraph {
     }
 
     #[must_use]
-    pub fn dijkstra_all(&self, start: NodeId, criticallity: f32) -> Vec<f32> {
+    pub fn dijkstra_all(&self, start: NodeId) -> Vec<f32> {
         let n = self.nodes.len();
 
         let mut dist: Vec<f32> = vec![f32::MAX; n];
@@ -149,7 +149,7 @@ impl FabricGraph {
 
             for edge in &self.map_reversed[position] {
                 let base_cost = edge.cost;
-                let next_cost = cost + self.costs[edge.node_id].calc_costs(base_cost, criticallity);
+                let next_cost = cost + self.costs[edge.node_id].calc_costs(base_cost, 0.0);
 
                 let next_pos = edge.node_id;
 

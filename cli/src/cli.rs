@@ -56,7 +56,7 @@ pub struct RouteArgs {
     #[arg(short = 'i', long, default_value_t = 2000)]
     pub max_iterations: usize,
     #[arg(short, long)]
-    pub ffs: String,
+    pub ffs: Option<String>,
     #[arg(short, long)]
     pub timings: String,
     #[arg(short, long, default_value_t = false)]

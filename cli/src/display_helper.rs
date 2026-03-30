@@ -6,18 +6,13 @@ pub fn display_results(results: &[IterationResult], swaps: &[Swap]) {
     if !swaps.is_empty() {
         println!("\nInput Swaps Performed:");
         println!("{:-<110}", "");
-        println!(
-            "{:<20} | {:<40} -> {:<40}",
-            "Signal", "Old Sink (Input)", "New Sink (Input)"
-        );
+        println!("{:<20} | {:<40} -> {:<40}", "Signal", "Old Sink (Input)", "New Sink (Input)");
         println!("{:-<110}", "");
-        
+
         for swap in swaps {
             println!(
                 "{:<20} | {:<40} -> {:<40}",
-                swap.signal.id, 
-                swap.sink_old.id, 
-                swap.sink_new.id
+                swap.signal.id, swap.sink_old.id, swap.sink_new.id
             );
         }
         println!("{:-<110}\n", "");
@@ -50,7 +45,7 @@ pub fn display_results(results: &[IterationResult], swaps: &[Swap]) {
     }
 }
 
-pub fn display_run_metadata_route<T: RouteNet>(config: &RouteArgs, solver: &T) {
+pub fn display_metadata_route<T: RouteNet>(config: &RouteArgs, solver: &T) {
     println!("{:=<60}", "");
     println!(" FPGA ROUTER CONFIGURATION");
     println!("{:-<60}", "");
@@ -60,9 +55,13 @@ pub fn display_run_metadata_route<T: RouteNet>(config: &RouteArgs, solver: &T) {
     println!("{:<20}: {}", "Netlist File", config.net_list);
     println!("{:<20}: {}", "Max Iterations", config.max_iterations);
     println!("{:<20}: {}", "History Factor", config.hist_factor);
-    println!("{:<20}: {}", "Flip-Flop file", config.ffs);
+    println!(
+        "{:<20}: {}",
+        "Flip-Flop file",
+        config.ffs.as_ref().map_or("Not Provided.", |a| a.as_str())
+    );
     println!("{:<20}: {}", "Timings file", config.timings);
-    println!("{:<20}: {}", "Timing Driven", if config.timing_driven {"Yes"} else {"No"});
+    println!("{:<20}: {}", "Timing Driven", if config.timing_driven { "Yes" } else { "No" });
     println!("{:=<60}\n", "");
 }
 pub fn display_run_create_test(config: &CreateTestArgs) {

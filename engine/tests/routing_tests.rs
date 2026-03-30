@@ -102,7 +102,7 @@ fn test_routing_simple_logging() {
         .build()
         .unwrap();
     let result = route(&mut config).unwrap();
-    let len = result.len();
+    let len = result.1.len();
     assert!(config.logger.calls_iteration.load(Ordering::Relaxed) == len);
 }
 

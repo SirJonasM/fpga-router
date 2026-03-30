@@ -23,8 +23,6 @@ pub struct NetExternal {
     /// Optional routing result after computation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<NetResultExternal>,
-    #[serde(skip)]
-    pub criticallity: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,6 +49,7 @@ impl NetListExternal {
         Ok(x)
     }
 
+    #[must_use]
     pub fn swapped_inputs(&self, old: &Self) -> Vec<Swap> {
         let mut x1 = self
             .plan

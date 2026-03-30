@@ -16,13 +16,21 @@
 )])
 
 = Overview
-#lorem(100)
+This project implements a FPGA router. 
 = Implementation
-#lorem(100)
+- engine: Implements the `path_finder`, `Net solver` and 
+- cli: Uses the engine to route a given `netlist` for an given `Fabric` defined by `bel.txt` and `pips.txt`.
 = Build Guide
-#lorem(100)
+== Nix
+- It is a nix project so using nix shell and cargo build should be sufficient
+== Custom
+- dependencies: 
+  - Cargo
+  - Python (only to map a `placement.json` to a `net-list.json` that the router uses)
 = Tools and Data Used
-#lorem(100)
+- Sta from the other team
+- FABulous - `pips.txt` and `bel.txt`
+- nextpnr-genereric - `placement.json`
 = Further Notes
 #lorem(100)
 

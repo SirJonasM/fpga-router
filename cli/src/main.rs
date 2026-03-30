@@ -16,14 +16,14 @@ use std::{
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use router::{
-    Fabric, FabricError, FabricGraph, FabricResult, NetListExternal, RoutingConfigBuilder, SimpleSolver, SimpleSteinerSolver,
-    SlackReport, SteinerSolver, TileManager, TimingAnalysis, create_fasm, create_test, route, route_timing_driven,
-    validate_routing,
+    Fabric, FabricError, FabricGraph, FabricResult, NetListExternal, RoutingConfig, RoutingConfigBuilder, SimpleSolver,
+    SimpleSteinerSolver, SlackReport, SteinerSolver, TileManager, TimingAnalysis, create_fasm, create_test, route,
+    route_timing_driven, validate_routing,
 };
 
 use crate::{
     cli::{Cli, Commands, CreateTestArgs, LoggerType, Solver, SolverType, ValidateArgs},
-    display_helper::{display_failed_routing, display_results, display_run_create_test, display_run_metadata_route},
+    display_helper::{display_failed_routing, display_results, display_run_create_test, display_metadata_route},
     logger::Loggers,
 };
 
@@ -51,46 +51,10 @@ fn command_create_test(args: &CreateTestArgs) -> Result<()> {
 }
 
 fn command_route(args: &cli::RouteArgs) -> Result<()> {
-    let solver = match args.solver {
-        SolverType::Simple => Solver::Simple(SimpleSolver),
-        SolverType::Steiner => Solver::Steiner(SteinerSolver),
-        SolverType::SimpleSteiner => Solver::SimpleSteiner(SimpleSteinerSolver),
-    };
-    let logger = match &args.logger {
-        LoggerType::No => Loggers::No,
-        LoggerType::Terminal => Loggers::Terminal,
-    };
-    let file = File::open(&args.timings)?;
-    let reader = BufReader::new(file);
-    let mut sta: Sta = serde_json::from_reader(reader)?;
-    sta.graph = Some(fpga_timing_analyzer::pips_parser(&args.graph));
-
-    let graph_timing_model = router::TimingModel {
-        lut_delay: sta.timing_model.lut_delay,
-        pip_delay: sta.timing_model.pip_delay,
-        fanout_delay: sta.timing_model.fanout_delay,
-        clock_to_output_delay: sta.timing_model.clock_to_output_delay,
-        clock_tree_delay: sta.timing_model.clock_tree_delay,
-    };
-
-    let graph = FabricGraph::from_file(&args.graph, Some(graph_timing_model))
-        .with_context(|| format!("Router initialization failed: unable to load graph {}", args.graph))?;
-    let net_list = NetListExternal::from_file(&args.net_list)
-        .with_context(|| format!("Router initialization failed: unable to load net-list {}", args.net_list))?;
-
-    let tile_manager = TileManager::from_file(&args.bel)?;
-    let mut config = RoutingConfigBuilder::default()
-        .hist_factor(args.hist_factor)
-        .max_iterations(args.max_iterations)
-        .net_list(net_list)
-        .solver(solver)
-        .logger(logger)
-        .graph(graph)
-        .tile_manager(tile_manager)
-        .build()?;
+    let (mut config, sta) = parse_arguments(args)?;
 
     let _ = clearscreen::clear();
-    display_run_metadata_route(args, &config.solver);
+    display_metadata_route(args, &config.solver);
     let routing_result = if args.timing_driven {
         route_timing_driven(&mut config, &sta)
     } else {
@@ -116,7 +80,10 @@ fn command_route(args: &cli::RouteArgs) -> Result<()> {
     let path = Path::new(&args.output);
     let serialized_net_list = match path.extension().and_then(|s| s.to_str()) {
         Some("fasm") => {
-            let ffs = fs::read_to_string(&args.ffs).unwrap();
+            let ffs = args.ffs.as_ref().map_or_else(
+                || Ok("# No FFS provided".to_string()),
+                |path| fs::read_to_string(path).context("Error reading FFS file"),
+            )?;
             let fasm = create_fasm(&result.0, &config.fabric.tile_manager)
                 .with_context(|| "Failed to generate FASM output from the routed net-list")?;
             format!("{fasm}\n{ffs}")
@@ -126,7 +93,10 @@ fn command_route(args: &cli::RouteArgs) -> Result<()> {
         }
         _ => {
             println!("Unknown file extension defaulting to fasm.");
-            let ffs = fs::read_to_string(&args.ffs).unwrap();
+            let ffs = args.ffs.as_ref().map_or_else(
+                || Ok("# No FFS provided".to_string()),
+                |path| fs::read_to_string(path).context("Error reading FFS file"),
+            )?;
             let fasm = create_fasm(&config.net_list, &config.fabric.tile_manager)
                 .with_context(|| "Failed to generate FASM output from the routed net-list")?;
             format!("{fasm}\n{ffs}")
@@ -241,4 +211,46 @@ fn slack_report_from_timing_analyis(
         criticalities,
         worst_slack,
     })
+}
+fn parse_arguments(args: &cli::RouteArgs) -> Result<(RoutingConfig<Solver, Loggers>, Sta)> {
+    let solver = match args.solver {
+        SolverType::Simple => Solver::Simple(SimpleSolver),
+        SolverType::Steiner => Solver::Steiner(SteinerSolver),
+        SolverType::SimpleSteiner => Solver::SimpleSteiner(SimpleSteinerSolver),
+    };
+    let logger = match &args.logger {
+        LoggerType::No => Loggers::No,
+        LoggerType::Terminal => Loggers::Terminal,
+    };
+    let file = File::open(&args.timings)?;
+    let reader = BufReader::new(file);
+    let mut sta: Sta = serde_json::from_reader(reader)?;
+    let timing_model = &sta.timing_model;
+    sta.graph = Some(fpga_timing_analyzer::pips_parser(&args.graph));
+
+    let graph_timing_model = router::TimingModel {
+        lut_delay: timing_model.lut_delay,
+        pip_delay: timing_model.pip_delay,
+        fanout_delay: timing_model.fanout_delay,
+        clock_to_output_delay: timing_model.clock_to_output_delay,
+        clock_tree_delay: timing_model.clock_tree_delay,
+    };
+
+    let graph = FabricGraph::from_file(&args.graph, Some(graph_timing_model))
+        .with_context(|| format!("Router initialization failed: unable to load graph {}", args.graph))?;
+    let net_list = NetListExternal::from_file(&args.net_list)
+        .with_context(|| format!("Router initialization failed: unable to load net-list {}", args.net_list))?;
+
+    let tile_manager = TileManager::from_file(&args.bel)?;
+    let config = RoutingConfigBuilder::default()
+        .hist_factor(args.hist_factor)
+        .max_iterations(args.max_iterations)
+        .net_list(net_list)
+        .solver(solver)
+        .logger(logger)
+        .graph(graph)
+        .tile_manager(tile_manager)
+        .build()
+        .context("Failed to build Routing Config.")?;
+    Ok((config, sta))
 }

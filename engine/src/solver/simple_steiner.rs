@@ -5,7 +5,11 @@ use std::{
 
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::{Fabric, FabricError, FabricGraph, FabricResult, RouteNet, fabric::node::NodeId, netlist::{NetInternal, NetResultInternal}};
+use crate::{
+    Fabric, FabricError, FabricGraph, FabricResult, RouteNet,
+    fabric::node::NodeId,
+    netlist::{NetInternal, NetResultInternal},
+};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SimpleSteinerSolver;
@@ -45,11 +49,14 @@ impl RouteNet for SimpleSteinerSolver {
         Ok(())
     }
     fn solve(&self, fabric: &mut Fabric, net: &mut NetInternal) -> FabricResult<()> {
-        let criticallity = net.criticallity;
         if let Some(steiner_tree) = &net.intermediate_nodes {
             let mut paths = HashMap::new();
             let mut nodes = HashSet::new();
             for (terminal, route) in steiner_tree {
+                let criticallity = fabric
+                    .slack_report
+                    .as_ref()
+                    .map_or(0.0, |slack_report| *slack_report.criticalities.get(&(net.signal, *terminal)).unwrap_or(&0.0));
                 let mut path = Vec::new();
                 for steiner_node in route.windows(2) {
                     let (start, end) = (steiner_node[0], steiner_node[1]);
@@ -80,7 +87,7 @@ fn pre_calc_steiner_tree(graph: &mut FabricGraph, net: &NetInternal) -> FabricRe
     let dists = net
         .sinks
         .par_iter()
-        .map(|sink| (*sink, graph.dijkstra_all(*sink, 0.0)))
+        .map(|sink| (*sink, graph.dijkstra_all(*sink)))
         .collect::<HashMap<NodeId, Vec<f32>>>();
     let signal = net.signal;
     let base_paths: Vec<(NodeId, NodeId)> = net.sinks.iter().map(|&sink| (signal, sink)).collect();
@@ -89,13 +96,14 @@ fn pre_calc_steiner_tree(graph: &mut FabricGraph, net: &NetInternal) -> FabricRe
     let best_candidate: Vec<SteinerTreeCandidate> = base_paths
         .into_par_iter()
         .map(|(start, base_sink)| {
-            let (base_path, mut costs) = graph
-                .dijkstra(start, base_sink, 0.0)
-                .ok_or_else(||{
-                    let start_name = graph.get_node(start).clone();
-                    let sink_name = graph.get_node(base_sink).clone();
-                    FabricError::PathfindingFailed { start: start_name, sink: sink_name }
-                })?;
+            let (base_path, mut costs) = graph.dijkstra(start, base_sink, 0.0).ok_or_else(|| {
+                let start_name = graph.get_node(start).clone();
+                let sink_name = graph.get_node(base_sink).clone();
+                FabricError::PathfindingFailed {
+                    start: start_name,
+                    sink: sink_name,
+                }
+            })?;
 
             let mut nodes = HashSet::new();
             let min_points = net
