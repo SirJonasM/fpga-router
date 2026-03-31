@@ -4,13 +4,13 @@ This project implements an **FPGA router written in Rust**. It is designed to fo
 
 ## Key Features
 
-- *Timing-Driven Routing**: Integrates a Static Timing Analyzer (STA) to prioritize critical paths and meet hardware performance requirements.
-- *Extensible Architecture**: Built with a trait-based engine, allowing for easy experimentation with different routing algorithms and timing analysis backends.
+- **Timing-Driven Routing**: Integrates a Static Timing Analyzer (STA) to prioritize critical paths and meet hardware performance requirements.
+- **Extensible Architecture**: Built with a trait-based engine, allowing for easy experimentation with different routing algorithms and timing analysis backends.
 - **Multiple Solvers**:
-    - *Simple**: Dijkstra-based routing with support for LUT input swapping.
-    - *Steiner**: Approximates Steiner trees for high wire efficiency.
-    - *Simple Steiner**: A hybrid approach for faster Steiner-based routing.
-- *LUT-based Tie-off**: Automatically handles unsolvable `VCC` or `GND` signals by "borrowing" nearby LUTs as tie-off points.
+    - **Simple**: Dijkstra-based routing with support for LUT input swapping.
+    - **Steiner**: Approximates Steiner trees for high wire efficiency.
+    - **Simple Steiner**: A hybrid approach for faster Steiner-based routing.
+- **LUT-based Tie-off**: Automatically handles unsolvable `VCC` or `GND` signals by "borrowing" nearby LUTs as tie-off points.
 
 ## Installation
 
@@ -36,8 +36,8 @@ nix develop
 
 ### 1. Netlist Creation
 You can generate a `net-list.json` in two ways:
-- *Synthetic Tests**: Use the `create-test` command to generate netlists based on LUT output percentages.
-- *Placement Mapping**: Map a `placement.json` from the `nextpnr-generic` placer using the provided `map_net_io.py` script.
+- **Synthetic Tests**: Use the `create-test` command to generate netlists based on LUT output percentages.
+- **Placement Mapping**: Map a `placement.json` from the `nextpnr-generic` placer using the provided `map_net_io.py` script.
 
 ### 2. Routing
 Execute the router using the `route` command. All routing passes require a `--timings` file to establish base costs for the routing graph.
@@ -53,5 +53,5 @@ router-cli route \
 ```
 
 ## Performance and Compatibility
-- *Performance**: Current iterations on default FABulous fabrics take approximately 1–2 seconds.
-- *Compatibility**: Primarily tested on the `sequential_16bit_en.v` design. More complex designs may encounter errors as some placement features are not yet fully supported.
+- **Performance**: Current iterations on default FABulous fabrics take approximately 1–2 seconds.
+- **Compatibility**: Primarily tested on the `sequential_16bit_en.v` design. More complex designs may encounter errors as some placement features are not yet fully supported.
