@@ -2,7 +2,7 @@
 #set list(marker: ([--], [--], [--]))
 #include "cover.typ"
 #counter(page).update(1)
-#set page(numbering: "1.")
+#set page(numbering: "[1]")
 #set heading(numbering: "1.")
 #set text(
   font: "New Computer Modern",
@@ -70,16 +70,12 @@ The solver is resposible for for routing individual nets.
 - Build with: `cargo build -p router-cli --release`
 == Installing
 By default, the project is run using Cargo commands. To use the router as a standalone tool from any directory, follow these steps:
-+ Compile and Install:
-  Run the following command from the project root to install the binary to your local Cargo bin directory
-  ```
-cargo install --path cli
-  ```
-+ Update System Path:
-  Ensure your shell can locate the installed binary by adding the Cargo bin folder to your `PATH`:
-  ```
-  export PATH=$PATH:~/.cargo/bin
-  ```
++ *Compile and Install:* \
+  Run the following command from the project root to install the binary to your local Cargo bin directory: \
+  `cargo install --path cli`
++ *Update System Path:*
+  Ensure your shell can locate the installed binary by adding the Cargo bin folder to your `PATH`:\
+  `export PATH=$PATH:~/.cargo/bin`
 + Command Simplification
   Once installed, you can replace the lengthy cargo run development commands with the direct binary call. 
   For example:

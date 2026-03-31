@@ -35,7 +35,7 @@
         devShells = {
           # Local development: 'nix develop'
           default = pkgs.mkShell {
-            nativeBuildInputs = [ devToolchain pkgs.python3 ];
+            nativeBuildInputs = [ devToolchain pkgs.python3 pkgs.typst ];
             buildInputs = commonInputs;
             shellHook = ''echo "Welcome to your FULL dev shell (with rust-analyzer)!"'';
           };
