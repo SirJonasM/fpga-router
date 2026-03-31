@@ -2,7 +2,7 @@
   "timing_constraints": {
 	  "setup_time": 80.0,
 	  "hold_time": 20.0,
-	  "clk_period": 10000.0
+	  "clk_period": 6000.0
   },
   "timing_model": {
 	  "lut_delay": 320.0,

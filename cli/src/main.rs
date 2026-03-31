@@ -145,7 +145,7 @@ fn slack_report_from_timing_analyis(
 
     for (_, arrival, src, sink, path) in &timing_analyisis.max_paths {
         let slack = target_period_ps - arrival;
-        let criticality = (arrival / max_arrival).clamp(0.0, 1.0);
+        let criticality = (arrival / max_arrival).clamp(0.0, 1.0).sqrt();
 
         // MAP THE SINK:
         // If the sink is a 'FF_SINK', the router actually needs to know
@@ -153,7 +153,7 @@ fn slack_report_from_timing_analyis(
         let router_sink = if sink.pin.contains("FF_SINK") {
             // Get the node immediately BEFORE the FF_SINK in the timing path
             path.iter().rev().nth(2).map_or_else(
-                || format!("X{}Y{}.{}", sink.tile.0, sink.tile.1, sink.pin),
+                || sink.to_string(),
                 |tn| format!("X{}Y{}.{}", tn.tile.0, tn.tile.1, tn.pin),
             )
         } else {
