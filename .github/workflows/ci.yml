@@ -16,11 +16,18 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Rust
-      uses: dtolnay/rust-toolchain@stable
+    # 1. Install and configure Nix
+    - uses: cachix/install-nix-action@v2
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
 
-    - name: Build
-      run: cargo build --verbose
-
-    - name: Run tests
-      run: cargo test --verbose
+    # 2. Run your build/test commands inside the Nix environment
+    # This assumes you have a shell.nix or flake.nix in your repository
+    - name: Build and Test
+      run: nix-shell --run "cargo build --verbose && cargo test --verbose"
+    - name: Lint with Clippy (Nursery & Pedantic)
+      run: |
+        nix-shell --run "cargo clippy \
+          -p router \
+          -p router-cli \
+          -- -W clippy::nursery -W clippy::pedantic"
