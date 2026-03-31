@@ -7,6 +7,8 @@
   font: "New Computer Modern",
   size: 12pt,
 )
+#show raw: set text(font: "Iosevka NF")
+#show math.equation: set text(font: "IosevkaTerm NF")
 
 #set page(header: text(size: 10pt)[#grid(
   columns: (1fr, 2fr, 1fr),
@@ -14,75 +16,99 @@
   align: (left, center, right),
   [ACF], [University Heidelberg], [Jonas Möwes],
 )])
+#show raw.where(block: true): block.with(fill: rgb(0,120, 255, 4%))
+#show raw.where(block: false): box.with(fill: rgb(0,120,255, 4%))
 
 = Overview
 This project implements a FPGA router.
+
 = Implementation
-- engine: Implements the `path_finder`, `Net solver` and
-- cli: Uses the engine to route a given `netlist` for an given `Fabric` defined by `bel.txt` and `pips.txt`.
-== PathFinder
+== Project Structure
+*The Engine (Library Layer)* \
+The engine serves as the core logic provider. It is designed with extensibility in mind to allow for future experimentation with different routing algorithms.
+- *Net Solver Trait (`RouteNet`): *
+  The Net solver is implemented as a Rust Trait, making it fully extensible.
+  This allows the engine to swap between different routing strategies—such as the `Simple`, `Steiner`, or `Simple Steiner` solvers—without changing the underlying engine code.
+- *SlackReport Trait (`TimingAnalysis`): * 
+  Similar to the solver, the Timing Analysis is abstracted as a trait, allowing for different timing analysis backends to be hooked into the routing process.
+*The Engine (Library Layer)* \
+The CLI acts as the front-end "driver" for the engine, handling data ingestion and execution.
 
 == Solver
-The solver is the algorithm that is used to route a single net.
-=== Simple
-- Solves each net by running dijkstra for each sink
-- Uses LUT input swapping by routing to all possible inputs on the LUT and choosing the best performing one.
-=== Steiner
-- Approximates a steiner tree for signal and sinks as terminals.
-- Calculates a base path to one sink. 
-- Goes then over the path again and finds nodes from which another sink can be connected with the lowest cost. This makes the net overall cheaper in terms of overall wire consumption but the algorithm is much slower.
-=== Simple Steiner
-- Pre calculates the steiner nodes. Nodes that are used to hook up the other nodes from the base path. Saves them for the actual routing of the net.
-- When net needs to be solved it just calculates each path by using the steiner nodes.
-- This is much faster then the steiner solver but also not as efficient as normaly the steiner nodes change when the congestion cost changes.
-- Also sometimes the pre computation makes the routing impossible. But this issue gets tackled by running the precomputation again if the solver does not progress.
-== Timing Driven
-- the engine can be run with a static timing analyzer hooked up. The cli uses the STA from the other team to do that. 
-- The STA calculates a criticallity that gets used in the net routing (currently only the simple solver supports that). 
+The solver is resposible for for routing individual nets.
+- *Simple:*
+  Utilizes Dijkstra’s algorithm for each sink. It supports LUT input swapping by routing to all possible inputs and selecting the optimal one.
+- *Steiner:*
+  Approximates a Steiner tree to minimize overall wire consumption. While more wire-efficient, it is significantly slower than the Simple solver.
+- *Simple Steiner:*
+  A hybrid approach that pre-calculates Steiner nodes to speed up the process. While faster than the standard Steiner solver, it can be less efficient as Steiner nodes do not adapt to changing congestion costs.
 
-== LUT-based Tie-off
-- The router first checks if all nets are solvable while not caring about congestion.
-- If a net is not solvable it also checks if the signal is a VCC or GND signal. If so it tries to find a LUT near the sink and routes from there marking the LUT as borrowed and leaving a mark for HIGH or LOW.
-- When generating the `fasm` it goes over all LUTs and if it is borrowed it generates FASM that initializes the LUT properly.
-= Build Guid
-== Dependencies
-=== Nix
-- It is a nix project so using nix shell and cargo build should be sufficient
-=== Custom
-- dependencies:
-  - Cargo
-  - Python (only to map a `placement.json` to a `net-list.json` that the router uses)
+== Advanced features
+- *Timing Driven Routing: *
+  The engine integrates a Static Timing Analyzer (STA) to calculate net criticality. Currently, only the Simple solver supports this mode.
+- *LUT-based Tie-off: *
+  If a `VCC` or `GND` signal is unsolvable due to routing constraints, the router can "borrow" a nearby LUT to act as a tie-off point. This is automatically handled during FASM generation by initializing the borrowed LUTs correctly.
+
+= Build Guide
+== Dependencies and Setup
+- *Environment: *
+  The project is Nix-based; running `nix-shell` followed by `cargo build` is the recommended setup
+- *Tools: *
+  Requires *Cargo* for the Rust build and *Python* for mapping the placement to netlists.
 == Building
-- `cargo build -p router-cli --release`
+- Build with: `cargo build -p router-cli --release`
 == Installing
-- The router can be installed using cargo and then used by adding the binary to PATH. all commands that run the binary with `cargo run -p router-cli --release` can then be replaced using the binary with `router-cli`
-- `cargo install --path cli`
-== Running
+The router can be installed with `cargo install --path cli` and then used by adding the cargo binaries to path with `PATH=$PATH:~/.cargo/bin`.
+
+All commands that run the binary with `cargo run -p router-cli --release` can then be replaced using the binary with `router-cli`
+
+== Executing the router
+*Net List Creation* \
 First a net-list is needed. There are 2 ways to generate one:
-- create-test command:
-  - The cli provides a `create-test` command which generates a test-net-list with two parameters:
-    - percentage: The percentage of LUT-Outputs that the fabric contains that will be used in the net-list.
-    - destinations: How manny sinks each LUT-Output is connected to.
-  - Example: `router-cli create-test -g tests/data/pips_8x8.txt -o net-list.json -d 3 -p 0.3`
-- mapping a `placement.json` from `nextpnr-generic` placer.
-  - `nextpnr` has the option to generate json file that contains some data about the placement. This can be mapped using the `map_net_io.py` script to a net-list.json
-  - `python map_net_io.py net-list.json`
-  - This will also produce a `ffs.fasm` file that gets combined with the router output fasm and sets the Flip-Flops.
++ `create-test` command:
+  - Generates synthetic netlists based on a percentage of LUT outputs and a specified number of sinks per output.
+  - Example (30% of LUT outputs with 3 sinks each): \
+    ``` 
+cargo run -p router-cli --release -- create-test \
+  -g tests/data/pips_8x8.txt \
+  -o net-list.json \
+  -d 3 -p 0.3
+```
++ Mapping a `placement.json` from `nextpnr-generic` placer.
+  - `nextpnr` has the option to generate a `json` file that contains data about the placement. This file can be mapped using the `map_net_io.py` script to a `net-list.json`.
+  - Example: `python map_net_io.py net-list.json`
+  - This will also produce a `ffs.fasm` file that gets combined with the router output FASM and initilalizes the Flip-Flops.
+
+*Routing* \
 Now the router can be run using the `net-list.json` and the `route` command.
 There are several arguments that can be passed to the router:
 - files: output, bel, pips and net-list file
   - timings file: To make the Static Timing Analysis there is a timings argument which sets the timing model and the timing constraints. It is similar to the STA timing files except that its combined into one.
   - ffs file: the file that was produced using the `map_net_io.py` script.
 - hist-factor: sets the historic factor of the path-finding algorithm
-- solver: the solver for the net that is used there are 3 implements each with advantages and disadvantages:  
-- simple: 
-  - simple-steiner:
-  - steiner:
+- solver (simple, simple-steiner or steiner)
 - max-iterations: how many iterations the router does before failing
 - timing-driven: activates the timing driven router.
+- Example: \
+  `cargo run -p router-cli --release -- route \
+  -o out.fasm \
+  -n net-list.json \
+  -g tests/data/pips_8x8.txt \
+  -i 1000 \
+  -b tests/data/bel.txt \
+  --hist-factor 0.1 \
+  --ffs ffs.fasm \
+  --timings tests/data/timing_model.json`
 
 = Tools and Data Used
-- Sta from the other team
-- FABulous - `pips.txt` and `bel.txt`
-- nextpnr-genereric - `placement.json`
+- STA from the other team (With some changes to make it usable in this project)
+- FABulous
+  - The project uses the small demo fabric and the default fabric of FABulous.
+  - And the placement file `placement.json` from the demo design: `sequential_16bit_en.v`
+  - All artifacts can be found in `tests/data/`
+
 = Further Notes
+- *Performance:*
+  Currently, iterations on default FABulous fabrics take 1–2 seconds. A proposed optimization is to implement incremental routing that only targets congested nets.
+- *Compatibility: * The project was primarily tested on the `sequential_16bit_en.v` design. As not all placement features are currently supported, errors may occur with more complex designs.
+- *GitHub:* #link("https://github.com/SirJonasM/fpga-router")

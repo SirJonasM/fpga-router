@@ -20,28 +20,28 @@ impl Logging for MockLogger {
 
 #[test]
 fn test_create_test() {
-    let graph = FabricGraph::from_file(&get_test_data_path("pips_8x8.txt"), None).unwrap();
+    let graph = FabricGraph::from_file(&get_test_data_path("pips_4x4.txt"), None).unwrap();
     let result = create_test(&graph, 0.1, 3);
     assert!(result.is_ok())
 }
 #[test]
 fn test_create_test_bad_percentage() {
-    let graph = FabricGraph::from_file(&get_test_data_path("pips_8x8.txt"), None).unwrap();
+    let graph = FabricGraph::from_file(&get_test_data_path("pips_4x4.txt"), None).unwrap();
     let result = create_test(&graph, 100.1, 3);
     assert!(result.is_err())
 }
 
 #[test]
 fn test_create_test_bad_destinations() {
-    let graph = FabricGraph::from_file(&get_test_data_path("pips_8x8.txt"), None).unwrap();
+    let graph = FabricGraph::from_file(&get_test_data_path("pips_4x4.txt"), None).unwrap();
     let result = create_test(&graph, 0.1, 10000);
     assert!(result.is_err())
 }
 
 #[test]
 fn test_routing_simple() {
-    let graph = FabricGraph::from_file(&get_test_data_path("pips_8x8.txt"), None).unwrap();
-    let tile_manager = TileManager::from_file(&get_test_data_path("bel.txt")).unwrap();
+    let graph = FabricGraph::from_file(&get_test_data_path("pips_4x4.txt"), None).unwrap();
+    let tile_manager = TileManager::from_file(&get_test_data_path("bel_4x4.txt")).unwrap();
     let mut config = RoutingConfigBuilder::default()
         .graph(graph)
         .with_test_netlist(0.2, 3)
@@ -55,8 +55,8 @@ fn test_routing_simple() {
 
 #[test]
 fn test_routing_simple_steiner() {
-    let graph = FabricGraph::from_file(&get_test_data_path("pips_8x8.txt"), None).unwrap();
-    let tile_manager = TileManager::from_file(&get_test_data_path("bel.txt")).unwrap();
+    let graph = FabricGraph::from_file(&get_test_data_path("pips_4x4.txt"), None).unwrap();
+    let tile_manager = TileManager::from_file(&get_test_data_path("bel_4x4.txt")).unwrap();
     let mut config = RoutingConfigBuilder::default()
         .graph(graph)
         .with_test_netlist(0.2, 1)
@@ -71,8 +71,8 @@ fn test_routing_simple_steiner() {
 
 #[test]
 fn test_routing_steiner() {
-    let graph = FabricGraph::from_file(&get_test_data_path("pips_8x8.txt"), None).unwrap();
-    let tile_manager = TileManager::from_file(&get_test_data_path("bel.txt")).unwrap();
+    let graph = FabricGraph::from_file(&get_test_data_path("pips_4x4.txt"), None).unwrap();
+    let tile_manager = TileManager::from_file(&get_test_data_path("bel_4x4.txt")).unwrap();
     let mut config = RoutingConfigBuilder::default()
         .graph(graph)
         .tile_manager(tile_manager)
@@ -87,8 +87,8 @@ fn test_routing_steiner() {
 
 #[test]
 fn test_routing_simple_logging() {
-    let graph = FabricGraph::from_file(&get_test_data_path("pips_8x8.txt"), None).unwrap();
-    let tile_manager = TileManager::from_file(&get_test_data_path("bel.txt")).unwrap();
+    let graph = FabricGraph::from_file(&get_test_data_path("pips_4x4.txt"), None).unwrap();
+    let tile_manager = TileManager::from_file(&get_test_data_path("bel_4x4.txt")).unwrap();
     let logger = MockLogger {
         calls_text: AtomicUsize::new(0),
         calls_iteration: AtomicUsize::new(0),
@@ -108,8 +108,8 @@ fn test_routing_simple_logging() {
 
 #[test]
 fn test_create_fasm() {
-    let graph = FabricGraph::from_file(&get_test_data_path("pips_8x8.txt"), None).unwrap();
-    let tile_manager = TileManager::from_file(&get_test_data_path("bel.txt")).unwrap();
+    let graph = FabricGraph::from_file(&get_test_data_path("pips_4x4.txt"), None).unwrap();
+    let tile_manager = TileManager::from_file(&get_test_data_path("bel_4x4.txt")).unwrap();
     let mut config = RoutingConfigBuilder::default()
         .graph(graph)
         .tile_manager(tile_manager)
@@ -117,7 +117,6 @@ fn test_create_fasm() {
         .unwrap()
         .build()
         .unwrap();
-    let _ = route(&mut config).unwrap();
-    let net_list = config.net_list;
-    let _ = create_fasm(&net_list, &config.fabric.tile_manager).unwrap();
+    let (a, _) = route(&mut config).unwrap();
+    let _ = create_fasm(&a, &config.fabric.tile_manager).unwrap();
 }

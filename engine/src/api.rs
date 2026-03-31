@@ -31,7 +31,7 @@ pub struct RoutingConfig<R: RouteNet, L: Logging> {
 /// TileManager};
 ///
 /// let path_pips = testing_utils::get_test_data_path("pips_4x4.txt");
-/// let path_bel = testing_utils::get_test_data_path("pips_4x4.txt");
+/// let path_bel = testing_utils::get_test_data_path("bel_4x4.txt");
 /// let graph = FabricGraph::from_file(&path_pips, None).unwrap();
 /// let tile_manager = TileManager::from_file(&path_bel).unwrap();
 ///
@@ -40,8 +40,9 @@ pub struct RoutingConfig<R: RouteNet, L: Logging> {
 /// let _ = route(&mut config).unwrap();
 /// ```
 /// # Errors
-/// Fails if files cannot be read or cannot be parsed or it cannot write to the output file.
+/// # Errors
 /// Fails if the `max_iterations` are reached
+/// Or `netlist` is invalid
 pub fn route<R, L>(config: &mut RoutingConfig<R, L>) -> FabricResult<(NetListExternal,Vec<IterationResult>)>
 where
     R: RouteNet,
@@ -59,8 +60,10 @@ where
         (new_net_list, a)
     })
 }
+/// Tries to solve a `NetList` and runs the STA to solve for timing constraints
 /// # Errors
-///
+/// Fails if the `max_iterations` are reached
+/// Or `netlist` is invalid
 pub fn route_timing_driven<R, L, T>(config: &mut RoutingConfig<R, L>, sta: &T) -> FabricResult<(NetListExternal, Vec<IterationResult>)>
 where
     R: RouteNet,

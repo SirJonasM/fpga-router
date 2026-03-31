@@ -1,0 +1,2404 @@
+{
+  "creator": "Next Generation Place and Route (Version )",
+  "modules": {
+    "top": {
+      "settings": {
+        "route": "00000000000000000000000000000001",
+        "router/tmg_ripup": "0 ",
+        "router1/useEstimate": "1 ",
+        "router1/fullCleanupReroute": "1 ",
+        "router1/cleanupReroute": "1 ",
+        "router1/maxIterCnt": "200",
+        "place": "00000000000000000000000000000001",
+        "placer1/startTemp": "1.000000",
+        "placer1/minBelsForGridPick": "64",
+        "placer1/netShareWeight": "0.000000",
+        "placer1/constraintWeight": "10.000000",
+        "placerHeap/cellPlacementTimeout": "8",
+        "placerHeap/netShareWeight": "0.000000",
+        "placerHeap/parallelRefine": "0 ",
+        "pack": "00000000000000000000000000000001",
+        "synth": "00000000000000000000000000000001",
+        "placerHeap/timingWeight": "10 ",
+        "placerHeap/criticalityExponent": "2",
+        "placerHeap/beta": "0.900000",
+        "placerHeap/alpha": "0.100000",
+        "seed": "0011000101000001010110010010011001010011010110001001011110010011",
+        "arch.type": "none",
+        "arch.name": "generic",
+        "router": "router1",
+        "placer": "heap",
+        "auto_freq": "00000000000000000000000000000000",
+        "slack_redist_iter": "00000000000000000000000000000000",
+        "timing_driven": "00000000000000000000000000000001",
+        "target_freq": "12000000.000000"
+      },
+      "attributes": {
+        "top": "00000000000000000000000000000001",
+        "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:3.1-40.10",
+        "hdlname": "top_wrapper"
+      },
+      "ports": {
+      },
+      "cells": {
+        "io9_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y10/A",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:24.64-24.114"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5758 ],
+            "I": [ 5531 ]
+          }
+        },
+        "io15_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y7/A",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:18.63-18.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5631 ],
+            "I": [ 5576 ]
+          }
+        },
+        "io6_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y11/B",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:27.64-27.114"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5743 ],
+            "I": [ 5511 ]
+          }
+        },
+        "io14_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y7/B",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:19.63-19.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5626 ],
+            "I": [ 5568 ]
+          }
+        },
+        "io22_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y3/B",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:11.63-11.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5683 ],
+            "I": [ 5770 ]
+          }
+        },
+        "io13_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y8/A",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:20.63-20.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5621 ],
+            "I": [ 5563 ]
+          }
+        },
+        "io27_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y1/A",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:6.63-6.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5718 ],
+            "I": [ 5770 ]
+          }
+        },
+        "io12_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y8/B",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:21.63-21.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5616 ],
+            "I": [ 5558 ]
+          }
+        },
+        "$PACKER_VCC_DRV": {
+          "hide_name": 1,
+          "type": "_CONST1_DRV",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X0Y0/_CONST1_DRV"
+          },
+          "port_directions": {
+            "O": "output"
+          },
+          "connections": {
+            "O": [ 5769 ]
+          }
+        },
+        "io11_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y9/A",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:22.63-22.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5611 ],
+            "I": [ 5549 ]
+          }
+        },
+        "io21_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y4/A",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:12.63-12.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5676 ],
+            "I": [ 5770 ]
+          }
+        },
+        "io10_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y9/B",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:23.63-23.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5606 ],
+            "I": [ 5536 ]
+          }
+        },
+        "io5_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y12/A",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:28.64-28.114"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5738 ],
+            "I": [ 5505 ]
+          }
+        },
+        "io0_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y14/B",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:33.64-33.114"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5769 ],
+            "O": [ 5467 ],
+            "I": [ 5470 ]
+          }
+        },
+        "clk_i": {
+          "hide_name": 0,
+          "type": "Global_Clock",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X0Y0/CLK",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:36.25-36.42",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "CLK": "output"
+          },
+          "connections": {
+            "CLK": [ 5582 ]
+          }
+        },
+        "io16_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y6/B",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:17.63-17.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5638 ],
+            "I": [ 5770 ]
+          }
+        },
+        "io23_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y3/A",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:10.63-10.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5690 ],
+            "I": [ 5770 ]
+          }
+        },
+        "io2_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y13/B",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:31.64-31.114"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5723 ],
+            "I": [ 5486 ]
+          }
+        },
+        "io17_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y6/A",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:16.63-16.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5645 ],
+            "I": [ 5770 ]
+          }
+        },
+        "io7_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y11/A",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:26.64-26.114"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5748 ],
+            "I": [ 5517 ]
+          }
+        },
+        "io24_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y2/B",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:9.63-9.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5697 ],
+            "I": [ 5770 ]
+          }
+        },
+        "io18_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y5/B",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:15.63-15.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5652 ],
+            "I": [ 5770 ]
+          }
+        },
+        "io3_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y13/A",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:30.64-30.114"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5728 ],
+            "I": [ 5493 ]
+          }
+        },
+        "$PACKER_GND_DRV": {
+          "hide_name": 1,
+          "type": "_CONST0_DRV",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X0Y0/_CONST0_DRV"
+          },
+          "port_directions": {
+            "O": "output"
+          },
+          "connections": {
+            "O": [ 5770 ]
+          }
+        },
+        "io19_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y5/A",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:14.63-14.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5659 ],
+            "I": [ 5770 ]
+          }
+        },
+        "io25_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y2/A",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:8.63-8.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5704 ],
+            "I": [ 5770 ]
+          }
+        },
+        "io4_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y12/B",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:29.64-29.114"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5733 ],
+            "I": [ 5499 ]
+          }
+        },
+        "io1_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y14/A",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:32.64-32.114"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5473 ],
+            "I": [ 5479 ]
+          }
+        },
+        "io8_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y10/B",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:25.64-25.114"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5753 ],
+            "I": [ 5523 ]
+          }
+        },
+        "io20_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y4/B",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:13.63-13.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5669 ],
+            "I": [ 5770 ]
+          }
+        },
+        "io26_i": {
+          "hide_name": 0,
+          "type": "IO_1_bidirectional_frame_config_pass",
+          "parameters": {
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000110",
+            "NEXTPNR_BEL": "X0Y1/B",
+            "module_not_derived": "00000000000000000000000000000001",
+            "keep": "00000000000000000000000000000001",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/top_wrapper.v:7.63-7.117"
+          },
+          "port_directions": {
+            "T": "input",
+            "O": "output",
+            "I": "input"
+          },
+          "connections": {
+            "T": [ 5770 ],
+            "O": [ 5711 ],
+            "I": [ 5770 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$541": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "INIT": "1000000000000000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y8/B",
+            "src": "/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/cells_map.v:21.26-21.95",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "O": "output",
+            "I3": "input",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "O": [ 5574 ],
+            "I3": [ 5568 ],
+            "I2": [ 5563 ],
+            "I1": [ 5558 ],
+            "I0": [ 5554 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$540": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0001010000010100"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y8/C",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5576 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "I3": [  ],
+            "O": [  ],
+            "I2": [ 5576 ],
+            "I1": [ 5574 ],
+            "I0": [ 5483 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$539": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "INIT": "1000000010000000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y8/G",
+            "src": "/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/cells_map.v:18.26-18.84",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "I3": [  ],
+            "O": [ 5570 ],
+            "I2": [ 5563 ],
+            "I1": [ 5558 ],
+            "I0": [ 5554 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$538": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0000011101110000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y8/F",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "O": "output",
+            "I3": "input",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5568 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "O": [  ],
+            "I3": [ 5570 ],
+            "I2": [ 5568 ],
+            "I1": [ 5467 ],
+            "I0": [ 5473 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$537": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0000011100001000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y8/A",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "O": "output",
+            "I3": "input",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5563 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "O": [  ],
+            "I3": [ 5563 ],
+            "I2": [ 5483 ],
+            "I1": [ 5558 ],
+            "I0": [ 5554 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$536": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0001010000010100"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y8/H",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5558 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "I3": [  ],
+            "O": [  ],
+            "I2": [ 5558 ],
+            "I1": [ 5554 ],
+            "I0": [ 5483 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$535": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "INIT": "1000000010000000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y9/F",
+            "src": "/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/cells_map.v:18.26-18.84",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "I3": [  ],
+            "O": [ 5553 ],
+            "I2": [ 5549 ],
+            "I1": [ 5493 ],
+            "I0": [ 5486 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$534": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "INIT": "1000000000000000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y8/D",
+            "src": "/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/cells_map.v:21.26-21.95",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "O": "output",
+            "I3": "input",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "O": [ 5554 ],
+            "I3": [ 5553 ],
+            "I2": [ 5544 ],
+            "I1": [ 5541 ],
+            "I0": [ 5484 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$533": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0001010000010100"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y10/A",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5549 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "I3": [  ],
+            "O": [  ],
+            "I2": [ 5545 ],
+            "I1": [ 5549 ],
+            "I0": [ 5483 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$532": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "INIT": "1000000010000000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y9/A",
+            "src": "/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/cells_map.v:18.26-18.84",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "I3": [  ],
+            "O": [ 5544 ],
+            "I2": [ 5536 ],
+            "I1": [ 5505 ],
+            "I0": [ 5499 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$531": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "INIT": "1000000010000000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y10/C",
+            "src": "/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/cells_map.v:18.26-18.84",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "I3": [  ],
+            "O": [ 5545 ],
+            "I2": [ 5544 ],
+            "I1": [ 5541 ],
+            "I0": [ 5497 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$530": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "INIT": "1000000000000000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y10/G",
+            "src": "/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/cells_map.v:21.26-21.95",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "O": "output",
+            "I3": "input",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "O": [ 5541 ],
+            "I3": [ 5531 ],
+            "I2": [ 5523 ],
+            "I1": [ 5517 ],
+            "I0": [ 5511 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$529": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "INIT": "1000000000000000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y9/B",
+            "src": "/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/cells_map.v:21.26-21.95",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "O": "output",
+            "I3": "input",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "O": [ 5538 ],
+            "I3": [ 5505 ],
+            "I2": [ 5499 ],
+            "I1": [ 5541 ],
+            "I0": [ 5497 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$528": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0001010000010100"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y9/C",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5536 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "I3": [  ],
+            "O": [  ],
+            "I2": [ 5538 ],
+            "I1": [ 5536 ],
+            "I0": [ 5483 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$527": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0000011100001000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y11/F",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "O": "output",
+            "I3": "input",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5531 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "O": [  ],
+            "I3": [ 5531 ],
+            "I2": [ 5483 ],
+            "I1": [ 5523 ],
+            "I0": [ 5521 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$526": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "INIT": "1000000000000000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y11/C",
+            "src": "/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/cells_map.v:21.26-21.95",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "O": "output",
+            "I3": "input",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "O": [ 5527 ],
+            "I3": [ 5517 ],
+            "I2": [ 5511 ],
+            "I1": [ 5505 ],
+            "I0": [ 5499 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$525": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "INIT": "1000100010001000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y11/E",
+            "src": "/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/cells_map.v:14.26-14.73",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "I3": "input",
+            "I2": "input",
+            "O": "output",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "I3": [  ],
+            "I2": [  ],
+            "O": [ 5521 ],
+            "I1": [ 5527 ],
+            "I0": [ 5497 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$524": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0001010000010100"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y11/H",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5523 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "I3": [  ],
+            "O": [  ],
+            "I2": [ 5523 ],
+            "I1": [ 5521 ],
+            "I0": [ 5483 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$523": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0000011100001000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y10/D",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "O": "output",
+            "I3": "input",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5517 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "O": [  ],
+            "I3": [ 5517 ],
+            "I2": [ 5483 ],
+            "I1": [ 5511 ],
+            "I0": [ 5509 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$522": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "INIT": "1000000010000000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y10/F",
+            "src": "/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/cells_map.v:18.26-18.84",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "I3": [  ],
+            "O": [ 5509 ],
+            "I2": [ 5505 ],
+            "I1": [ 5499 ],
+            "I0": [ 5497 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$521": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0001010000010100"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y10/B",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5511 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "I3": [  ],
+            "O": [  ],
+            "I2": [ 5511 ],
+            "I1": [ 5509 ],
+            "I0": [ 5483 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$520": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0000011100001000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y10/E",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "O": "output",
+            "I3": "input",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5505 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "O": [  ],
+            "I3": [ 5505 ],
+            "I2": [ 5483 ],
+            "I1": [ 5499 ],
+            "I0": [ 5497 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$519": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "INIT": "1000000010000000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y10/H",
+            "src": "/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/cells_map.v:18.26-18.84",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "I3": [  ],
+            "O": [ 5497 ],
+            "I2": [ 5493 ],
+            "I1": [ 5486 ],
+            "I0": [ 5484 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$518": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0001010000010100"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y9/D",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5499 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "I3": [  ],
+            "O": [  ],
+            "I2": [ 5499 ],
+            "I1": [ 5497 ],
+            "I0": [ 5483 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$517": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0000011100001000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y9/H",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "O": "output",
+            "I3": "input",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5493 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "O": [  ],
+            "I3": [ 5493 ],
+            "I2": [ 5483 ],
+            "I1": [ 5486 ],
+            "I0": [ 5484 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$516": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "INIT": "1000000010000000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y13/G",
+            "src": "/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/cells_map.v:18.26-18.84",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "I3": [  ],
+            "O": [ 5484 ],
+            "I2": [ 5479 ],
+            "I1": [ 5473 ],
+            "I0": [ 5470 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$515": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "INIT": "1000100010001000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y8/E",
+            "src": "/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/cells_map.v:14.26-14.73",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "I3": "input",
+            "I2": "input",
+            "O": "output",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "I3": [  ],
+            "I2": [  ],
+            "O": [ 5483 ],
+            "I1": [ 5467 ],
+            "I0": [ 5473 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$514": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0001010000010100"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y9/G",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5486 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "I3": [  ],
+            "O": [  ],
+            "I2": [ 5486 ],
+            "I1": [ 5484 ],
+            "I0": [ 5483 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$513": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0011011101000000"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y13/F",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "O": "output",
+            "I3": "input",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5479 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "O": [  ],
+            "I3": [ 5479 ],
+            "I2": [ 5470 ],
+            "I1": [ 5473 ],
+            "I0": [ 5467 ]
+          }
+        },
+        "$abc$511$auto$blifparse.cc:557:parse_blif$512": {
+          "hide_name": 1,
+          "type": "FABULOUS_LC",
+          "parameters": {
+            "FF": "00000000000000000000000000000001",
+            "SET_NORESET": "00000000000000000000000000000000",
+            "ASYNC_SR": "00000000000000000000000000000000",
+            "NEG_CLK": "00000000000000000000000000000000",
+            "INIT": "0001110000011100"
+          },
+          "attributes": {
+            "BEL_STRENGTH": "00000000000000000000000000000001",
+            "NEXTPNR_BEL": "X1Y13/E",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:6.5-13.24|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/fabulous/ff_map.v:1.49-1.90",
+            "module_not_derived": "00000000000000000000000000000001"
+          },
+          "port_directions": {
+            "Q": "output",
+            "EN": "input",
+            "SR": "input",
+            "CLK": "input",
+            "I3": "input",
+            "O": "output",
+            "I2": "input",
+            "I1": "input",
+            "I0": "input"
+          },
+          "connections": {
+            "Q": [ 5470 ],
+            "EN": [  ],
+            "SR": [  ],
+            "CLK": [ 5582 ],
+            "I3": [  ],
+            "O": [  ],
+            "I2": [ 5473 ],
+            "I1": [ 5470 ],
+            "I0": [ 5467 ]
+          }
+        }
+      },
+      "netnames": {
+        "io_in[20]": {
+          "hide_name": 0,
+          "bits": [ 5669 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[5]": {
+          "hide_name": 0,
+          "bits": [ 5738 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[8]": {
+          "hide_name": 0,
+          "bits": [ 5753 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[25]": {
+          "hide_name": 0,
+          "bits": [ 5704 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[19]": {
+          "hide_name": 0,
+          "bits": [ 5659 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[4]": {
+          "hide_name": 0,
+          "bits": [ 5733 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "$PACKER_GND": {
+          "hide_name": 1,
+          "bits": [ 5770 ] ,
+          "attributes": {
+            "ROUTING": "X0Y2/A_I;X0Y2/W2MID1.A_I;1;X0Y3/B_I;X0Y3/W2MID5.B_I;1;X0Y12/B_T;X0Y12/GND0.B_T;1;X1Y3/$CONST0;X0Y3/$CONST0/X1Y3/$CONST0;1;X1Y3/LG_O;X1Y3/$CONST0/X1Y3/LG_O;1;X1Y3/JW2BEG5;X1Y3/LG_O.JW2BEG5;1;X1Y3/JW2END5;X1Y3/JW2BEG5.JW2END5;1;X1Y3/W2BEG5;X1Y3/JW2END5.W2BEG5;1;X0Y3/W2MID5;X1Y3/W2BEG5.W2MID5;1;X0Y3/A_I;X0Y3/W2MID5.A_I;1;X0Y9/A_T;X0Y9/GND0.A_T;1;X0Y8/B_T;X0Y8/GND0.B_T;1;X0Y5/A_I;X0Y5/W2MID6.A_I;1;X0Y3/B_T;X0Y3/GND0.B_T;1;X0Y6/A_I;X0Y6/W2MID2.A_I;1;X0Y1/A_I;X0Y1/W2MID6.A_I;1;X0Y2/A_T;X0Y2/GND0.A_T;1;X0Y6/B_T;X0Y6/GND0.B_T;1;X1Y1/$CONST0;X0Y1/$CONST0/X1Y1/$CONST0;1;X1Y1/LD_O;X1Y1/$CONST0/X1Y1/LD_O;1;X1Y1/JW2BEG6;X1Y1/LD_O.JW2BEG6;1;X1Y1/JW2END6;X1Y1/JW2BEG6.JW2END6;1;X1Y1/W2BEG6;X1Y1/JW2END6.W2BEG6;1;X0Y1/W2MID6;X1Y1/W2BEG6.W2MID6;1;X0Y1/B_I;X0Y1/W2MID6.B_I;1;X0Y1/A_T;X0Y1/GND0.A_T;1;X0Y10/A_T;X0Y10/GND0.A_T;1;X0Y3/$CONST0;X0Y0/$CONST0/X0Y3/$CONST0;1;X0Y3/GND0;X0Y3/$CONST0/X0Y3/GND0;1;X0Y3/A_T;X0Y3/GND0.A_T;1;X0Y10/$CONST0;X0Y0/$CONST0/X0Y10/$CONST0;1;X0Y10/GND0;X0Y10/$CONST0/X0Y10/GND0;1;X0Y10/B_T;X0Y10/GND0.B_T;1;X1Y6/$CONST0;X0Y6/$CONST0/X1Y6/$CONST0;1;X1Y6/LD_O;X1Y6/$CONST0/X1Y6/LD_O;1;X1Y6/JW2BEG2;X1Y6/LD_O.JW2BEG2;1;X1Y6/JW2END2;X1Y6/JW2BEG2.JW2END2;1;X1Y6/W2BEG2;X1Y6/JW2END2.W2BEG2;1;X0Y6/W2MID2;X1Y6/W2BEG2.W2MID2;1;X0Y6/B_I;X0Y6/W2MID2.B_I;1;X0Y4/B_T;X0Y4/GND0.B_T;1;X0Y4/A_I;X0Y4/W2MID6.A_I;1;X1Y4/$CONST0;X0Y4/$CONST0/X1Y4/$CONST0;1;X1Y4/LC_O;X1Y4/$CONST0/X1Y4/LC_O;1;X1Y4/JW2BEG6;X1Y4/LC_O.JW2BEG6;1;X1Y4/JW2END6;X1Y4/JW2BEG6.JW2END6;1;X1Y4/W2BEG6;X1Y4/JW2END6.W2BEG6;1;X0Y4/W2MID6;X1Y4/W2BEG6.W2MID6;1;X0Y4/B_I;X0Y4/W2MID6.B_I;1;X0Y11/B_T;X0Y11/GND0.B_T;1;X0Y2/GND0;X0Y2/$CONST0/X0Y2/GND0;1;X0Y2/B_T;X0Y2/GND0.B_T;1;X0Y11/$CONST0;X0Y0/$CONST0/X0Y11/$CONST0;1;X0Y11/GND0;X0Y11/$CONST0/X0Y11/GND0;1;X0Y11/A_T;X0Y11/GND0.A_T;1;X0Y8/$CONST0;X0Y0/$CONST0/X0Y8/$CONST0;1;X0Y8/GND0;X0Y8/$CONST0/X0Y8/GND0;1;X0Y8/A_T;X0Y8/GND0.A_T;1;X0Y13/A_T;X0Y13/GND0.A_T;1;X0Y5/B_T;X0Y5/GND0.B_T;1;X0Y13/$CONST0;X0Y0/$CONST0/X0Y13/$CONST0;1;X0Y13/GND0;X0Y13/$CONST0/X0Y13/GND0;1;X0Y13/B_T;X0Y13/GND0.B_T;1;X0Y6/$CONST0;X0Y0/$CONST0/X0Y6/$CONST0;1;X0Y6/GND0;X0Y6/$CONST0/X0Y6/GND0;1;X0Y6/A_T;X0Y6/GND0.A_T;1;X0Y2/$CONST0;X0Y0/$CONST0/X0Y2/$CONST0;1;X1Y2/$CONST0;X0Y2/$CONST0/X1Y2/$CONST0;1;X1Y2/LC_O;X1Y2/$CONST0/X1Y2/LC_O;1;X1Y2/JW2BEG1;X1Y2/LC_O.JW2BEG1;1;X1Y2/JW2END1;X1Y2/JW2BEG1.JW2END1;1;X1Y2/W2BEG1;X1Y2/JW2END1.W2BEG1;1;X0Y2/W2MID1;X1Y2/W2BEG1.W2MID1;1;X0Y2/B_I;X0Y2/W2MID1.B_I;1;X0Y12/$CONST0;X0Y0/$CONST0/X0Y12/$CONST0;1;X0Y12/GND0;X0Y12/$CONST0/X0Y12/GND0;1;X0Y12/A_T;X0Y12/GND0.A_T;1;X0Y14/$CONST0;X0Y0/$CONST0/X0Y14/$CONST0;1;X0Y14/GND0;X0Y14/$CONST0/X0Y14/GND0;1;X0Y14/A_T;X0Y14/GND0.A_T;1;X0Y7/A_T;X0Y7/GND0.A_T;1;X0Y9/$CONST0;X0Y0/$CONST0/X0Y9/$CONST0;1;X0Y9/GND0;X0Y9/$CONST0/X0Y9/GND0;1;X0Y9/B_T;X0Y9/GND0.B_T;1;X0Y1/$CONST0;X0Y0/$CONST0/X0Y1/$CONST0;1;X0Y1/GND0;X0Y1/$CONST0/X0Y1/GND0;1;X0Y1/B_T;X0Y1/GND0.B_T;1;X0Y7/$CONST0;X0Y0/$CONST0/X0Y7/$CONST0;1;X0Y7/GND0;X0Y7/$CONST0/X0Y7/GND0;1;X0Y7/B_T;X0Y7/GND0.B_T;1;X0Y5/GND0;X0Y5/$CONST0/X0Y5/GND0;1;X0Y5/A_T;X0Y5/GND0.A_T;1;X0Y5/$CONST0;X0Y0/$CONST0/X0Y5/$CONST0;1;X1Y5/$CONST0;X0Y5/$CONST0/X1Y5/$CONST0;1;X1Y5/LE_O;X1Y5/$CONST0/X1Y5/LE_O;1;X1Y5/JW2BEG6;X1Y5/LE_O.JW2BEG6;1;X1Y5/JW2END6;X1Y5/JW2BEG6.JW2END6;1;X1Y5/W2BEG6;X1Y5/JW2END6.W2BEG6;1;X0Y5/W2MID6;X1Y5/W2BEG6.W2MID6;1;X0Y5/B_I;X0Y5/W2MID6.B_I;1;X0Y0/$CONST0;;1;X0Y4/$CONST0;X0Y0/$CONST0/X0Y4/$CONST0;1;X0Y4/GND0;X0Y4/$CONST0/X0Y4/GND0;1;X0Y4/A_T;X0Y4/GND0.A_T;1"
+          }
+        },
+        "io_in[18]": {
+          "hide_name": 0,
+          "bits": [ 5652 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[24]": {
+          "hide_name": 0,
+          "bits": [ 5697 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[3]": {
+          "hide_name": 0,
+          "bits": [ 5728 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[17]": {
+          "hide_name": 0,
+          "bits": [ 5645 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[7]": {
+          "hide_name": 0,
+          "bits": [ 5748 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[23]": {
+          "hide_name": 0,
+          "bits": [ 5690 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[16]": {
+          "hide_name": 0,
+          "bits": [ 5638 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[2]": {
+          "hide_name": 0,
+          "bits": [ 5723 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[9]": {
+          "hide_name": 0,
+          "bits": [ 5758 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[15]": {
+          "hide_name": 0,
+          "bits": [ 5631 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[22]": {
+          "hide_name": 0,
+          "bits": [ 5683 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[14]": {
+          "hide_name": 0,
+          "bits": [ 5626 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[27]": {
+          "hide_name": 0,
+          "bits": [ 5718 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[13]": {
+          "hide_name": 0,
+          "bits": [ 5621 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[6]": {
+          "hide_name": 0,
+          "bits": [ 5743 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[12]": {
+          "hide_name": 0,
+          "bits": [ 5616 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[21]": {
+          "hide_name": 0,
+          "bits": [ 5676 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[11]": {
+          "hide_name": 0,
+          "bits": [ 5611 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "$PACKER_VCC": {
+          "hide_name": 1,
+          "bits": [ 5769 ] ,
+          "attributes": {
+            "ROUTING": "X0Y0/$CONST1;;1;X0Y14/$CONST1;X0Y0/$CONST1/X0Y14/$CONST1;1;X0Y14/VCC0;X0Y14/$CONST1/X0Y14/VCC0;1;X0Y14/B_T;X0Y14/VCC0.B_T;1"
+          }
+        },
+        "io_in[10]": {
+          "hide_name": 0,
+          "bits": [ 5606 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_in[26]": {
+          "hide_name": 0,
+          "bits": [ 5711 ] ,
+          "attributes": {
+            "ROUTING": " ",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "clk": {
+          "hide_name": 0,
+          "bits": [ 5582 ] ,
+          "attributes": {
+            "ROUTING": "X1Y9/G_CLK;X0Y0/CLK/X1Y9/G_CLK;1;X1Y8/C_CLK;X0Y0/CLK/X1Y8/C_CLK;1;X1Y10/B_CLK;X0Y0/CLK/X1Y10/B_CLK;1;X1Y9/H_CLK;X0Y0/CLK/X1Y9/H_CLK;1;X1Y9/C_CLK;X0Y0/CLK/X1Y9/C_CLK;1;X1Y9/D_CLK;X0Y0/CLK/X1Y9/D_CLK;1;X1Y10/A_CLK;X0Y0/CLK/X1Y10/A_CLK;1;X1Y11/H_CLK;X0Y0/CLK/X1Y11/H_CLK;1;X1Y10/D_CLK;X0Y0/CLK/X1Y10/D_CLK;1;X1Y13/E_CLK;X0Y0/CLK/X1Y13/E_CLK;1;X1Y8/F_CLK;X0Y0/CLK/X1Y8/F_CLK;1;X1Y8/A_CLK;X0Y0/CLK/X1Y8/A_CLK;1;X1Y8/H_CLK;X0Y0/CLK/X1Y8/H_CLK;1;X1Y11/F_CLK;X0Y0/CLK/X1Y11/F_CLK;1;X1Y13/F_CLK;X0Y0/CLK/X1Y13/F_CLK;1;X0Y0/CLK;;1;X1Y10/E_CLK;X0Y0/CLK/X1Y10/E_CLK;1",
+            "hdlname": "top_i clk",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.39-1.42"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$491": {
+          "hide_name": 1,
+          "bits": [ 5578 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "io_out[15]": {
+          "hide_name": 0,
+          "bits": [ 5576 ] ,
+          "attributes": {
+            "ROUTING": "X1Y8/N1BEG0;X1Y8/LC_O.N1BEG0;1;X1Y7/N1END0;X1Y8/N1BEG0.N1END0;1;X1Y7/JW2BEG1;X1Y7/N1END0.JW2BEG1;1;X1Y7/JW2END1;X1Y7/JW2BEG1.JW2END1;1;X1Y7/W2BEG1;X1Y7/JW2END1.W2BEG1;1;X0Y7/W2MID1;X1Y7/W2BEG1.W2MID1;1;X0Y7/A_I;X0Y7/W2MID1.A_I;1;X1Y8/C_Q;;1;X1Y8/LC_O;X1Y8/C_Q/X1Y8/LC_O;1;X1Y8/JN2BEG4;X1Y8/LC_O.JN2BEG4;1;X1Y8/JN2END4;X1Y8/JN2BEG4.JN2END4;1;X1Y8/J2MID_CDa_BEG0;X1Y8/JN2END4.J2MID_CDa_BEG0;1;X1Y8/J2MID_CDa_END0;X1Y8/J2MID_CDa_BEG0.J2MID_CDa_END0;1;X1Y8/LC_I0;X1Y8/J2MID_CDa_END0.LC_I0;1;X1Y8/C_PERM_I2;X1Y8/LC_I0/X1Y8/C_PERM_I2;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$new_n65": {
+          "hide_name": 1,
+          "bits": [ 5574 ] ,
+          "attributes": {
+            "ROUTING": "X1Y8/LB_O;;1;X1Y8/JE2BEG2;X1Y8/LB_O.JE2BEG2;1;X1Y8/JE2END2;X1Y8/JE2BEG2.JE2END2;1;X1Y8/J_l_CD_BEG1;X1Y8/JE2END2.J_l_CD_BEG1;1;X1Y8/J_l_CD_END1;X1Y8/J_l_CD_BEG1.J_l_CD_END1;1;X1Y8/LC_I1;X1Y8/J_l_CD_END1.LC_I1;1;X1Y8/C_PERM_I1;X1Y8/LC_I1/X1Y8/C_PERM_I1;1"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$487": {
+          "hide_name": 1,
+          "bits": [ 5571 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "$abc$511$new_n63": {
+          "hide_name": 1,
+          "bits": [ 5570 ] ,
+          "attributes": {
+            "ROUTING": "X1Y8/LG_O;;1;X1Y8/JW2BEG3;X1Y8/LG_O.JW2BEG3;1;X1Y8/JW2END3;X1Y8/JW2BEG3.JW2END3;1;X1Y8/J_l_EF_BEG3;X1Y8/JW2END3.J_l_EF_BEG3;1;X1Y8/J_l_EF_END3;X1Y8/J_l_EF_BEG3.J_l_EF_END3;1;X1Y8/LF_I3;X1Y8/J_l_EF_END3.LF_I3;1;X1Y8/F_PERM_I3;X1Y8/LF_I3/X1Y8/F_PERM_I3;1"
+          }
+        },
+        "io_out[14]": {
+          "hide_name": 0,
+          "bits": [ 5568 ] ,
+          "attributes": {
+            "ROUTING": "X1Y8/N1BEG3;X1Y8/LF_O.N1BEG3;1;X1Y7/N1END3;X1Y8/N1BEG3.N1END3;1;X1Y7/JW2BEG6;X1Y7/N1END3.JW2BEG6;1;X1Y7/JW2END6;X1Y7/JW2BEG6.JW2END6;1;X1Y7/W2BEG6;X1Y7/JW2END6.W2BEG6;1;X0Y7/W2MID6;X1Y7/W2BEG6.W2MID6;1;X0Y7/B_I;X0Y7/W2MID6.B_I;1;X1Y8/JS2BEG3;X1Y8/LF_O.JS2BEG3;1;X1Y8/JS2END3;X1Y8/JS2BEG3.JS2END3;1;X1Y8/J_l_EF_BEG2;X1Y8/JS2END3.J_l_EF_BEG2;1;X1Y8/J_l_EF_END2;X1Y8/J_l_EF_BEG2.J_l_EF_END2;1;X1Y8/LF_I2;X1Y8/J_l_EF_END2.LF_I2;1;X1Y8/F_PERM_I2;X1Y8/LF_I2/X1Y8/F_PERM_I2;1;X1Y8/F_Q;;1;X1Y8/LF_O;X1Y8/F_Q/X1Y8/LF_O;1;X1Y8/JN2BEG1;X1Y8/LF_O.JN2BEG1;1;X1Y8/JN2END1;X1Y8/JN2BEG1.JN2END1;1;X1Y8/J_l_AB_BEG0;X1Y8/JN2END1.J_l_AB_BEG0;1;X1Y8/J_l_AB_END0;X1Y8/J_l_AB_BEG0.J_l_AB_END0;1;X1Y8/LB_I0;X1Y8/J_l_AB_END0.LB_I0;1;X1Y8/B_PERM_I3;X1Y8/LB_I0/X1Y8/B_PERM_I3;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$483": {
+          "hide_name": 1,
+          "bits": [ 5565 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "io_out[13]": {
+          "hide_name": 0,
+          "bits": [ 5563 ] ,
+          "attributes": {
+            "ROUTING": "X1Y8/JW2BEG7;X1Y8/LA_O.JW2BEG7;1;X1Y8/JW2END7;X1Y8/JW2BEG7.JW2END7;1;X1Y8/W2BEG7;X1Y8/JW2END7.W2BEG7;1;X0Y8/W2MID7;X1Y8/W2BEG7.W2MID7;1;X0Y8/A_I;X0Y8/W2MID7.A_I;1;X1Y8/LA_I1;X1Y8/J_l_AB_END1.LA_I1;1;X1Y8/A_PERM_I3;X1Y8/LA_I1/X1Y8/A_PERM_I3;1;X1Y8/JE2BEG1;X1Y8/LA_O.JE2BEG1;1;X1Y8/JE2END1;X1Y8/JE2BEG1.JE2END1;1;X1Y8/J_l_AB_BEG1;X1Y8/JE2END1.J_l_AB_BEG1;1;X1Y8/J_l_AB_END1;X1Y8/J_l_AB_BEG1.J_l_AB_END1;1;X1Y8/LB_I1;X1Y8/J_l_AB_END1.LB_I1;1;X1Y8/B_PERM_I2;X1Y8/LB_I1/X1Y8/B_PERM_I2;1;X1Y8/A_Q;;1;X1Y8/LA_O;X1Y8/A_Q/X1Y8/LA_O;1;X1Y8/JE2BEG4;X1Y8/LA_O.JE2BEG4;1;X1Y8/JE2END4;X1Y8/JE2BEG4.JE2END4;1;X1Y8/J_l_GH_BEG1;X1Y8/JE2END4.J_l_GH_BEG1;1;X1Y8/J_l_GH_END1;X1Y8/J_l_GH_BEG1.J_l_GH_END1;1;X1Y8/LG_I1;X1Y8/J_l_GH_END1.LG_I1;1;X1Y8/G_PERM_I2;X1Y8/LG_I1/X1Y8/G_PERM_I2;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$479": {
+          "hide_name": 1,
+          "bits": [ 5560 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "io_out[12]": {
+          "hide_name": 0,
+          "bits": [ 5558 ] ,
+          "attributes": {
+            "ROUTING": "X1Y8/JW2BEG0;X1Y8/LH_O.JW2BEG0;1;X1Y8/JW2END0;X1Y8/JW2BEG0.JW2END0;1;X1Y8/W2BEG0;X1Y8/JW2END0.W2BEG0;1;X0Y8/W2MID0;X1Y8/W2BEG0.W2MID0;1;X0Y8/B_I;X0Y8/W2MID0.B_I;1;X1Y8/LH_I2;X1Y8/J_l_GH_END2.LH_I2;1;X1Y8/H_PERM_I2;X1Y8/LH_I2/X1Y8/H_PERM_I2;1;X1Y8/LG_I2;X1Y8/J_l_GH_END2.LG_I2;1;X1Y8/G_PERM_I1;X1Y8/LG_I2/X1Y8/G_PERM_I1;1;X1Y8/A_PERM_I1;X1Y8/LA_I2/X1Y8/A_PERM_I1;1;X1Y8/LA_I2;X1Y8/J_l_AB_END2.LA_I2;1;X1Y8/JS2BEG4;X1Y8/LH_O.JS2BEG4;1;X1Y8/JS2END4;X1Y8/JS2BEG4.JS2END4;1;X1Y8/J_l_GH_BEG2;X1Y8/JS2END4.J_l_GH_BEG2;1;X1Y8/J_l_GH_END2;X1Y8/J_l_GH_BEG2.J_l_GH_END2;1;X1Y8/H_Q;;1;X1Y8/LH_O;X1Y8/H_Q/X1Y8/LH_O;1;X1Y8/JS2BEG1;X1Y8/LH_O.JS2BEG1;1;X1Y8/JS2END1;X1Y8/JS2BEG1.JS2END1;1;X1Y8/J_l_AB_BEG2;X1Y8/JS2END1.J_l_AB_BEG2;1;X1Y8/J_l_AB_END2;X1Y8/J_l_AB_BEG2.J_l_AB_END2;1;X1Y8/LB_I2;X1Y8/J_l_AB_END2.LB_I2;1;X1Y8/B_PERM_I1;X1Y8/LB_I2/X1Y8/B_PERM_I1;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$new_n58": {
+          "hide_name": 1,
+          "bits": [ 5554 ] ,
+          "attributes": {
+            "ROUTING": "X1Y8/LH_I3;X1Y8/J_l_GH_END3.LH_I3;1;X1Y8/H_PERM_I1;X1Y8/LH_I3/X1Y8/H_PERM_I1;1;X1Y8/LA_I3;X1Y8/J_l_AB_END3.LA_I3;1;X1Y8/A_PERM_I0;X1Y8/LA_I3/X1Y8/A_PERM_I0;1;X1Y8/JW2BEG1;X1Y8/LD_O.JW2BEG1;1;X1Y8/JW2END1;X1Y8/JW2BEG1.JW2END1;1;X1Y8/J_l_AB_BEG3;X1Y8/JW2END1.J_l_AB_BEG3;1;X1Y8/J_l_AB_END3;X1Y8/J_l_AB_BEG3.J_l_AB_END3;1;X1Y8/LB_I3;X1Y8/J_l_AB_END3.LB_I3;1;X1Y8/B_PERM_I0;X1Y8/LB_I3/X1Y8/B_PERM_I0;1;X1Y8/LD_O;;1;X1Y8/JW2BEG4;X1Y8/LD_O.JW2BEG4;1;X1Y8/JW2END4;X1Y8/JW2BEG4.JW2END4;1;X1Y8/J_l_GH_BEG3;X1Y8/JW2END4.J_l_GH_BEG3;1;X1Y8/J_l_GH_END3;X1Y8/J_l_GH_BEG3.J_l_GH_END3;1;X1Y8/LG_I3;X1Y8/J_l_GH_END3.LG_I3;1;X1Y8/G_PERM_I0;X1Y8/LG_I3/X1Y8/G_PERM_I0;1"
+          }
+        },
+        "$abc$511$new_n59": {
+          "hide_name": 1,
+          "bits": [ 5553 ] ,
+          "attributes": {
+            "ROUTING": "X1Y9/LF_O;;1;X1Y9/JN2BEG2;X1Y9/LF_O.JN2BEG2;1;X1Y9/JN2END2;X1Y9/JN2BEG2.JN2END2;1;X1Y9/N2BEG2;X1Y9/JN2END2.N2BEG2;1;X1Y8/N2MID2;X1Y9/N2BEG2.N2MID2;1;X1Y8/J2MID_CDa_BEG1;X1Y8/N2MID2.J2MID_CDa_BEG1;1;X1Y8/J2MID_CDa_END1;X1Y8/J2MID_CDa_BEG1.J2MID_CDa_END1;1;X1Y8/LD_I1;X1Y8/J2MID_CDa_END1.LD_I1;1;X1Y8/D_PERM_I3;X1Y8/LD_I1/X1Y8/D_PERM_I3;1"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$475": {
+          "hide_name": 1,
+          "bits": [ 5551 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "io_out[11]": {
+          "hide_name": 0,
+          "bits": [ 5549 ] ,
+          "attributes": {
+            "ROUTING": "X1Y10/J2MID_ABa_BEG3;X1Y10/JW2END3.J2MID_ABa_BEG3;1;X1Y10/J2MID_ABa_END3;X1Y10/J2MID_ABa_BEG3.J2MID_ABa_END3;1;X1Y10/LA_I3;X1Y10/J2MID_ABa_END3.LA_I3;1;X1Y10/A_PERM_I1;X1Y10/LA_I3/X1Y10/A_PERM_I1;1;X1Y9/W2BEG7;X1Y9/JW2END7.W2BEG7;1;X0Y9/W2MID7;X1Y9/W2BEG7.W2MID7;1;X0Y9/A_I;X0Y9/W2MID7.A_I;1;X1Y10/JW2BEG3;X1Y10/LA_O.JW2BEG3;1;X1Y10/JW2END3;X1Y10/JW2BEG3.JW2END3;1;X1Y9/N1END0;X1Y10/N1BEG0.N1END0;1;X1Y9/JW2BEG7;X1Y9/N1END0.JW2BEG7;1;X1Y10/N1BEG0;X1Y10/JW2END3.N1BEG0;1;X1Y9/JW2END7;X1Y9/JW2BEG7.JW2END7;1;X1Y10/A_Q;;1;X1Y10/LA_O;X1Y10/A_Q/X1Y10/LA_O;1;X1Y10/JN2BEG7;X1Y10/LA_O.JN2BEG7;1;X1Y10/JN2END7;X1Y10/JN2BEG7.JN2END7;1;X1Y10/N2BEG7;X1Y10/JN2END7.N2BEG7;1;X1Y9/N2MID7;X1Y10/N2BEG7.N2MID7;1;X1Y9/J2MID_EFb_BEG0;X1Y9/N2MID7.J2MID_EFb_BEG0;1;X1Y9/J2MID_EFb_END0;X1Y9/J2MID_EFb_BEG0.J2MID_EFb_END0;1;X1Y9/LF_I0;X1Y9/J2MID_EFb_END0.LF_I0;1;X1Y9/F_PERM_I2;X1Y9/LF_I0/X1Y9/F_PERM_I2;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$new_n55": {
+          "hide_name": 1,
+          "bits": [ 5545 ] ,
+          "attributes": {
+            "ROUTING": "X1Y10/LC_O;;1;X1Y10/JE2BEG1;X1Y10/LC_O.JE2BEG1;1;X1Y10/JE2END1;X1Y10/JE2BEG1.JE2END1;1;X1Y10/J_l_AB_BEG1;X1Y10/JE2END1.J_l_AB_BEG1;1;X1Y10/J_l_AB_END1;X1Y10/J_l_AB_BEG1.J_l_AB_END1;1;X1Y10/LA_I1;X1Y10/J_l_AB_END1.LA_I1;1;X1Y10/A_PERM_I2;X1Y10/LA_I1/X1Y10/A_PERM_I2;1"
+          }
+        },
+        "$abc$511$new_n56": {
+          "hide_name": 1,
+          "bits": [ 5544 ] ,
+          "attributes": {
+            "ROUTING": "X1Y9/JS2BEG3;X1Y9/LA_O.JS2BEG3;1;X1Y9/JS2END3;X1Y9/JS2BEG3.JS2END3;1;X1Y9/S2BEG3;X1Y9/JS2END3.S2BEG3;1;X1Y10/S2MID3;X1Y9/S2BEG3.S2MID3;1;X1Y10/J2MID_CDb_BEG1;X1Y10/S2MID3.J2MID_CDb_BEG1;1;X1Y10/J2MID_CDb_END1;X1Y10/J2MID_CDb_BEG1.J2MID_CDb_END1;1;X1Y10/LC_I1;X1Y10/J2MID_CDb_END1.LC_I1;1;X1Y10/C_PERM_I2;X1Y10/LC_I1/X1Y10/C_PERM_I2;1;X1Y9/LA_O;;1;X1Y9/JN2BEG5;X1Y9/LA_O.JN2BEG5;1;X1Y9/JN2END5;X1Y9/JN2BEG5.JN2END5;1;X1Y9/N2BEG5;X1Y9/JN2END5.N2BEG5;1;X1Y8/N2MID5;X1Y9/N2BEG5.N2MID5;1;X1Y8/J2MID_CDb_BEG2;X1Y8/N2MID5.J2MID_CDb_BEG2;1;X1Y8/J2MID_CDb_END2;X1Y8/J2MID_CDb_BEG2.J2MID_CDb_END2;1;X1Y8/LD_I2;X1Y8/J2MID_CDb_END2.LD_I2;1;X1Y8/D_PERM_I2;X1Y8/LD_I2/X1Y8/D_PERM_I2;1"
+          }
+        },
+        "$abc$511$new_n54": {
+          "hide_name": 1,
+          "bits": [ 5541 ] ,
+          "attributes": {
+            "ROUTING": "X1Y9/J2MID_ABa_BEG3;X1Y9/N2MID0.J2MID_ABa_BEG3;1;X1Y9/J2MID_ABa_END3;X1Y9/J2MID_ABa_BEG3.J2MID_ABa_END3;1;X1Y9/LB_I3;X1Y9/J2MID_ABa_END3.LB_I3;1;X1Y9/B_PERM_I1;X1Y9/LB_I3/X1Y9/B_PERM_I1;1;X1Y9/N2BEGb0;X1Y9/N2MID0.N2BEGb0;1;X1Y8/N2END0;X1Y9/N2BEGb0.N2END0;1;X1Y8/J2END_CD_BEG3;X1Y8/N2END0.J2END_CD_BEG3;1;X1Y8/J2END_CD_END3;X1Y8/J2END_CD_BEG3.J2END_CD_END3;1;X1Y8/LD_I3;X1Y8/J2END_CD_END3.LD_I3;1;X1Y8/D_PERM_I1;X1Y8/LD_I3/X1Y8/D_PERM_I1;1;X1Y10/LC_I3;X1Y10/J_l_CD_END3.LC_I3;1;X1Y10/J_l_CD_END3;X1Y10/J_l_CD_BEG3.J_l_CD_END3;1;X1Y10/J_l_CD_BEG3;X1Y10/JW2END2.J_l_CD_BEG3;1;X1Y10/JW2END2;X1Y10/JW2BEG2.JW2END2;1;X1Y10/JW2BEG2;X1Y10/LG_O.JW2BEG2;1;X1Y10/JN2BEG0;X1Y10/LG_O.JN2BEG0;1;X1Y10/JN2END0;X1Y10/JN2BEG0.JN2END0;1;X1Y10/N2BEG0;X1Y10/JN2END0.N2BEG0;1;X1Y9/N2MID0;X1Y10/N2BEG0.N2MID0;1;X1Y10/LG_O;;1;X1Y10/C_PERM_I1;X1Y10/LC_I3/X1Y10/C_PERM_I1;1"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$471": {
+          "hide_name": 1,
+          "bits": [ 5539 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "$abc$511$new_n53": {
+          "hide_name": 1,
+          "bits": [ 5538 ] ,
+          "attributes": {
+            "ROUTING": "X1Y9/LB_O;;1;X1Y9/JS2BEG2;X1Y9/LB_O.JS2BEG2;1;X1Y9/JS2END2;X1Y9/JS2BEG2.JS2END2;1;X1Y9/J_l_CD_BEG2;X1Y9/JS2END2.J_l_CD_BEG2;1;X1Y9/J_l_CD_END2;X1Y9/J_l_CD_BEG2.J_l_CD_END2;1;X1Y9/LC_I2;X1Y9/J_l_CD_END2.LC_I2;1;X1Y9/C_PERM_I2;X1Y9/LC_I2/X1Y9/C_PERM_I2;1"
+          }
+        },
+        "io_out[10]": {
+          "hide_name": 0,
+          "bits": [ 5536 ] ,
+          "attributes": {
+            "ROUTING": "X1Y9/W2BEG1;X1Y9/JW2END1.W2BEG1;1;X0Y9/W2MID1;X1Y9/W2BEG1.W2MID1;1;X0Y9/B_I;X0Y9/W2MID1.B_I;1;X1Y9/JE2BEG4;X1Y9/LC_O.JE2BEG4;1;X1Y9/JE2END4;X1Y9/JE2BEG4.JE2END4;1;X1Y9/J2MID_CDa_BEG1;X1Y9/JE2END4.J2MID_CDa_BEG1;1;X1Y9/J2MID_CDa_END1;X1Y9/J2MID_CDa_BEG1.J2MID_CDa_END1;1;X1Y9/LC_I1;X1Y9/J2MID_CDa_END1.LC_I1;1;X1Y9/C_PERM_I1;X1Y9/LC_I1/X1Y9/C_PERM_I1;1;X1Y9/C_Q;;1;X1Y9/LC_O;X1Y9/C_Q/X1Y9/LC_O;1;X1Y9/JW2BEG1;X1Y9/LC_O.JW2BEG1;1;X1Y9/JW2END1;X1Y9/JW2BEG1.JW2END1;1;X1Y9/J_l_AB_BEG3;X1Y9/JW2END1.J_l_AB_BEG3;1;X1Y9/J_l_AB_END3;X1Y9/J_l_AB_BEG3.J_l_AB_END3;1;X1Y9/LA_I3;X1Y9/J_l_AB_END3.LA_I3;1;X1Y9/A_PERM_I2;X1Y9/LA_I3/X1Y9/A_PERM_I2;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$467": {
+          "hide_name": 1,
+          "bits": [ 5533 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "io_out[9]": {
+          "hide_name": 0,
+          "bits": [ 5531 ] ,
+          "attributes": {
+            "ROUTING": "X1Y11/JW2BEG3;X1Y11/LF_O.JW2BEG3;1;X1Y11/JW2END3;X1Y11/JW2BEG3.JW2END3;1;X1Y11/J_l_EF_BEG3;X1Y11/JW2END3.J_l_EF_BEG3;1;X1Y11/J_l_EF_END3;X1Y11/J_l_EF_BEG3.J_l_EF_END3;1;X1Y11/LF_I3;X1Y11/J_l_EF_END3.LF_I3;1;X1Y11/F_PERM_I3;X1Y11/LF_I3/X1Y11/F_PERM_I3;1;X1Y10/J2MID_GHa_BEG1;X1Y10/JE2END6.J2MID_GHa_BEG1;1;X1Y10/J2MID_GHa_END1;X1Y10/J2MID_GHa_BEG1.J2MID_GHa_END1;1;X1Y10/LG_I1;X1Y10/J2MID_GHa_END1.LG_I1;1;X1Y10/JE2BEG6;X1Y10/N1END3.JE2BEG6;1;X1Y10/G_PERM_I3;X1Y10/LG_I1/X1Y10/G_PERM_I3;1;X1Y11/F_Q;;1;X1Y11/LF_O;X1Y11/F_Q/X1Y11/LF_O;1;X1Y11/N1BEG3;X1Y11/LF_O.N1BEG3;1;X1Y10/N1END3;X1Y11/N1BEG3.N1END3;1;X1Y10/W2BEG0;X1Y10/JW2END0.W2BEG0;1;X0Y10/W2MID0;X1Y10/W2BEG0.W2MID0;1;X1Y10/JW2END0;X1Y10/JW2BEG0.JW2END0;1;X1Y10/JW2BEG0;X1Y10/N1END3.JW2BEG0;1;X0Y10/A_I;X0Y10/W2MID0.A_I;1;X1Y10/JE2END6;X1Y10/JE2BEG6.JE2END6;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$techmap$auto$alumacc.cc:512:replace_alu$49.lcu.$and$/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/techmap.v:241$200_Y_new": {
+          "hide_name": 1,
+          "bits": [ 5527 ] ,
+          "attributes": {
+            "ROUTING": "X1Y11/LC_O;;1;X1Y11/JS2BEG5;X1Y11/LC_O.JS2BEG5;1;X1Y11/JS2END5;X1Y11/JS2BEG5.JS2END5;1;X1Y11/J2MID_EFa_BEG2;X1Y11/JS2END5.J2MID_EFa_BEG2;1;X1Y11/J2MID_EFa_END2;X1Y11/J2MID_EFa_BEG2.J2MID_EFa_END2;1;X1Y11/LE_I2;X1Y11/J2MID_EFa_END2.LE_I2;1;X1Y11/E_PERM_I1;X1Y11/LE_I2/X1Y11/E_PERM_I1;1",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:11.24-11.34|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/techmap.v:293.27-293.63|/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/../share/yosys/techmap.v:241.12-241.34"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$463": {
+          "hide_name": 1,
+          "bits": [ 5525 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "io_out[8]": {
+          "hide_name": 0,
+          "bits": [ 5523 ] ,
+          "attributes": {
+            "ROUTING": "X1Y11/JE2BEG6;X1Y11/LH_O.JE2BEG6;1;X1Y11/JE2END6;X1Y11/JE2BEG6.JE2END6;1;X1Y11/J2MID_GHa_BEG1;X1Y11/JE2END6.J2MID_GHa_BEG1;1;X1Y11/J2MID_GHa_END1;X1Y11/J2MID_GHa_BEG1.J2MID_GHa_END1;1;X1Y11/LH_I1;X1Y11/J2MID_GHa_END1.LH_I1;1;X1Y11/H_PERM_I2;X1Y11/LH_I1/X1Y11/H_PERM_I2;1;X1Y10/JW2BEG5;X1Y10/N1END2.JW2BEG5;1;X1Y10/JW2END5;X1Y10/JW2BEG5.JW2END5;1;X1Y10/W2BEG5;X1Y10/JW2END5.W2BEG5;1;X0Y10/W2MID5;X1Y10/W2BEG5.W2MID5;1;X0Y10/B_I;X0Y10/W2MID5.B_I;1;X1Y11/J_l_EF_BEG2;X1Y11/JS2END3.J_l_EF_BEG2;1;X1Y11/J_l_EF_END2;X1Y11/J_l_EF_BEG2.J_l_EF_END2;1;X1Y11/LF_I2;X1Y11/J_l_EF_END2.LF_I2;1;X1Y11/F_PERM_I1;X1Y11/LF_I2/X1Y11/F_PERM_I1;1;X1Y11/JN2BEG6;X1Y11/LH_O.JN2BEG6;1;X1Y11/JN2END6;X1Y11/JN2BEG6.JN2END6;1;X1Y11/JW2END1;X1Y11/JW2BEG1.JW2END1;1;X1Y11/N1BEG2;X1Y11/JW2END1.N1BEG2;1;X1Y11/JW2BEG1;X1Y11/LH_O.JW2BEG1;1;X1Y10/N1END2;X1Y11/N1BEG2.N1END2;1;X1Y11/H_Q;;1;X1Y11/LH_O;X1Y11/H_Q/X1Y11/LH_O;1;X1Y11/JS2END3;X1Y11/JS2BEG3.JS2END3;1;X1Y10/J2MID_GHa_END0;X1Y10/J2MID_GHa_BEG0.J2MID_GHa_END0;1;X1Y10/LG_I0;X1Y10/J2MID_GHa_END0.LG_I0;1;X1Y10/G_PERM_I2;X1Y10/LG_I0/X1Y10/G_PERM_I2;1;X1Y10/J2MID_GHa_BEG0;X1Y10/N2MID6.J2MID_GHa_BEG0;1;X1Y11/N2BEG6;X1Y11/JN2END6.N2BEG6;1;X1Y10/N2MID6;X1Y11/N2BEG6.N2MID6;1;X1Y11/JS2BEG3;X1Y11/LH_O.JS2BEG3;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$new_n49": {
+          "hide_name": 1,
+          "bits": [ 5521 ] ,
+          "attributes": {
+            "ROUTING": "X1Y11/JS2BEG6;X1Y11/LE_O.JS2BEG6;1;X1Y11/JS2END6;X1Y11/JS2BEG6.JS2END6;1;X1Y11/J2MID_GHa_BEG2;X1Y11/JS2END6.J2MID_GHa_BEG2;1;X1Y11/J2MID_GHa_END2;X1Y11/J2MID_GHa_BEG2.J2MID_GHa_END2;1;X1Y11/LH_I2;X1Y11/J2MID_GHa_END2.LH_I2;1;X1Y11/H_PERM_I1;X1Y11/LH_I2/X1Y11/H_PERM_I1;1;X1Y11/LE_O;;1;X1Y11/JE2END3;X1Y11/JE2BEG3.JE2END3;1;X1Y11/JE2BEG3;X1Y11/LE_O.JE2BEG3;1;X1Y11/J_l_EF_BEG1;X1Y11/JE2END3.J_l_EF_BEG1;1;X1Y11/J_l_EF_END1;X1Y11/J_l_EF_BEG1.J_l_EF_END1;1;X1Y11/LF_I1;X1Y11/J_l_EF_END1.LF_I1;1;X1Y11/F_PERM_I0;X1Y11/LF_I1/X1Y11/F_PERM_I0;1"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$459": {
+          "hide_name": 1,
+          "bits": [ 5519 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "io_out[7]": {
+          "hide_name": 0,
+          "bits": [ 5517 ] ,
+          "attributes": {
+            "ROUTING": "X1Y11/JW2BEG6;X1Y11/S1END1.JW2BEG6;1;X1Y11/JW2END6;X1Y11/JW2BEG6.JW2END6;1;X1Y11/W2BEG6;X1Y11/JW2END6.W2BEG6;1;X0Y11/W2MID6;X1Y11/W2BEG6.W2MID6;1;X0Y11/A_I;X0Y11/W2MID6.A_I;1;X1Y10/J2MID_CDa_BEG3;X1Y10/JW2END4.J2MID_CDa_BEG3;1;X1Y10/J2MID_CDa_END3;X1Y10/J2MID_CDa_BEG3.J2MID_CDa_END3;1;X1Y10/LD_I3;X1Y10/J2MID_CDa_END3.LD_I3;1;X1Y10/D_PERM_I3;X1Y10/LD_I3/X1Y10/D_PERM_I3;1;X1Y10/JW2BEG4;X1Y10/LD_O.JW2BEG4;1;X1Y10/JW2END4;X1Y10/JW2BEG4.JW2END4;1;X1Y10/J_l_GH_BEG3;X1Y10/JW2END4.J_l_GH_BEG3;1;X1Y10/J_l_GH_END3;X1Y10/J_l_GH_BEG3.J_l_GH_END3;1;X1Y10/LG_I3;X1Y10/J_l_GH_END3.LG_I3;1;X1Y10/G_PERM_I1;X1Y10/LG_I3/X1Y10/G_PERM_I1;1;X1Y10/D_Q;;1;X1Y10/LD_O;X1Y10/D_Q/X1Y10/LD_O;1;X1Y10/JE2BEG0;X1Y10/LD_O.JE2BEG0;1;X1Y10/JE2END0;X1Y10/JE2BEG0.JE2END0;1;X1Y10/S1BEG1;X1Y10/JE2END0.S1BEG1;1;X1Y11/S1END1;X1Y10/S1BEG1.S1END1;1;X1Y11/JE2BEG4;X1Y11/S1END1.JE2BEG4;1;X1Y11/JE2END4;X1Y11/JE2BEG4.JE2END4;1;X1Y11/J2MID_CDa_BEG1;X1Y11/JE2END4.J2MID_CDa_BEG1;1;X1Y11/J2MID_CDa_END1;X1Y11/J2MID_CDa_BEG1.J2MID_CDa_END1;1;X1Y11/LC_I1;X1Y11/J2MID_CDa_END1.LC_I1;1;X1Y11/C_PERM_I3;X1Y11/LC_I1/X1Y11/C_PERM_I3;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$455": {
+          "hide_name": 1,
+          "bits": [ 5513 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "io_out[6]": {
+          "hide_name": 0,
+          "bits": [ 5511 ] ,
+          "attributes": {
+            "ROUTING": "X1Y10/J_l_GH_BEG2;X1Y10/JS2END4.J_l_GH_BEG2;1;X1Y10/J_l_GH_END2;X1Y10/J_l_GH_BEG2.J_l_GH_END2;1;X1Y10/LG_I2;X1Y10/J_l_GH_END2.LG_I2;1;X1Y10/G_PERM_I0;X1Y10/LG_I2/X1Y10/G_PERM_I0;1;X1Y11/W2BEG4;X1Y11/JW2END4.W2BEG4;1;X0Y11/W2MID4;X1Y11/W2BEG4.W2MID4;1;X0Y11/B_I;X0Y11/W2MID4.B_I;1;X1Y10/JS2BEG3;X1Y10/LB_O.JS2BEG3;1;X1Y10/JS2END3;X1Y10/JS2BEG3.JS2END3;1;X1Y10/J2MID_ABa_BEG2;X1Y10/JS2END3.J2MID_ABa_BEG2;1;X1Y10/J2MID_ABa_END2;X1Y10/J2MID_ABa_BEG2.J2MID_ABa_END2;1;X1Y10/LB_I2;X1Y10/J2MID_ABa_END2.LB_I2;1;X1Y10/B_PERM_I2;X1Y10/LB_I2/X1Y10/B_PERM_I2;1;X1Y10/JE2END2;X1Y10/JE2BEG2.JE2END2;1;X1Y10/S1BEG3;X1Y10/JE2END2.S1BEG3;1;X1Y11/S1END3;X1Y10/S1BEG3.S1END3;1;X1Y11/JW2BEG4;X1Y11/S1END3.JW2BEG4;1;X1Y10/JE2BEG2;X1Y10/LB_O.JE2BEG2;1;X1Y11/JW2END4;X1Y11/JW2BEG4.JW2END4;1;X1Y10/LD_I2;X1Y10/J2MID_CDa_END2.LD_I2;1;X1Y10/J2MID_CDa_END2;X1Y10/J2MID_CDa_BEG2.J2MID_CDa_END2;1;X1Y10/J2MID_CDa_BEG2;X1Y10/JS2END4.J2MID_CDa_BEG2;1;X1Y10/JS2END4;X1Y10/JS2BEG4.JS2END4;1;X1Y10/JS2BEG4;X1Y10/LB_O.JS2BEG4;1;X1Y10/D_PERM_I1;X1Y10/LD_I2/X1Y10/D_PERM_I1;1;X1Y10/B_Q;;1;X1Y10/LB_O;X1Y10/B_Q/X1Y10/LB_O;1;X1Y10/JS2BEG0;X1Y10/LB_O.JS2BEG0;1;X1Y10/JS2END0;X1Y10/JS2BEG0.JS2END0;1;X1Y10/S2BEG0;X1Y10/JS2END0.S2BEG0;1;X1Y11/S2MID0;X1Y10/S2BEG0.S2MID0;1;X1Y11/J2MID_CDa_BEG3;X1Y11/S2MID0.J2MID_CDa_BEG3;1;X1Y11/J2MID_CDa_END3;X1Y11/J2MID_CDa_BEG3.J2MID_CDa_END3;1;X1Y11/LC_I3;X1Y11/J2MID_CDa_END3.LC_I3;1;X1Y11/C_PERM_I2;X1Y11/LC_I3/X1Y11/C_PERM_I2;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$new_n46": {
+          "hide_name": 1,
+          "bits": [ 5509 ] ,
+          "attributes": {
+            "ROUTING": "X1Y10/JW2BEG1;X1Y10/LF_O.JW2BEG1;1;X1Y10/JW2END1;X1Y10/JW2BEG1.JW2END1;1;X1Y10/J_l_AB_BEG3;X1Y10/JW2END1.J_l_AB_BEG3;1;X1Y10/J_l_AB_END3;X1Y10/J_l_AB_BEG3.J_l_AB_END3;1;X1Y10/LB_I3;X1Y10/J_l_AB_END3.LB_I3;1;X1Y10/B_PERM_I1;X1Y10/LB_I3/X1Y10/B_PERM_I1;1;X1Y10/LF_O;;1;X1Y10/JE2BEG4;X1Y10/LF_O.JE2BEG4;1;X1Y10/JE2END4;X1Y10/JE2BEG4.JE2END4;1;X1Y10/J2MID_CDa_BEG1;X1Y10/JE2END4.J2MID_CDa_BEG1;1;X1Y10/J2MID_CDa_END1;X1Y10/J2MID_CDa_BEG1.J2MID_CDa_END1;1;X1Y10/LD_I1;X1Y10/J2MID_CDa_END1.LD_I1;1;X1Y10/D_PERM_I0;X1Y10/LD_I1/X1Y10/D_PERM_I0;1"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$451": {
+          "hide_name": 1,
+          "bits": [ 5507 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "io_out[5]": {
+          "hide_name": 0,
+          "bits": [ 5505 ] ,
+          "attributes": {
+            "ROUTING": "X1Y11/S2BEGb5;X1Y11/S2MID5.S2BEGb5;1;X1Y12/S2END5;X1Y11/S2BEGb5.S2END5;1;X1Y12/JW2BEG4;X1Y12/S2END5.JW2BEG4;1;X1Y12/JW2END4;X1Y12/JW2BEG4.JW2END4;1;X1Y12/W2BEG4;X1Y12/JW2END4.W2BEG4;1;X0Y12/W2MID4;X1Y12/W2BEG4.W2MID4;1;X0Y12/A_I;X0Y12/W2MID4.A_I;1;X1Y10/J2MID_EFa_BEG2;X1Y10/JS2END5.J2MID_EFa_BEG2;1;X1Y10/J2MID_EFa_END2;X1Y10/J2MID_EFa_BEG2.J2MID_EFa_END2;1;X1Y10/LE_I2;X1Y10/J2MID_EFa_END2.LE_I2;1;X1Y10/E_PERM_I3;X1Y10/LE_I2/X1Y10/E_PERM_I3;1;X1Y10/LF_I1;X1Y10/J_l_EF_END1.LF_I1;1;X1Y10/F_PERM_I2;X1Y10/LF_I1/X1Y10/F_PERM_I2;1;X1Y10/JS2BEG5;X1Y10/LE_O.JS2BEG5;1;X1Y10/JS2END5;X1Y10/JS2BEG5.JS2END5;1;X1Y10/S2BEG5;X1Y10/JS2END5.S2BEG5;1;X1Y11/S2MID5;X1Y10/S2BEG5.S2MID5;1;X1Y11/J2MID_CDb_BEG2;X1Y11/S2MID5.J2MID_CDb_BEG2;1;X1Y11/J2MID_CDb_END2;X1Y11/J2MID_CDb_BEG2.J2MID_CDb_END2;1;X1Y11/LC_I2;X1Y11/J2MID_CDb_END2.LC_I2;1;X1Y11/C_PERM_I1;X1Y11/LC_I2/X1Y11/C_PERM_I1;1;X1Y10/JE2END3;X1Y10/JE2BEG3.JE2END3;1;X1Y10/J_l_EF_BEG1;X1Y10/JE2END3.J_l_EF_BEG1;1;X1Y10/JE2BEG3;X1Y10/LE_O.JE2BEG3;1;X1Y9/B_PERM_I3;X1Y9/LB_I1/X1Y9/B_PERM_I3;1;X1Y9/LB_I1;X1Y9/J2MID_ABa_END1.LB_I1;1;X1Y10/J_l_EF_END1;X1Y10/J_l_EF_BEG1.J_l_EF_END1;1;X1Y10/E_Q;;1;X1Y10/LE_O;X1Y10/E_Q/X1Y10/LE_O;1;X1Y10/N1BEG2;X1Y10/LE_O.N1BEG2;1;X1Y9/N1END2;X1Y10/N1BEG2.N1END2;1;X1Y9/JE2BEG3;X1Y9/N1END2.JE2BEG3;1;X1Y9/JE2END3;X1Y9/JE2BEG3.JE2END3;1;X1Y9/J2MID_ABa_BEG1;X1Y9/JE2END3.J2MID_ABa_BEG1;1;X1Y9/J2MID_ABa_END1;X1Y9/J2MID_ABa_BEG1.J2MID_ABa_END1;1;X1Y9/LA_I1;X1Y9/J2MID_ABa_END1.LA_I1;1;X1Y9/A_PERM_I1;X1Y9/LA_I1/X1Y9/A_PERM_I1;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$447": {
+          "hide_name": 1,
+          "bits": [ 5501 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "io_out[4]": {
+          "hide_name": 0,
+          "bits": [ 5499 ] ,
+          "attributes": {
+            "ROUTING": "X1Y9/SS4BEG3;X1Y9/LD_O.SS4BEG3;1;X1Y10/SS4END15;X1Y9/SS4BEG3.SS4END15;1;X1Y10/SS4BEG15;X1Y10/SS4END15.SS4BEG15;1;X1Y11/SS4END11;X1Y10/SS4BEG15.SS4END11;1;X1Y11/SS4BEG11;X1Y11/SS4END11.SS4BEG11;1;X1Y12/SS4END7;X1Y11/SS4BEG11.SS4END7;1;X1Y12/SS4BEG7;X1Y12/SS4END7.SS4BEG7;1;X1Y13/SS4END3;X1Y12/SS4BEG7.SS4END3;1;X1Y13/JW2BEG2;X1Y13/SS4END3.JW2BEG2;1;X1Y13/JW2END2;X1Y13/JW2BEG2.JW2END2;1;X1Y13/N1BEG3;X1Y13/JW2END2.N1BEG3;1;X1Y12/N1END3;X1Y13/N1BEG3.N1END3;1;X1Y12/JW2BEG6;X1Y12/N1END3.JW2BEG6;1;X1Y12/JW2END6;X1Y12/JW2BEG6.JW2END6;1;X1Y12/W2BEG6;X1Y12/JW2END6.W2BEG6;1;X0Y12/W2MID6;X1Y12/W2BEG6.W2MID6;1;X0Y12/B_I;X0Y12/W2MID6.B_I;1;X1Y9/JW2BEG4;X1Y9/LD_O.JW2BEG4;1;X1Y9/JW2END4;X1Y9/JW2BEG4.JW2END4;1;X1Y9/J2MID_CDa_BEG3;X1Y9/JW2END4.J2MID_CDa_BEG3;1;X1Y9/J2MID_CDa_END3;X1Y9/J2MID_CDa_BEG3.J2MID_CDa_END3;1;X1Y9/LD_I3;X1Y9/J2MID_CDa_END3.LD_I3;1;X1Y9/D_PERM_I2;X1Y9/LD_I3/X1Y9/D_PERM_I2;1;X1Y9/JN2BEG1;X1Y9/LD_O.JN2BEG1;1;X1Y9/JN2END1;X1Y9/JN2BEG1.JN2END1;1;X1Y9/J_l_AB_BEG0;X1Y9/JN2END1.J_l_AB_BEG0;1;X1Y9/J_l_AB_END0;X1Y9/J_l_AB_BEG0.J_l_AB_END0;1;X1Y9/LB_I0;X1Y9/J_l_AB_END0.LB_I0;1;X1Y9/B_PERM_I2;X1Y9/LB_I0/X1Y9/B_PERM_I2;1;X1Y10/LE_I3;X1Y10/J2MID_EFb_END3.LE_I3;1;X1Y10/E_PERM_I1;X1Y10/LE_I3/X1Y10/E_PERM_I1;1;X1Y9/S2BEG1;X1Y9/JS2END1.S2BEG1;1;X1Y10/S2MID1;X1Y9/S2BEG1.S2MID1;1;X1Y10/J2MID_EFb_BEG3;X1Y10/S2MID1.J2MID_EFb_BEG3;1;X1Y10/J2MID_EFb_END3;X1Y10/J2MID_EFb_BEG3.J2MID_EFb_END3;1;X1Y10/LF_I3;X1Y10/J2MID_EFb_END3.LF_I3;1;X1Y10/F_PERM_I1;X1Y10/LF_I3/X1Y10/F_PERM_I1;1;X1Y9/JS2BEG1;X1Y9/LD_O.JS2BEG1;1;X1Y9/JS2END1;X1Y9/JS2BEG1.JS2END1;1;X1Y9/J_l_AB_BEG2;X1Y9/JS2END1.J_l_AB_BEG2;1;X1Y9/J_l_AB_END2;X1Y9/J_l_AB_BEG2.J_l_AB_END2;1;X1Y9/LA_I2;X1Y9/J_l_AB_END2.LA_I2;1;X1Y9/A_PERM_I0;X1Y9/LA_I2/X1Y9/A_PERM_I0;1;X1Y9/D_Q;;1;X1Y9/LD_O;X1Y9/D_Q/X1Y9/LD_O;1;X1Y9/JS2BEG6;X1Y9/LD_O.JS2BEG6;1;X1Y9/JS2END6;X1Y9/JS2BEG6.JS2END6;1;X1Y9/S2BEG6;X1Y9/JS2END6.S2BEG6;1;X1Y10/S2MID6;X1Y9/S2BEG6.S2MID6;1;X1Y10/S2BEGb6;X1Y10/S2MID6.S2BEGb6;1;X1Y11/S2END6;X1Y10/S2BEGb6.S2END6;1;X1Y11/J2END_CD_BEG0;X1Y11/S2END6.J2END_CD_BEG0;1;X1Y11/J2END_CD_END0;X1Y11/J2END_CD_BEG0.J2END_CD_END0;1;X1Y11/LC_I0;X1Y11/J2END_CD_END0.LC_I0;1;X1Y11/C_PERM_I0;X1Y11/LC_I0/X1Y11/C_PERM_I0;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$new_n43": {
+          "hide_name": 1,
+          "bits": [ 5497 ] ,
+          "attributes": {
+            "ROUTING": "X1Y10/JE2BEG5;X1Y10/LH_O.JE2BEG5;1;X1Y10/JE2END5;X1Y10/JE2BEG5.JE2END5;1;X1Y10/J2MID_EFa_BEG1;X1Y10/JE2END5.J2MID_EFa_BEG1;1;X1Y10/J2MID_EFa_END1;X1Y10/J2MID_EFa_BEG1.J2MID_EFa_END1;1;X1Y10/LE_I1;X1Y10/J2MID_EFa_END1.LE_I1;1;X1Y10/E_PERM_I0;X1Y10/LE_I1/X1Y10/E_PERM_I0;1;X1Y10/LF_I0;X1Y10/J2MID_EFa_END0.LF_I0;1;X1Y10/F_PERM_I0;X1Y10/LF_I0/X1Y10/F_PERM_I0;1;X1Y10/S2BEG2;X1Y10/JS2END2.S2BEG2;1;X1Y11/S2MID2;X1Y10/S2BEG2.S2MID2;1;X1Y11/J2MID_EFa_BEG1;X1Y11/S2MID2.J2MID_EFa_BEG1;1;X1Y11/J2MID_EFa_END1;X1Y11/J2MID_EFa_BEG1.J2MID_EFa_END1;1;X1Y11/LE_I1;X1Y11/J2MID_EFa_END1.LE_I1;1;X1Y11/E_PERM_I0;X1Y11/LE_I1/X1Y11/E_PERM_I0;1;X1Y10/LC_I0;X1Y10/J2MID_CDa_END0.LC_I0;1;X1Y10/C_PERM_I0;X1Y10/LC_I0/X1Y10/C_PERM_I0;1;X1Y10/J2MID_EFa_END0;X1Y10/J2MID_EFa_BEG0.J2MID_EFa_END0;1;X1Y10/J2MID_EFa_BEG0;X1Y10/JN2END5.J2MID_EFa_BEG0;1;X1Y10/JN2BEG5;X1Y10/LH_O.JN2BEG5;1;X1Y10/JN2END5;X1Y10/JN2BEG5.JN2END5;1;X1Y10/JS2BEG2;X1Y10/LH_O.JS2BEG2;1;X1Y10/JS2END2;X1Y10/JS2BEG2.JS2END2;1;X1Y10/J2MID_CDa_BEG0;X1Y10/JN2END4.J2MID_CDa_BEG0;1;X1Y10/J2MID_CDa_END0;X1Y10/J2MID_CDa_BEG0.J2MID_CDa_END0;1;X1Y9/J2MID_CDa_BEG2;X1Y9/N2MID4.J2MID_CDa_BEG2;1;X1Y9/J2MID_CDa_END2;X1Y9/J2MID_CDa_BEG2.J2MID_CDa_END2;1;X1Y9/LD_I2;X1Y9/J2MID_CDa_END2.LD_I2;1;X1Y9/D_PERM_I1;X1Y9/LD_I2/X1Y9/D_PERM_I1;1;X1Y10/LH_O;;1;X1Y10/JN2BEG4;X1Y10/LH_O.JN2BEG4;1;X1Y10/JN2END4;X1Y10/JN2BEG4.JN2END4;1;X1Y10/N2BEG4;X1Y10/JN2END4.N2BEG4;1;X1Y9/N2MID4;X1Y10/N2BEG4.N2MID4;1;X1Y9/J2MID_ABa_BEG2;X1Y9/N2MID4.J2MID_ABa_BEG2;1;X1Y9/J2MID_ABa_END2;X1Y9/J2MID_ABa_BEG2.J2MID_ABa_END2;1;X1Y9/LB_I2;X1Y9/J2MID_ABa_END2.LB_I2;1;X1Y9/B_PERM_I0;X1Y9/LB_I2/X1Y9/B_PERM_I0;1"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$443": {
+          "hide_name": 1,
+          "bits": [ 5495 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "io_out[3]": {
+          "hide_name": 0,
+          "bits": [ 5493 ] ,
+          "attributes": {
+            "ROUTING": "X1Y10/JS2BEG6;X1Y10/S1END3.JS2BEG6;1;X1Y10/JS2END6;X1Y10/JS2BEG6.JS2END6;1;X1Y10/S2BEG6;X1Y10/JS2END6.S2BEG6;1;X1Y11/S2MID6;X1Y10/S2BEG6.S2MID6;1;X1Y11/S2BEGb6;X1Y11/S2MID6.S2BEGb6;1;X1Y12/S2END6;X1Y11/S2BEGb6.S2END6;1;X1Y12/JS2BEG5;X1Y12/S2END6.JS2BEG5;1;X1Y12/JS2END5;X1Y12/JS2BEG5.JS2END5;1;X1Y12/S2BEG5;X1Y12/JS2END5.S2BEG5;1;X1Y13/S2MID5;X1Y12/S2BEG5.S2MID5;1;X1Y13/J2MID_ABb_BEG2;X1Y13/S2MID5.J2MID_ABb_BEG2;1;X1Y13/J2MID_ABb_END2;X1Y13/J2MID_ABb_BEG2.J2MID_ABb_END2;1;X1Y13/W1BEG3;X1Y13/J2MID_ABb_END2.W1BEG3;1;X0Y13/W1END3;X1Y13/W1BEG3.W1END3;1;X0Y13/E6BEG1;X0Y13/W1END3.E6BEG1;1;X1Y13/E6END1;X0Y13/E6BEG1.E6END1;1;X1Y13/JW2BEG0;X1Y13/E6END1.JW2BEG0;1;X1Y13/JW2END0;X1Y13/JW2BEG0.JW2END0;1;X1Y13/W2BEG0;X1Y13/JW2END0.W2BEG0;1;X0Y13/W2MID0;X1Y13/W2BEG0.W2MID0;1;X0Y13/A_I;X0Y13/W2MID0.A_I;1;X1Y9/JE2BEG6;X1Y9/LH_O.JE2BEG6;1;X1Y9/JE2END6;X1Y9/JE2BEG6.JE2END6;1;X1Y9/J2MID_GHa_BEG1;X1Y9/JE2END6.J2MID_GHa_BEG1;1;X1Y9/J2MID_GHa_END1;X1Y9/J2MID_GHa_BEG1.J2MID_GHa_END1;1;X1Y9/LH_I1;X1Y9/J2MID_GHa_END1.LH_I1;1;X1Y9/H_PERM_I3;X1Y9/LH_I1/X1Y9/H_PERM_I3;1;X1Y9/JS2BEG5;X1Y9/LH_O.JS2BEG5;1;X1Y9/JS2END5;X1Y9/JS2BEG5.JS2END5;1;X1Y9/J2MID_EFa_BEG2;X1Y9/JS2END5.J2MID_EFa_BEG2;1;X1Y9/J2MID_EFa_END2;X1Y9/J2MID_EFa_BEG2.J2MID_EFa_END2;1;X1Y9/LF_I2;X1Y9/J2MID_EFa_END2.LF_I2;1;X1Y9/F_PERM_I1;X1Y9/LF_I2/X1Y9/F_PERM_I1;1;X1Y9/H_Q;;1;X1Y9/LH_O;X1Y9/H_Q/X1Y9/LH_O;1;X1Y9/S1BEG3;X1Y9/LH_O.S1BEG3;1;X1Y10/S1END3;X1Y9/S1BEG3.S1END3;1;X1Y10/JW2BEG6;X1Y10/S1END3.JW2BEG6;1;X1Y10/JW2END6;X1Y10/JW2BEG6.JW2END6;1;X1Y10/J2MID_GHa_BEG3;X1Y10/JW2END6.J2MID_GHa_BEG3;1;X1Y10/J2MID_GHa_END3;X1Y10/J2MID_GHa_BEG3.J2MID_GHa_END3;1;X1Y10/LH_I3;X1Y10/J2MID_GHa_END3.LH_I3;1;X1Y10/H_PERM_I2;X1Y10/LH_I3/X1Y10/H_PERM_I2;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$439": {
+          "hide_name": 1,
+          "bits": [ 5488 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "io_out[2]": {
+          "hide_name": 0,
+          "bits": [ 5486 ] ,
+          "attributes": {
+            "ROUTING": "X1Y9/S2BEG4;X1Y9/JS2END4.S2BEG4;1;X1Y10/S2MID4;X1Y9/S2BEG4.S2MID4;1;X1Y10/J2MID_GHa_BEG2;X1Y10/S2MID4.J2MID_GHa_BEG2;1;X1Y10/J2MID_GHa_END2;X1Y10/J2MID_GHa_BEG2.J2MID_GHa_END2;1;X1Y10/LH_I2;X1Y10/J2MID_GHa_END2.LH_I2;1;X1Y10/H_PERM_I1;X1Y10/LH_I2/X1Y10/H_PERM_I1;1;X1Y13/JE2BEG7;X1Y13/SS4END0.JE2BEG7;1;X1Y13/JE2END7;X1Y13/JE2BEG7.JE2END7;1;X1Y13/E2BEG7;X1Y13/JE2END7.E2BEG7;1;X2Y13/E2MID7;X1Y13/E2BEG7.E2MID7;1;X2Y13/J2MID_EFb_BEG0;X2Y13/E2MID7.J2MID_EFb_BEG0;1;X2Y13/J2MID_EFb_END0;X2Y13/J2MID_EFb_BEG0.J2MID_EFb_END0;1;X2Y13/W1BEG1;X2Y13/J2MID_EFb_END0.W1BEG1;1;X1Y13/W1END1;X2Y13/W1BEG1.W1END1;1;X1Y13/JW2BEG4;X1Y13/W1END1.JW2BEG4;1;X1Y13/JW2END4;X1Y13/JW2BEG4.JW2END4;1;X1Y13/W2BEG4;X1Y13/JW2END4.W2BEG4;1;X0Y13/W2MID4;X1Y13/W2BEG4.W2MID4;1;X0Y13/B_I;X0Y13/W2MID4.B_I;1;X1Y9/LH_I2;X1Y9/J_l_GH_END2.LH_I2;1;X1Y9/H_PERM_I1;X1Y9/LH_I2/X1Y9/H_PERM_I1;1;X1Y9/JS2BEG4;X1Y9/LG_O.JS2BEG4;1;X1Y9/JS2END4;X1Y9/JS2BEG4.JS2END4;1;X1Y9/J_l_GH_BEG2;X1Y9/JS2END4.J_l_GH_BEG2;1;X1Y9/J_l_GH_END2;X1Y9/J_l_GH_BEG2.J_l_GH_END2;1;X1Y9/LG_I2;X1Y9/J_l_GH_END2.LG_I2;1;X1Y9/G_PERM_I2;X1Y9/LG_I2/X1Y9/G_PERM_I2;1;X1Y9/JW2BEG5;X1Y9/LG_O.JW2BEG5;1;X1Y9/JW2END5;X1Y9/JW2BEG5.JW2END5;1;X1Y9/J2MID_EFa_BEG3;X1Y9/JW2END5.J2MID_EFa_BEG3;1;X1Y9/J2MID_EFa_END3;X1Y9/J2MID_EFa_BEG3.J2MID_EFa_END3;1;X1Y9/LF_I3;X1Y9/J2MID_EFa_END3.LF_I3;1;X1Y9/F_PERM_I0;X1Y9/LF_I3/X1Y9/F_PERM_I0;1;X1Y9/G_Q;;1;X1Y9/LG_O;X1Y9/G_Q/X1Y9/LG_O;1;X1Y11/SS4END8;X1Y10/SS4BEG12.SS4END8;1;X1Y10/SS4BEG12;X1Y10/SS4END12.SS4BEG12;1;X1Y10/SS4END12;X1Y9/SS4BEG0.SS4END12;1;X1Y9/SS4BEG0;X1Y9/LG_O.SS4BEG0;1;X1Y11/SS4BEG8;X1Y11/SS4END8.SS4BEG8;1;X1Y12/SS4END4;X1Y11/SS4BEG8.SS4END4;1;X1Y12/SS4BEG4;X1Y12/SS4END4.SS4BEG4;1;X1Y13/SS4END0;X1Y12/SS4BEG4.SS4END0;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$new_n40": {
+          "hide_name": 1,
+          "bits": [ 5484 ] ,
+          "attributes": {
+            "ROUTING": "X1Y9/N1BEG2;X1Y9/J_l_GH_END3.N1BEG2;1;X1Y8/N1END2;X1Y9/N1BEG2.N1END2;1;X1Y8/WW4BEG0;X1Y8/N1END2.WW4BEG0;1;X0Y8/WW4END12;X1Y8/WW4BEG0.WW4END12;1;X0Y8/E2BEGb3;X0Y8/WW4END12.E2BEGb3;1;X1Y8/E2END3;X0Y8/E2BEGb3.E2END3;1;X1Y8/J_l_CD_BEG0;X1Y8/E2END3.J_l_CD_BEG0;1;X1Y8/J_l_CD_END0;X1Y8/J_l_CD_BEG0.J_l_CD_END0;1;X1Y8/LD_I0;X1Y8/J_l_CD_END0.LD_I0;1;X1Y8/D_PERM_I0;X1Y8/LD_I0/X1Y8/D_PERM_I0;1;X1Y10/J2MID_GHb_BEG1;X1Y10/E2MID3.J2MID_GHb_BEG1;1;X1Y10/J2MID_GHb_END1;X1Y10/J2MID_GHb_BEG1.J2MID_GHb_END1;1;X1Y10/LH_I1;X1Y10/J2MID_GHb_END1.LH_I1;1;X1Y10/H_PERM_I0;X1Y10/LH_I1/X1Y10/H_PERM_I0;1;X1Y13/LG_O;;1;X1Y13/NN4BEG0;X1Y13/LG_O.NN4BEG0;1;X1Y12/NN4END12;X1Y13/NN4BEG0.NN4END12;1;X1Y12/NN4BEG12;X1Y12/NN4END12.NN4BEG12;1;X1Y11/NN4END8;X1Y12/NN4BEG12.NN4END8;1;X1Y11/NN4BEG8;X1Y11/NN4END8.NN4BEG8;1;X1Y10/NN4END4;X1Y11/NN4BEG8.NN4END4;1;X1Y10/NN4BEG4;X1Y10/NN4END4.NN4BEG4;1;X1Y9/NN4END0;X1Y10/NN4BEG4.NN4END0;1;X1Y9/J_l_GH_BEG3;X1Y9/NN4END0.J_l_GH_BEG3;1;X1Y9/J_l_GH_END3;X1Y9/J_l_GH_BEG3.J_l_GH_END3;1;X1Y9/H_PERM_I0;X1Y9/LH_I3/X1Y9/H_PERM_I0;1;X1Y9/LG_I3;X1Y9/J_l_GH_END3.LG_I3;1;X1Y9/G_PERM_I1;X1Y9/LG_I3/X1Y9/G_PERM_I1;1;X1Y9/S1BEG2;X1Y9/J_l_GH_END3.S1BEG2;1;X1Y10/S1END2;X1Y9/S1BEG2.S1END2;1;X1Y10/WW4BEG0;X1Y10/S1END2.WW4BEG0;1;X0Y10/WW4END12;X1Y10/WW4BEG0.WW4END12;1;X0Y10/E2BEG3;X0Y10/WW4END12.E2BEG3;1;X1Y9/LH_I3;X1Y9/J_l_GH_END3.LH_I3;1;X1Y10/E2MID3;X0Y10/E2BEG3.E2MID3;1"
+          }
+        },
+        "$abc$511$new_n39": {
+          "hide_name": 1,
+          "bits": [ 5483 ] ,
+          "attributes": {
+            "ROUTING": "X1Y11/J2END_GH_BEG0;X1Y11/S2END7.J2END_GH_BEG0;1;X1Y11/J2END_GH_END0;X1Y11/J2END_GH_BEG0.J2END_GH_END0;1;X1Y11/LH_I0;X1Y11/J2END_GH_END0.LH_I0;1;X1Y11/H_PERM_I0;X1Y11/LH_I0/X1Y11/H_PERM_I0;1;X1Y10/LB_I0;X1Y10/J2MID_ABb_END0.LB_I0;1;X1Y10/B_PERM_I0;X1Y10/LB_I0/X1Y10/B_PERM_I0;1;X1Y9/LC_I0;X1Y9/J2MID_CDb_END0.LC_I0;1;X1Y9/C_PERM_I0;X1Y9/LC_I0/X1Y9/C_PERM_I0;1;X1Y10/J2MID_EFb_BEG0;X1Y10/S2MID7.J2MID_EFb_BEG0;1;X1Y10/J2MID_EFb_END0;X1Y10/J2MID_EFb_BEG0.J2MID_EFb_END0;1;X1Y10/LE_I0;X1Y10/J2MID_EFb_END0.LE_I0;1;X1Y10/E_PERM_I2;X1Y10/LE_I0/X1Y10/E_PERM_I2;1;X1Y10/S2BEGb7;X1Y10/S2MID7.S2BEGb7;1;X1Y11/S2END7;X1Y10/S2BEGb7.S2END7;1;X1Y11/J2END_EF_BEG0;X1Y11/S2END7.J2END_EF_BEG0;1;X1Y11/J2END_EF_END0;X1Y11/J2END_EF_BEG0.J2END_EF_END0;1;X1Y11/LF_I0;X1Y11/J2END_EF_END0.LF_I0;1;X1Y11/F_PERM_I2;X1Y11/LF_I0/X1Y11/F_PERM_I2;1;X1Y9/LH_I0;X1Y9/J2MID_GHb_END0.LH_I0;1;X1Y9/H_PERM_I2;X1Y9/LH_I0/X1Y9/H_PERM_I2;1;X1Y9/J2MID_GHb_BEG0;X1Y9/S2MID7.J2MID_GHb_BEG0;1;X1Y9/J2MID_GHb_END0;X1Y9/J2MID_GHb_BEG0.J2MID_GHb_END0;1;X1Y8/JS2BEG7;X1Y8/LE_O.JS2BEG7;1;X1Y8/JS2END7;X1Y8/JS2BEG7.JS2END7;1;X1Y8/S2BEG7;X1Y8/JS2END7.S2BEG7;1;X1Y9/S2MID7;X1Y8/S2BEG7.S2MID7;1;X1Y9/J2MID_CDb_BEG0;X1Y9/S2MID7.J2MID_CDb_BEG0;1;X1Y9/J2MID_CDb_END0;X1Y9/J2MID_CDb_BEG0.J2MID_CDb_END0;1;X1Y9/LD_I0;X1Y9/J2MID_CDb_END0.LD_I0;1;X1Y9/D_PERM_I0;X1Y9/LD_I0/X1Y9/D_PERM_I0;1;X1Y8/S1BEG0;X1Y8/LE_O.S1BEG0;1;X1Y9/S1END0;X1Y8/S1BEG0.S1END0;1;X1Y9/JS2BEG7;X1Y9/S1END0.JS2BEG7;1;X1Y9/JS2END7;X1Y9/JS2BEG7.JS2END7;1;X1Y9/S2BEG7;X1Y9/JS2END7.S2BEG7;1;X1Y10/S2MID7;X1Y9/S2BEG7.S2MID7;1;X1Y10/J2MID_ABb_BEG0;X1Y10/S2MID7.J2MID_ABb_BEG0;1;X1Y10/J2MID_ABb_END0;X1Y10/J2MID_ABb_BEG0.J2MID_ABb_END0;1;X1Y10/LA_I0;X1Y10/J2MID_ABb_END0.LA_I0;1;X1Y10/A_PERM_I0;X1Y10/LA_I0/X1Y10/A_PERM_I0;1;X1Y8/JE2BEG6;X1Y8/LE_O.JE2BEG6;1;X1Y8/JE2END6;X1Y8/JE2BEG6.JE2END6;1;X1Y8/J2MID_GHa_BEG1;X1Y8/JE2END6.J2MID_GHa_BEG1;1;X1Y8/J2MID_GHa_END1;X1Y8/J2MID_GHa_BEG1.J2MID_GHa_END1;1;X1Y8/LH_I1;X1Y8/J2MID_GHa_END1.LH_I1;1;X1Y8/H_PERM_I0;X1Y8/LH_I1/X1Y8/H_PERM_I0;1;X1Y8/JN2BEG3;X1Y8/LE_O.JN2BEG3;1;X1Y8/JN2END3;X1Y8/JN2BEG3.JN2END3;1;X1Y8/J2MID_ABa_BEG0;X1Y8/JN2END3.J2MID_ABa_BEG0;1;X1Y8/J2MID_ABa_END0;X1Y8/J2MID_ABa_BEG0.J2MID_ABa_END0;1;X1Y8/LA_I0;X1Y8/J2MID_ABa_END0.LA_I0;1;X1Y8/A_PERM_I2;X1Y8/LA_I0/X1Y8/A_PERM_I2;1;X1Y9/S2BEGb6;X1Y9/S2MID6.S2BEGb6;1;X1Y10/S2END6;X1Y9/S2BEGb6.S2END6;1;X1Y10/J2END_CD_BEG0;X1Y10/S2END6.J2END_CD_BEG0;1;X1Y10/J2END_CD_END0;X1Y10/J2END_CD_BEG0.J2END_CD_END0;1;X1Y10/LD_I0;X1Y10/J2END_CD_END0.LD_I0;1;X1Y10/D_PERM_I2;X1Y10/LD_I0/X1Y10/D_PERM_I2;1;X1Y8/JS2BEG2;X1Y8/LE_O.JS2BEG2;1;X1Y8/JS2END2;X1Y8/JS2BEG2.JS2END2;1;X1Y8/J_l_CD_BEG2;X1Y8/JS2END2.J_l_CD_BEG2;1;X1Y8/J_l_CD_END2;X1Y8/J_l_CD_BEG2.J_l_CD_END2;1;X1Y8/LC_I2;X1Y8/J_l_CD_END2.LC_I2;1;X1Y8/C_PERM_I0;X1Y8/LC_I2/X1Y8/C_PERM_I0;1;X1Y8/LE_O;;1;X1Y8/JS2BEG6;X1Y8/LE_O.JS2BEG6;1;X1Y8/JS2END6;X1Y8/JS2BEG6.JS2END6;1;X1Y8/S2BEG6;X1Y8/JS2END6.S2BEG6;1;X1Y9/S2MID6;X1Y8/S2BEG6.S2MID6;1;X1Y9/J2MID_GHa_BEG0;X1Y9/S2MID6.J2MID_GHa_BEG0;1;X1Y9/J2MID_GHa_END0;X1Y9/J2MID_GHa_BEG0.J2MID_GHa_END0;1;X1Y9/LG_I0;X1Y9/J2MID_GHa_END0.LG_I0;1;X1Y9/G_PERM_I0;X1Y9/LG_I0/X1Y9/G_PERM_I0;1"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$435": {
+          "hide_name": 1,
+          "bits": [ 5481 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "io_out[1]": {
+          "hide_name": 0,
+          "bits": [ 5479 ] ,
+          "attributes": {
+            "ROUTING": "X1Y13/S1BEG1;X1Y13/LF_O.S1BEG1;1;X1Y14/S1END1;X1Y13/S1BEG1.S1END1;1;X1Y14/JW2BEG6;X1Y14/S1END1.JW2BEG6;1;X1Y14/JW2END6;X1Y14/JW2BEG6.JW2END6;1;X1Y14/W2BEG6;X1Y14/JW2END6.W2BEG6;1;X0Y14/W2MID6;X1Y14/W2BEG6.W2MID6;1;X0Y14/A_I;X0Y14/W2MID6.A_I;1;X1Y13/JW2BEG3;X1Y13/LF_O.JW2BEG3;1;X1Y13/JW2END3;X1Y13/JW2BEG3.JW2END3;1;X1Y13/J_l_EF_BEG3;X1Y13/JW2END3.J_l_EF_BEG3;1;X1Y13/J_l_EF_END3;X1Y13/J_l_EF_BEG3.J_l_EF_END3;1;X1Y13/LF_I3;X1Y13/J_l_EF_END3.LF_I3;1;X1Y13/F_PERM_I3;X1Y13/LF_I3/X1Y13/F_PERM_I3;1;X1Y13/F_Q;;1;X1Y13/LF_O;X1Y13/F_Q/X1Y13/LF_O;1;X1Y13/JE2BEG6;X1Y13/LF_O.JE2BEG6;1;X1Y13/JE2END6;X1Y13/JE2BEG6.JE2END6;1;X1Y13/J2MID_GHa_BEG1;X1Y13/JE2END6.J2MID_GHa_BEG1;1;X1Y13/J2MID_GHa_END1;X1Y13/J2MID_GHa_BEG1.J2MID_GHa_END1;1;X1Y13/LG_I1;X1Y13/J2MID_GHa_END1.LG_I1;1;X1Y13/G_PERM_I2;X1Y13/LG_I1/X1Y13/G_PERM_I2;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "$abc$511$auto$rtlil.cc:3583:MuxGate$431": {
+          "hide_name": 1,
+          "bits": [ 5475 ] ,
+          "attributes": {
+            "ROUTING": " "
+          }
+        },
+        "io_in[1]": {
+          "hide_name": 0,
+          "bits": [ 5473 ] ,
+          "attributes": {
+            "ROUTING": "X1Y13/LF_I0;X1Y13/J2MID_EFb_END0.LF_I0;1;X1Y13/F_PERM_I1;X1Y13/LF_I0/X1Y13/F_PERM_I1;1;X1Y14/JN2BEG7;X1Y14/E1END0.JN2BEG7;1;X1Y14/JN2END7;X1Y14/JN2BEG7.JN2END7;1;X1Y14/N2BEG7;X1Y14/JN2END7.N2BEG7;1;X1Y13/N2MID7;X1Y14/N2BEG7.N2MID7;1;X1Y13/J2MID_EFb_BEG0;X1Y13/N2MID7.J2MID_EFb_BEG0;1;X1Y13/J2MID_EFb_END0;X1Y13/J2MID_EFb_BEG0.J2MID_EFb_END0;1;X1Y13/LE_I0;X1Y13/J2MID_EFb_END0.LE_I0;1;X1Y13/E_PERM_I2;X1Y13/LE_I0/X1Y13/E_PERM_I2;1;X1Y8/LF_I0;X1Y8/J2MID_EFa_END0.LF_I0;1;X1Y8/F_PERM_I0;X1Y8/LF_I0/X1Y8/F_PERM_I0;1;X1Y8/LE_I0;X1Y8/J2MID_EFa_END0.LE_I0;1;X1Y8/E_PERM_I0;X1Y8/LE_I0/X1Y8/E_PERM_I0;1;X1Y13/J2MID_GHb_BEG3;X1Y13/N2MID1.J2MID_GHb_BEG3;1;X1Y13/J2MID_GHb_END3;X1Y13/J2MID_GHb_BEG3.J2MID_GHb_END3;1;X1Y13/LG_I3;X1Y13/J2MID_GHb_END3.LG_I3;1;X1Y13/G_PERM_I1;X1Y13/LG_I3/X1Y13/G_PERM_I1;1;X1Y10/JS2BEG1;X1Y10/NN4END2.JS2BEG1;1;X1Y10/JS2END1;X1Y10/JS2BEG1.JS2END1;1;X0Y14/A_O;;1;X0Y14/E1BEG0;X0Y14/A_O.E1BEG0;1;X1Y14/E1END0;X0Y14/E1BEG0.E1END0;1;X1Y14/NN4BEG2;X1Y14/E1END0.NN4BEG2;1;X1Y13/NN4END14;X1Y14/NN4BEG2.NN4END14;1;X1Y13/NN4BEG14;X1Y13/NN4END14.NN4BEG14;1;X1Y12/NN4END10;X1Y13/NN4BEG14.NN4END10;1;X1Y12/NN4BEG10;X1Y12/NN4END10.NN4BEG10;1;X1Y11/NN4END6;X1Y12/NN4BEG10.NN4END6;1;X1Y11/NN4BEG6;X1Y11/NN4END6.NN4BEG6;1;X1Y10/NN4END2;X1Y11/NN4BEG6.NN4END2;1;X1Y14/JN2END1;X1Y14/JN2BEG1.JN2END1;1;X1Y14/JN2BEG1;X1Y14/E1END0.JN2BEG1;1;X1Y10/W1BEG2;X1Y10/JS2END1.W1BEG2;1;X0Y10/W1END2;X1Y10/W1BEG2.W1END2;1;X0Y10/E6BEG0;X0Y10/W1END2.E6BEG0;1;X1Y10/E6END0;X0Y10/E6BEG0.E6END0;1;X1Y10/JN2BEG1;X1Y10/E6END0.JN2BEG1;1;X1Y10/JN2END1;X1Y10/JN2BEG1.JN2END1;1;X1Y10/J_l_AB_BEG0;X1Y10/JN2END1.J_l_AB_BEG0;1;X1Y10/J_l_AB_END0;X1Y10/J_l_AB_BEG0.J_l_AB_END0;1;X1Y10/N1BEG3;X1Y10/J_l_AB_END0.N1BEG3;1;X1Y9/N1END3;X1Y10/N1BEG3.N1END3;1;X1Y9/JN2BEG6;X1Y9/N1END3.JN2BEG6;1;X1Y9/JN2END6;X1Y9/JN2BEG6.JN2END6;1;X1Y9/N2BEG6;X1Y9/JN2END6.N2BEG6;1;X1Y8/N2MID6;X1Y9/N2BEG6.N2MID6;1;X1Y8/J2MID_EFa_BEG0;X1Y8/N2MID6.J2MID_EFa_BEG0;1;X1Y8/J2MID_EFa_END0;X1Y8/J2MID_EFa_BEG0.J2MID_EFa_END0;1;X1Y14/N2BEG1;X1Y14/JN2END1.N2BEG1;1;X1Y13/N2MID1;X1Y14/N2BEG1.N2MID1;1",
+            "hdlname": "top_i io_in",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.62-1.67"
+          }
+        },
+        "io_out[0]": {
+          "hide_name": 0,
+          "bits": [ 5470 ] ,
+          "attributes": {
+            "ROUTING": "X1Y13/JS2BEG3;X1Y13/LE_O.JS2BEG3;1;X1Y13/JS2END3;X1Y13/JS2BEG3.JS2END3;1;X1Y13/J_l_EF_BEG2;X1Y13/JS2END3.J_l_EF_BEG2;1;X1Y13/J_l_EF_END2;X1Y13/J_l_EF_BEG2.J_l_EF_END2;1;X1Y13/LF_I2;X1Y13/J_l_EF_END2.LF_I2;1;X1Y13/F_PERM_I2;X1Y13/LF_I2/X1Y13/F_PERM_I2;1;X1Y14/JW2BEG5;X1Y14/S1END0.JW2BEG5;1;X1Y14/JW2END5;X1Y14/JW2BEG5.JW2END5;1;X1Y14/W2BEG5;X1Y14/JW2END5.W2BEG5;1;X0Y14/W2MID5;X1Y14/W2BEG5.W2MID5;1;X0Y14/B_I;X0Y14/W2MID5.B_I;1;X1Y13/S1BEG0;X1Y13/LE_O.S1BEG0;1;X1Y14/S1END0;X1Y13/S1BEG0.S1END0;1;X1Y13/JW2END5;X1Y13/JW2BEG5.JW2END5;1;X1Y13/J2MID_EFa_BEG3;X1Y13/JW2END5.J2MID_EFa_BEG3;1;X1Y13/J2MID_EFa_END3;X1Y13/J2MID_EFa_BEG3.J2MID_EFa_END3;1;X1Y13/LE_I3;X1Y13/J2MID_EFa_END3.LE_I3;1;X1Y13/JW2BEG5;X1Y13/LE_O.JW2BEG5;1;X1Y13/E_PERM_I1;X1Y13/LE_I3/X1Y13/E_PERM_I1;1;X1Y13/E_Q;;1;X1Y13/LE_O;X1Y13/E_Q/X1Y13/LE_O;1;X1Y13/JN2BEG6;X1Y13/LE_O.JN2BEG6;1;X1Y13/JN2END6;X1Y13/JN2BEG6.JN2END6;1;X1Y13/J2MID_GHa_BEG0;X1Y13/JN2END6.J2MID_GHa_BEG0;1;X1Y13/J2MID_GHa_END0;X1Y13/J2MID_GHa_BEG0.J2MID_GHa_END0;1;X1Y13/LG_I0;X1Y13/J2MID_GHa_END0.LG_I0;1;X1Y13/G_PERM_I0;X1Y13/LG_I0/X1Y13/G_PERM_I0;1",
+            "hdlname": "top_i io_out",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:1.88-1.94"
+          }
+        },
+        "io_in[0]": {
+          "hide_name": 0,
+          "bits": [ 5467 ] ,
+          "attributes": {
+            "ROUTING": "X1Y13/LF_I1;X1Y13/J2MID_EFa_END1.LF_I1;1;X1Y13/F_PERM_I0;X1Y13/LF_I1/X1Y13/F_PERM_I0;1;X1Y8/LF_I1;X1Y8/J2END_EF_END1.LF_I1;1;X1Y8/F_PERM_I1;X1Y8/LF_I1/X1Y8/F_PERM_I1;1;X1Y8/LE_I1;X1Y8/J2END_EF_END1.LE_I1;1;X1Y8/E_PERM_I1;X1Y8/LE_I1/X1Y8/E_PERM_I1;1;X1Y13/N4BEG12;X1Y13/N4END12.N4BEG12;1;X1Y12/N4END8;X1Y13/N4BEG12.N4END8;1;X1Y12/N4BEG8;X1Y12/N4END8.N4BEG8;1;X1Y11/N4END4;X1Y12/N4BEG8.N4END4;1;X1Y11/N4BEG4;X1Y11/N4END4.N4BEG4;1;X1Y10/N4END0;X1Y11/N4BEG4.N4END0;1;X1Y10/JN2END3;X1Y10/JN2BEG3.JN2END3;1;X1Y10/JN2BEG3;X1Y10/N4END0.JN2BEG3;1;X1Y10/N2BEG3;X1Y10/JN2END3.N2BEG3;1;X1Y9/N2MID3;X1Y10/N2BEG3.N2MID3;1;X1Y9/N2BEGb3;X1Y9/N2MID3.N2BEGb3;1;X1Y8/N2END3;X1Y9/N2BEGb3.N2END3;1;X1Y8/J2END_EF_BEG1;X1Y8/N2END3.J2END_EF_BEG1;1;X1Y8/J2END_EF_END1;X1Y8/J2END_EF_BEG1.J2END_EF_END1;1;X1Y14/N4BEG0;X1Y14/E6END1.N4BEG0;1;X1Y13/N4END12;X1Y14/N4BEG0.N4END12;1;X0Y14/B_O;;1;X0Y14/E6BEG1;X0Y14/B_O.E6BEG1;1;X1Y14/E6END1;X0Y14/E6BEG1.E6END1;1;X1Y14/JN2BEG2;X1Y14/E6END1.JN2BEG2;1;X1Y14/JN2END2;X1Y14/JN2BEG2.JN2END2;1;X1Y14/N2BEG2;X1Y14/JN2END2.N2BEG2;1;X1Y13/N2MID2;X1Y14/N2BEG2.N2MID2;1;X1Y13/J2MID_EFa_BEG1;X1Y13/N2MID2.J2MID_EFa_BEG1;1;X1Y13/J2MID_EFa_END1;X1Y13/J2MID_EFa_BEG1.J2MID_EFa_END1;1;X1Y13/LE_I1;X1Y13/J2MID_EFa_END1.LE_I1;1;X1Y13/E_PERM_I0;X1Y13/LE_I1/X1Y13/E_PERM_I0;1",
+            "hdlname": "top_i rst",
+            "unused_bits": "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27",
+            "src": "/home/jonas/git-repos/FABulous/demo/user_design/sequential_16bit_en.v:2.10-2.13"
+          }
+        }
+      }
+    }
+  }
+}
