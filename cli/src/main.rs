@@ -22,9 +22,8 @@ use router::{
 };
 
 use crate::{
-    cli::{Cli, Commands, CreateTestArgs, LoggerType, Solver, SolverType},
-    display_helper::{display_failed_routing, display_results, display_run_create_test, display_metadata_route},
-    logger::Loggers,
+    cli::{Cli, Commands, CreateTestArgs, Solver, SolverType},
+    display_helper::{display_failed_routing, display_metadata_route, display_results, display_run_create_test}, logger::TerminalLogger,
 };
 
 fn main() -> Result<()> {
@@ -200,7 +199,7 @@ fn slack_report_from_timing_analyis(
         worst_slack,
     })
 }
-fn parse_arguments(args: &cli::RouteArgs) -> Result<(RoutingConfig<Solver, Loggers>, Sta)> {
+fn parse_arguments(args: &cli::RouteArgs) -> Result<(RoutingConfig<Solver, TerminalLogger>, Sta)> {
     let solver = match args.solver {
         SolverType::Simple => Solver::Simple(SimpleSolver),
         SolverType::Steiner => Solver::Steiner(SteinerSolver),
@@ -231,7 +230,7 @@ fn parse_arguments(args: &cli::RouteArgs) -> Result<(RoutingConfig<Solver, Logge
         .max_iterations(args.max_iterations)
         .net_list(net_list)
         .solver(solver)
-        .logger(Loggers::Terminal)
+        .logger(TerminalLogger{})
         .graph(graph)
         .tile_manager(tile_manager)
         .build()

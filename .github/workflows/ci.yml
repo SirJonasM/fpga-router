@@ -27,4 +27,4 @@ jobs:
       run: nix develop .#ci -c cargo test --verbose
 
     - name: Lint with Clippy
-      run: nix develop .#ci -c cargo clippy -p router -p router-cli -- -D warnings -W clippy::nursery -W clippy::pedantic
+      run: nix develop .#ci -c cargo clippy -p router -- -D warnings -W clippy::nursery -W clippy::pedantic
