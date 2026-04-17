@@ -43,7 +43,7 @@ pub struct RoutingConfig<R: RouteNet, L: Logging> {
 /// # Errors
 /// Fails if the `max_iterations` are reached
 /// Or `netlist` is invalid
-pub fn route<R, L>(config: &mut RoutingConfig<R, L>) -> FabricResult<(NetListExternal,Vec<IterationResult>)>
+pub fn route<R, L>(config: &mut RoutingConfig<R, L>) -> FabricResult<(NetListExternal, Vec<IterationResult>)>
 where
     R: RouteNet,
     L: Logging,
@@ -64,7 +64,10 @@ where
 /// # Errors
 /// Fails if the `max_iterations` are reached
 /// Or `netlist` is invalid
-pub fn route_timing_driven<R, L, T>(config: &mut RoutingConfig<R, L>, sta: &T) -> FabricResult<(NetListExternal, Vec<IterationResult>)>
+pub fn route_timing_driven<R, L, T>(
+    config: &mut RoutingConfig<R, L>,
+    sta: &T,
+) -> FabricResult<(NetListExternal, Vec<IterationResult>)>
 where
     R: RouteNet,
     L: Logging,
@@ -102,6 +105,7 @@ pub fn create_fasm(netlist: &NetListExternal, tile_manager: &TileManager) -> Fab
 }
 
 /// Creates a Test Netlist by using a `percentage` of all Lut-Outputs and for each `destinations`
+/// using only distinct destinations.
 /// Lut-Inputs
 ///
 /// # Errors
@@ -115,15 +119,26 @@ pub fn create_test(graph: &FabricGraph, percentage: f32, destinations: usize) ->
     inputs.shuffle(&mut rng);
     outputs.shuffle(&mut rng);
 
+    if !(0.0..=1.0).contains(&percentage) {
+        return Err(FabricError::CreatingTestBadParameters(
+            "percentage needs to be between 0-100%".to_string(),
+        ));
+    }
+    if destinations == 0 {
+        return Err(FabricError::CreatingTestBadParameters(
+            "Destinations cannot be 0.".to_string(),
+        ));
+    }
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
     let input_count = (percentage * outputs.len() as f32) as usize;
     let output_count = input_count * destinations;
 
-    if input_count > outputs.len() {
-        return Err(FabricError::CreatingTestBadParameters);
-    }
+
     if output_count > inputs.len() {
-        return Err(FabricError::CreatingTestBadParameters);
+        return Err(FabricError::CreatingTestBadParameters(
+            "Too many resulting input luts for given parameters."
+                .to_string(),
+        ));
     }
 
     let used_outs = inputs.iter().take(output_count).copied().collect::<Vec<NodeId>>();

@@ -189,7 +189,7 @@ pub fn build_design(
         }
         for (src, destinations) in design.iter_mut() {
             if flopped_outputs.contains(src) {
-                let clk_delay = clock_tree_delay * clock_tree_delay_base(&src);
+                let clk_delay = clock_tree_delay * clock_tree_delay_base(src);
                 let total_initial_delay = clock_to_output_delay + clk_delay;
                 for conn in destinations.values_mut() {
                     conn.delay += total_initial_delay;

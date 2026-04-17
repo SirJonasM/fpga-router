@@ -33,8 +33,8 @@ pub enum FabricError {
     #[error("Cannot give each Node an own id because value space is too small.")]
     NodeIdValueSpaceTooSmall,
 
-    #[error("Creating test failed because of bad parameters.")]
-    CreatingTestBadParameters,
+    #[error("Tried to create a test with bad parameters:\n>\t{0}")]
+    CreatingTestBadParameters(String),
 
     #[error("Iteration Failed")]
     IterationError { source: Box<Self> },

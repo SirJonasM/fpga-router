@@ -17,13 +17,14 @@ use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use router::{
     Fabric, FabricError, FabricGraph, FabricResult, NetListExternal, RoutingConfig, RoutingConfigBuilder, SimpleSolver,
-    SimpleSteinerSolver, SlackReport, SteinerSolver, TileManager, TimingAnalysis, create_fasm, create_test, route,
-    route_timing_driven,
+    SimpleSteinerSolver, SlackReport, SteinerSolver, TileManager, TimingAnalysis, create_fasm, create_test, 
+    route, route_timing_driven,
 };
 
 use crate::{
     cli::{Cli, Commands, CreateTestArgs, Solver, SolverType},
-    display_helper::{display_failed_routing, display_metadata_route, display_results, display_run_create_test}, logger::TerminalLogger,
+    display_helper::{display_failed_routing, display_metadata_route, display_results, display_run_create_test},
+    logger::TerminalLogger,
 };
 
 fn main() -> Result<()> {
@@ -152,10 +153,10 @@ fn slack_report_from_timing_analyis(
         // the wire-end (the LUT input) that fed it.
         let router_sink = if sink.pin.contains("FF_SINK") {
             // Get the node immediately BEFORE the FF_SINK in the timing path
-            path.iter().rev().nth(2).map_or_else(
-                || sink.to_string(),
-                |tn| format!("X{}Y{}.{}", tn.tile.0, tn.tile.1, tn.pin),
-            )
+            path.iter()
+                .rev()
+                .nth(2)
+                .map_or_else(|| sink.to_string(), |tn| format!("X{}Y{}.{}", tn.tile.0, tn.tile.1, tn.pin))
         } else {
             format!("X{}Y{}.{}", sink.tile.0, sink.tile.1, sink.pin)
         };
@@ -230,7 +231,7 @@ fn parse_arguments(args: &cli::RouteArgs) -> Result<(RoutingConfig<Solver, Termi
         .max_iterations(args.max_iterations)
         .net_list(net_list)
         .solver(solver)
-        .logger(TerminalLogger{})
+        .logger(TerminalLogger {})
         .graph(graph)
         .tile_manager(tile_manager)
         .build()
