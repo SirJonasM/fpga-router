@@ -295,18 +295,18 @@ mod test {
     }
     #[test]
     fn test_parse_bels_file() {
-        let test_file = get_test_data_path("bel.txt");
+        let test_file = get_test_data_path("bel_8x8.txt");
         let _ = TileManager::from_file(&test_file);
     }
     #[test]
     fn test_mark_used() {
-        let test_file = get_test_data_path("bel.txt");
+        let test_file = get_test_data_path("bel_8x8.txt");
         let mut tile_manager = TileManager::from_file(&test_file).unwrap();
         let _ = tile_manager.mark_lut_used(TileId(1, 1), 'A').unwrap();
     }
     #[test]
     fn test_mark_borrowed() {
-        let test_file = get_test_data_path("bel.txt");
+        let test_file = get_test_data_path("bel_8x8.txt");
         let mut tile_manager = TileManager::from_file(&test_file).unwrap();
         let _ = tile_manager.request_constant(TileId(1, 1), State::High).unwrap();
     }
