@@ -3,6 +3,7 @@
 	"engine",
 	"cli",
 	"testing_utils",
-	"sta"
+	"sta",
+	"gui"
   ]
   resolver = "3"
