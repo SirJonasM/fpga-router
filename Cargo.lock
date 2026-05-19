@@ -1263,6 +1263,7 @@ dependencies = [
  "egui-winit",
  "image",
  "pollster",
+ "router",
  "vello",
  "wgpu",
  "winit",

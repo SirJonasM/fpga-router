@@ -27,16 +27,16 @@ pub enum LutInputState {
 
 #[derive(Debug)]
 pub struct Lut {
-    bel_index: char,
-    state: LutState,
-    output_pin: String,
-    input_pin: [(String, LutInputState); 4],
+    pub bel_index: char,
+    pub state: LutState,
+    pub output_pin: String,
+    pub input_pin: Vec<(String, LutInputState)>,
 }
 
 #[derive(Debug)]
 pub struct Tile {
-    id: TileId,
-    luts: Vec<Lut>,
+    pub id: TileId,
+    pub luts: Vec<Lut>,
 }
 
 #[derive(Debug)]
@@ -84,7 +84,7 @@ impl TileManager {
                 // parts[12] is the output pin (e.g., "LA_O")
                 output_pin: parts[12].to_string(),
                 // parts[5..9] are I0, I1, I2, I3
-                input_pin: [
+                input_pin: vec![
                     (parts[5].to_string(), LutInputState::Free),
                     (parts[6].to_string(), LutInputState::Free),
                     (parts[7].to_string(), LutInputState::Free),

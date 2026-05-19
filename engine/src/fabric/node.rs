@@ -191,6 +191,7 @@ impl Display for TileId {
 
 impl TileId {
     /// Parse coordinates from a string of the form "X<num>Y<num>"
+    /// # Errors
     pub fn from_str_coords(s: &str) -> std::result::Result<Self, ParseError> {
         if !s.starts_with('X') {
             return Err(ParseError::MissingPrefix {

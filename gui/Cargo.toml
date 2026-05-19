@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+router = { path = "../engine" }
 pollster = "0.3"
 
 winit = "0.29"
