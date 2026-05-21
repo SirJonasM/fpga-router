@@ -10,8 +10,8 @@
 pub(crate) mod api;
 pub(crate) mod dijkstra;
 pub(crate) mod error;
-pub(crate) mod fasm;
 pub(crate) mod fabric;
+pub(crate) mod fasm;
 pub(crate) mod netlist;
 pub(crate) mod path_finder;
 pub(crate) mod slack;
@@ -23,10 +23,10 @@ pub use error::{FabricError, FabricResult};
 
 // Public API
 pub use api::*;
-pub use fabric::graph::{FabricGraph, Fabric};
-pub use fabric::tile_manager::{TileManager};
-pub use fabric::node::{TileId};
+pub use fabric::graph::{Fabric, FabricGraph};
+pub use fabric::node::{TileId, NodeType};
 pub use fabric::parser::TimingModel;
+pub use fabric::tile_manager::TileManager;
 pub use netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal, NetResultExternal, NetResultInternal, Swap};
 pub use path_finder::{CongestionReportExtern, IterationResult, TimingAnalysis};
 pub use slack::SlackReport;

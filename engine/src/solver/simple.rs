@@ -22,7 +22,7 @@ impl RouteNet for SimpleSolver {
             .iter()
             .filter_map(|sink| {
                 let sink_node = fabric.graph.get_node(*sink);
-                if let NodeType::LutInput(bel_index) = sink_node.typ {
+                if let NodeType::LutInput(bel_index, port_id) = sink_node.typ {
                     return Some((sink, sink_node, bel_index));
                 }
                 None
@@ -75,7 +75,7 @@ impl RouteNet for SimpleSolver {
             .filter(|a| !paths.contains_key(a))
             .for_each(|a| {
                 let node = fabric.graph.get_node(a);
-                if let NodeType::LutInput(bel_index) = &node.typ {
+                if let NodeType::LutInput(bel_index, _port_id) = &node.typ {
                     fabric.tile_manager.free_lut_input(node.tile, *bel_index, &node.id).unwrap();
                 }
             });

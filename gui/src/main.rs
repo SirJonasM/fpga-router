@@ -1,7 +1,7 @@
 use egui::{CentralPanel, SidePanel};
 use egui_wgpu::{Renderer as EguiRenderer, ScreenDescriptor};
 use egui_winit::State as EguiWinitState;
-use router::{FabricGraph, TileId, TileManager};
+use router::{FabricGraph, NodeType, TileId, TileManager};
 use std::collections::{HashMap, VecDeque};
 use std::str::SplitWhitespace;
 use std::sync::mpsc::{channel, Receiver};
@@ -145,6 +145,15 @@ impl App {
         let routing_scene = None;
 
         let graph = Arc::new(FabricGraph::from_file(&format!("tests/data/pips_{XXXXXX}x{XXXXXX}.txt"), None).unwrap());
+        let mut c = 0;
+        for node in &graph.nodes {
+
+            if node.typ == NodeType::Other {
+                c +=1;
+                println!("Some Nodes are Other {}", node.id)
+            }
+        }
+        println!("counted: {c}/{}", graph.nodes.len());
         let tile_manager = Arc::new(TileManager::from_file(&format!("tests/data/bel_{XXXXXX}x{XXXXXX}.txt")).unwrap());
 
         let fabric_scene = Some(build_fabric_scene(&graph, &tile_manager));
@@ -213,7 +222,8 @@ impl App {
                 ui.painter()
                     .rect_stroke(viewport, 0.0, egui::Stroke::new(2.0, egui::Color32::LIGHT_BLUE));
             })
-            .response.interact(egui::Sense::drag());
+            .response
+            .interact(egui::Sense::drag());
         // 1. Handle Zooming (Scroll)
         let scroll_delta = self.egui_ctx.input(|i| i.smooth_scroll_delta.y);
         if scroll_delta != 0.0 {
@@ -367,6 +377,7 @@ impl App {
                 Ok(new_graph) => {
                     println!("Successfully loaded FPGA Fabric Graph!");
                     self.router.current_graph = Some(Arc::new(new_graph));
+
                     self.load_status = LoadStatus::Idle;
                     self.queues.rx_graph = None;
                 }
@@ -666,17 +677,15 @@ fn build_fabric_scene(graph: &FabricGraph, tile_manager: &TileManager) -> Scene 
     for (tile_id, tile) in &tile_manager.0 {
         let (tx, ty) = get_tile_pos(tile_id);
 
-        // 1. Draw Tile Boundary
         let rect = vello::kurbo::Rect::new(tx, ty, tx + TILE_WIDTH, ty + TILE_HEIGHT);
         scene.fill(
             vello::peniko::Fill::NonZero,
             vello::kurbo::Affine::IDENTITY,
-            vello::peniko::Color::rgb8(25, 25, 25), 
+            vello::peniko::Color::rgb8(25, 25, 25),
             None,
             &rect,
         );
 
-        // 2. Draw LUTs inside the tile
         let luts_per_row = ((TILE_WIDTH - (2.0 * LUT_MARGIN)) / (LUT_WIDTH + LUT_SPACING))
             .floor()
             .max(1.0) as usize;
@@ -698,7 +707,7 @@ fn build_fabric_scene(graph: &FabricGraph, tile_manager: &TileManager) -> Scene 
             );
 
             let num_inputs = lut.input_pin.len();
-            for (j, (pin_name, _state)) in lut.input_pin.iter().enumerate() {
+            for (j, (_pin_name, _state)) in lut.input_pin.iter().enumerate() {
                 let spacing = LUT_HEIGHT / (num_inputs as f64 + 1.0);
                 let py = ly + (spacing * (j as f64 + 1.0));
 
@@ -712,12 +721,12 @@ fn build_fabric_scene(graph: &FabricGraph, tile_manager: &TileManager) -> Scene 
                 );
             }
 
-            let py = ly + LUT_HEIGHT/2.0;
+            let py = ly + LUT_HEIGHT / 2.0;
             let out_line = vello::kurbo::Line::new((lx + LUT_WIDTH, py), (lx + LUT_WIDTH + PIN_LEN, py));
             scene.stroke(
                 &vello::kurbo::Stroke::new(0.5),
                 vello::kurbo::Affine::IDENTITY,
-                vello::peniko::Color::rgb8(0, 255, 150), 
+                vello::peniko::Color::rgb8(0, 255, 150),
                 None,
                 &out_line,
             );

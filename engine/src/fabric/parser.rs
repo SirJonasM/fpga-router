@@ -116,22 +116,42 @@ const fn distance(a: &Node, b: &Node) -> f32 {
 
 #[cfg(test)]
 mod test {
-    use crate::fabric::node::{NodeType, TileId};
+    use crate::fabric::node::{CablePoint, NodeType, TileId};
 
     use super::*;
 
     #[test]
-    fn test_parse_from_pips_line_success() {
-        let test_case = "X1Y0,N1END3,X1Y0,S1BEG0,8,N1END3.S1BEG0".to_string();
+    fn test_parse_from_pips_line_success_gnd() {
+        let test_case = "X1Y0,GND0,X1Y0,Co0,8,NN1END3.S1BEG0".to_string();
         let node1_expected = Node {
-            id: "N1END3".to_string(),
-            tile: TileId(1,0),
-            typ: NodeType::Other,
+            id: "GND0".to_string(),
+            tile: TileId(1, 0),
+            typ: NodeType::Ground(0),
+        };
+        let node2_expected = Node {
+            id: "Co0".to_string(),
+            tile: TileId(1, 0),
+            typ: NodeType::CarryOut(0),
+        };
+        let PipsLine {
+            start_node, end_node, ..
+        } = parse_pips_line(&test_case).unwrap();
+        assert_eq!(start_node, node1_expected);
+        assert_eq!(end_node, node2_expected);
+    }
+
+    #[test]
+    fn test_parse_from_pips_line_success() {
+        let test_case = "X1Y0,NN1END3,X1Y0,S1BEG0,8,NN1END3.S1BEG0".to_string();
+        let node1_expected = Node {
+            id: "NN1END3".to_string(),
+            tile: TileId(1, 0),
+            typ: NodeType::North(1, 3, 2, CablePoint::End),
         };
         let node2_expected = Node {
             id: "S1BEG0".to_string(),
-            tile: TileId(1,0),
-            typ: NodeType::Other,
+            tile: TileId(1, 0),
+            typ: NodeType::South(1, 0, 1, CablePoint::Begin),
         };
         let PipsLine {
             start_node, end_node, ..

@@ -3,8 +3,8 @@
 //! This module defines the building blocks of the FPGA fabric graph:
 //! nodes, their types, and associated costs for routing algorithms.
 
-use std::fmt::Display;
 use std::cmp::Ordering;
+use std::fmt::Display;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
@@ -47,7 +47,7 @@ impl<T> std::ops::IndexMut<NodeId> for Vec<T> {
     }
 }
 
-#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy, Ord, PartialOrd)]
 pub struct TileId(pub u8, pub u8);
 type NodeIdType = u32;
 
@@ -73,7 +73,9 @@ pub struct Node {
 impl Ord for Node {
     fn cmp(&self, other: &Self) -> Ordering {
         // 1. Compare X coordinate (tile.0)
-        self.tile.0.cmp(&other.tile.0)
+        self.tile
+            .0
+            .cmp(&other.tile.0)
             // 2. If X is equal, compare Y coordinate (tile.1)
             .then_with(|| self.tile.1.cmp(&other.tile.1))
             // 3. If both coordinates are equal, compare by id
@@ -107,15 +109,15 @@ impl<'de> Deserialize<'de> for Node {
         let s = String::deserialize(deserializer)?;
 
         // 2. Split into "XnYn" and "NodeId" parts via the '.'
-        let (tile_part, id_part) = s.split_once('.').ok_or_else(|| {
-            de::Error::custom(format!("Expected '.' separator in node string: {s}"))
-        })?;
+        let (tile_part, id_part) = s
+            .split_once('.')
+            .ok_or_else(|| de::Error::custom(format!("Expected '.' separator in node string: {s}")))?;
 
         // 3. Parse TileId using your helper
         let tile = TileId::from_str_coords(tile_part).map_err(de::Error::custom)?;
 
         // 4. Parse NodeType using your From<&str> implementation
-        // Note: From<&str> is used here; if you need to handle errors, 
+        // Note: From<&str> is used here; if you need to handle errors,
         // consider TryFrom instead.
         let typ = NodeType::from(id_part);
 
@@ -134,11 +136,30 @@ impl Display for Node {
 }
 
 #[derive(Hash, Eq, PartialEq, Clone, Debug)]
+pub enum CablePoint {
+    Begin,
+    Mid,
+    End,
+}
+
+#[derive(Hash, Eq, PartialEq, Clone, Debug)]
 pub enum NodeType {
-    LutInput(char),
+    LutInput(char, u8),
     LutOutput(char),
+    LutCarryIn(char),
+    LutCarryOut(char),
+    LutCarryEnable(char),
+    LutCarrySetReset(char),
+    North(u8, u8, u8, CablePoint),
+    East(u8, u8, u8, CablePoint),
+    South(u8, u8, u8, CablePoint),
+    West(u8, u8, u8, CablePoint),
+    CarryIn(u8),
+    CarryOut(u8),
+    Ground(u8),
     Other,
 }
+impl NodeType {}
 
 /// Structure representing costs associated with routing through a node
 #[derive(Clone, Debug)]
@@ -153,19 +174,157 @@ pub struct Costs {
 
 impl From<&str> for NodeType {
     fn from(value: &str) -> Self {
-
-        let mut typ = Self::Other;
-        let mut bel_index = '0';
-        for (index, char) in value.char_indices(){
-            match (index, char){
-                (0, 'L') | (2, '_') | (3, 'I') => {}
-                (1, a) => bel_index = a,
-                (3, 'O') => typ = Self::LutOutput(bel_index),
-                (4, a) if a.is_ascii_digit() => typ = Self::LutInput(bel_index),
-                (0 | 2 | 3 | _, _) => return Self::Other,
-            } 
+        let mut chars = value.chars();
+        if let Some(first_char) = chars.next() {
+            return match first_char {
+                'L' => Self::parse_lut(chars),
+                'N' => Self::parse_north(chars),
+                'E' => Self::parse_east(chars),
+                'S' => Self::parse_south(chars),
+                'W' => Self::parse_west(chars),
+                'C' => Self::parse_carry(chars),
+                'G' => Self::parse_ground(chars),
+                _ => Self::Other,
+            };
         }
-        typ
+        Self::Other
+    }
+}
+impl NodeType {
+    fn parse_lut(mut chars: std::str::Chars<'_>) -> Self {
+        let Some(bel_id) = chars.next() else {
+            return Self::Other;
+        };
+        if Some('_') != chars.next() {
+            return Self::Other;
+        }
+        match chars.next() {
+            Some('I') => Self::parse_lut_input(chars, bel_id),
+            Some('C') => Self::parse_lut_carry(chars, bel_id),
+            Some('E') => Self::parse_lut_enable(chars, bel_id),
+            Some('S') => Self::parse_lut_set_reset(chars, bel_id),
+            Some('O') => Self::LutOutput(bel_id),
+            _ => Self::Other,
+        }
+    }
+    fn parse_lut_input(mut chars: std::str::Chars<'_>, bel_id: char) -> Self {
+        let Some(port_id) = chars.next() else {
+            return Self::Other;
+        };
+        if let Some(digit) = port_id.to_digit(10) {
+            #[allow(clippy::cast_possible_truncation)]
+            return Self::LutInput(bel_id, digit as u8);
+        }
+        Self::Other
+    }
+    fn parse_lut_carry(mut chars: std::str::Chars<'_>, bel_id: char) -> Self {
+        #[allow(clippy::cast_possible_truncation)]
+        match chars.next(){
+            Some('i') =>  Self::LutCarryIn(bel_id),
+            Some('o') =>  Self::LutCarryOut(bel_id),
+            _ => Self::Other
+        }
+    }
+    fn parse_lut_enable(mut chars: std::str::Chars<'_>, bel_id: char) -> Self {
+        #[allow(clippy::cast_possible_truncation)]
+        match chars.next(){
+            Some('N') =>  Self::LutCarryEnable(bel_id),
+            _ => Self::Other
+        }
+    }
+    fn parse_lut_set_reset(mut chars: std::str::Chars<'_>, bel_id: char) -> Self {
+        #[allow(clippy::cast_possible_truncation)]
+        match chars.next(){
+            Some('R') =>  Self::LutCarrySetReset(bel_id),
+            _ => Self::Other
+        }
+    }
+
+    fn parse_ground(chars: std::str::Chars<'_>) -> Self {
+        if chars.as_str().starts_with("ND") {
+            let mut chars = chars.skip(2);
+            #[allow(clippy::cast_possible_truncation)]
+            return chars
+                .next()
+                .and_then(|a| a.to_digit(10))
+                .map_or(Self::Other, |a| Self::Ground(a as u8));
+        }
+        Self::Other
+    }
+
+    fn parse_carry(mut chars: std::str::Chars<'_>) -> Self {
+        #[allow(clippy::cast_possible_truncation)]
+        match chars.next() {
+            Some('o') => chars
+                .next()
+                .and_then(|a| a.to_digit(10))
+                .map_or(Self::Other, |a| Self::CarryOut(a as u8)),
+            Some('i') => chars
+                .next()
+                .and_then(|a| a.to_digit(10))
+                .map_or(Self::Other, |a| Self::CarryIn(a as u8)),
+            _ => Self::Other,
+        }
+    }
+
+    fn parse_north(chars: std::str::Chars<'_>) -> Self {
+        if let Some((x, x1, x2, x3)) = Self::parse_direction(chars, 'N') {
+            return Self::North(x, x1, x2, x3);
+        }
+        Self::Other
+    }
+
+    fn parse_east(chars: std::str::Chars<'_>) -> Self {
+        if let Some((x, x1, x2, x3)) = Self::parse_direction(chars, 'E') {
+            return Self::East(x, x1, x2, x3);
+        }
+        Self::Other
+    }
+
+    fn parse_south(chars: std::str::Chars<'_>) -> Self {
+        if let Some((x, x1, x2, x3)) = Self::parse_direction(chars, 'S') {
+            return Self::South(x, x1, x2, x3);
+        }
+        Self::Other
+    }
+
+    fn parse_west(chars: std::str::Chars<'_>) -> Self {
+        if let Some((x, x1, x2, x3)) = Self::parse_direction(chars, 'W') {
+            return Self::West(x, x1, x2, x3);
+        }
+        Self::Other
+    }
+    fn parse_direction(mut chars: std::str::Chars<'_>, direction: char) -> Option<(u8, u8, u8, CablePoint)> {
+        let mut length = 1u32;
+        let mut index_1 = 0;
+        if let Some(char) = chars.next() {
+            let char = if char == direction {
+                length = 2;
+                chars.next()?
+            } else {
+                char
+            };
+            if let Some(id) = char.to_digit(10) {
+                index_1 = id;
+            } else {
+                return None;
+            }
+        }
+        let cable_point = if chars.as_str().starts_with("BEG") {
+            CablePoint::Begin
+        } else if chars.as_str().starts_with("MID") {
+            CablePoint::Mid
+        } else if chars.as_str().starts_with("END") {
+            CablePoint::End
+        } else {
+            return None;
+        };
+        let mut chars = chars.skip(3);
+        #[allow(clippy::cast_possible_truncation)]
+        chars
+            .next()
+            .and_then(|a| a.to_digit(10))
+            .map(|digit| (index_1 as u8, digit as u8, length as u8, cable_point))
     }
 }
 

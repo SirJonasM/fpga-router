@@ -125,7 +125,6 @@ pub struct Fabric {
     pub slack_report: Option<SlackReport>,
 }
 
-
 /// Representation of the FPGA fabric graph
 #[derive(Debug, Clone, Default)]
 pub struct FabricGraph {
@@ -274,7 +273,7 @@ pub fn bucket_luts(graph: &FabricGraph) -> (Vec<NodeId>, Vec<NodeId>) {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use crate::fabric::node::TileId;
 
     use super::*;
@@ -286,6 +285,23 @@ mod test {
 
         let graph = FabricGraph::from_file(&test_file, Some(timing_model)).unwrap();
         assert_eq!(graph.nodes[0], Node::parse("N1END3", "X1Y0").unwrap());
+        let mut map: HashMap<TileId, HashSet<Node>> = HashMap::new();
+        for node in &graph.nodes {
+            map.entry(node.tile)
+                .and_modify(|set| {
+                    set.insert(node.clone());
+                })
+                .or_insert_with(|| {
+                    let mut set = HashSet::new();
+                    set.insert(node.clone());
+                    set
+                });
+        }
+        let mut l = map.into_iter().map(|(a,b)|(a, b.len())).collect::<Vec<(TileId,usize)>>();
+        l.sort_by(|(a,_b), (a1,_b1)|a.cmp(a1));
+        for (tile, nodes) in l  {
+            println!("Tile {tile}: {nodes} nodes");
+        }
     }
     #[test]
     fn test_parse_pips_file_error_accessing_file() {
