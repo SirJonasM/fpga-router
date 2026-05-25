@@ -142,7 +142,7 @@ pub fn generate_slack_report(
 
     // 2. Build the Design Graph
     // This maps the physical FASM/PIPs into a directed graph with delays
-    let design = build_design(pips, &configurations, &flops, &timing_model);
+    let design = build_design(pips, &configurations, &flops, timing_model);
 
     // 3. Perform Timing Analysis
     // Using the broadened perform_timing_analysis we discussed

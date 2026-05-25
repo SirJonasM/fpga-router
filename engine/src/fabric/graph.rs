@@ -223,6 +223,8 @@ impl FabricGraph {
     }
 
     #[must_use]
+    /// Expects a full node id. 
+    /// So use the `Node::id(&self)` function from the Node.
     pub fn get_node_id(&self, id: &str) -> Option<&NodeId> {
         self.index.get(id)
     }

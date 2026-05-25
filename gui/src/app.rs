@@ -1,10 +1,11 @@
 use egui_wgpu::{Renderer as EguiRenderer, ScreenDescriptor};
 use egui_winit::State as EguiWinitState;
 use router::{FabricGraph, TileManager};
-use std::{sync::{
-    Arc, mpsc::{Receiver, channel}
-}, time::Instant};
-use vello::{peniko::Color, Renderer, RendererOptions, Scene};
+use std::sync::{
+    Arc,
+    mpsc::{Receiver, channel},
+};
+use vello::{Renderer, RendererOptions, Scene, peniko::Color};
 use wgpu::{
     CommandEncoderDescriptor, DeviceDescriptor, Features, Instance, Limits, LoadOp, Operations, PowerPreference, PresentMode,
     Queue, RenderPassColorAttachment, RenderPassDescriptor, RequestAdapterOptions, SurfaceConfiguration, TextureUsages,
@@ -13,9 +14,9 @@ use wgpu::{
 use winit::{dpi::PhysicalSize, window::Window};
 
 use crate::{
-    LoadStatus, gui::{draw_ui, render_loading, render_vello}, input::{Command, InputHandler}, render::{build_fabric_scene, calculate_visible_tiles}
+    LoadStatus, constants::{MAX_ZOOM, MIN_ZOOM}, gui::{draw_ui, render_loading, render_vello}, input::{Command, InputHandler}, render::{build_fabric_scene, calculate_visible_tiles}
 };
-use crate::{render::SpatialFabricGrid, XXXXXX};
+use crate::{XXXXXX, render::SpatialFabricGrid};
 
 pub struct App {
     pub window: Arc<Window>,
@@ -40,12 +41,30 @@ pub struct App {
     pub router: Router,
 
     pub queues: Messages,
-    pub load_status: LoadStatus, // To show a "Loading..." spinner in UI
+    pub load_status: LoadStatus, 
 }
 
 pub struct ViewTransform {
     pub pan: vello::kurbo::Vec2,
     pub scale: f64,
+}
+impl ViewTransform {
+    pub fn zoom_at_point(&mut self, scroll_delta: f32, mouse_pos: egui::Pos2, viewport: egui::Rect) {
+        let raw_zoom_factor = (scroll_delta as f64 * 0.001).exp();
+
+        let target_scale = self.scale * raw_zoom_factor;
+        let new_scale = target_scale.clamp(MIN_ZOOM, MAX_ZOOM);
+
+        let effective_zoom_factor = new_scale / self.scale;
+
+        let mouse_vec = vello::kurbo::Vec2::new(
+            mouse_pos.x as f64 - viewport.min.x as f64 - self.pan.x,
+            mouse_pos.y as f64 - viewport.min.y as f64 - self.pan.y,
+        );
+
+        self.pan -= mouse_vec * (effective_zoom_factor - 1.0);
+        self.scale = new_scale;
+    }
 }
 
 impl Default for ViewTransform {
@@ -181,7 +200,6 @@ impl App {
     }
 
     pub fn render(&mut self) {
-        let time1 = Instant::now();
         if let Some(command) = self.input_handler.pop_command() {
             self.process_command(command);
         }
@@ -220,19 +238,15 @@ impl App {
             viewport.min.y as f64 + self.view_transform.pan.y,
         )) * vello::kurbo::Affine::scale(self.view_transform.scale);
 
-
         if let (Some(graph), Some(tile_manager), Some(spatial_grid)) = (
             &self.router.current_graph,
             &self.router.current_tile_manager,
             &self.spatial_grid,
         ) {
-            let time = Instant::now();
             let visible_range = calculate_visible_tiles(view_port_rect, &self.view_transform);
-            let current_fram_fabric = build_fabric_scene(
-                graph, tile_manager, spatial_grid, &visible_range, self.view_transform.scale,
-                );
+            let current_fram_fabric =
+                build_fabric_scene(graph, tile_manager, spatial_grid, &visible_range, self.view_transform.scale);
             self.scene.append(&current_fram_fabric, Some(transform));
-            println!("Building the scene: {:?}", time.elapsed())
         } else {
             // Fallback to your placeholder shapes if no graph is loaded
             render_vello(self, viewport);
@@ -293,7 +307,6 @@ impl App {
         for id in &full_output.textures_delta.free {
             self.egui_renderer.free_texture(id);
         }
-        println!("The whole render: {:?}", time1.elapsed());
     }
     pub fn process_command(&mut self, command: Command) {
         match command {

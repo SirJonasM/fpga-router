@@ -1,5 +1,5 @@
 use router::{Node, NodeType, TileId};
-pub use builder::LayoutBuilder;
+pub use builder::{LayoutBuilder, AtTile};
 
 use crate::constants::*;
 mod builder;

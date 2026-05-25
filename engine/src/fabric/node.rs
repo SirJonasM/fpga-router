@@ -11,7 +11,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use super::error::ParseError;
 use crate::FabricGraph;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct NodeId(pub(super) NodeIdType);
 
 impl NodeId {

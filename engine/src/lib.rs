@@ -24,9 +24,9 @@ pub use error::{FabricError, FabricResult};
 // Public API
 pub use api::*;
 pub use fabric::graph::{Fabric, FabricGraph};
-pub use fabric::node::{Node,TileId, NodeType, Direction};
+pub use fabric::node::{Node,TileId, NodeType, Direction, Edge, NodeId};
 pub use fabric::parser::TimingModel;
-pub use fabric::tile_manager::TileManager;
+pub use fabric::tile_manager::{TileManager, Lut, Tile};
 pub use netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal, NetResultExternal, NetResultInternal, Swap};
 pub use path_finder::{CongestionReportExtern, IterationResult, TimingAnalysis};
 pub use slack::SlackReport;
