@@ -1,8 +1,8 @@
 use egui::{CentralPanel, SidePanel};
 use egui_wgpu::{Renderer as EguiRenderer, ScreenDescriptor};
 use egui_winit::State as EguiWinitState;
-use router::{FabricGraph, NodeType, TileId, TileManager};
-use std::collections::{HashMap, VecDeque};
+use router::{FabricGraph, Node, NodeType, TileId, TileManager};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::str::SplitWhitespace;
 use std::sync::mpsc::{channel, Receiver};
 use std::sync::Arc;
@@ -19,7 +19,7 @@ use wgpu::{
 use winit::window::Window;
 use winit::{dpi::PhysicalSize, event::*, event_loop::EventLoop, window::WindowBuilder};
 
-const XXXXXX: usize = 4;
+const XXXXXX: usize = 8;
 
 struct App {
     window: Arc<Window>,
@@ -146,14 +146,18 @@ impl App {
 
         let graph = Arc::new(FabricGraph::from_file(&format!("tests/data/pips_{XXXXXX}x{XXXXXX}.txt"), None).unwrap());
         let mut c = 0;
+        let mut x = 0;
         for node in &graph.nodes {
-
-            if node.typ == NodeType::Other {
-                c +=1;
-                println!("Some Nodes are Other {}", node.id)
+            if node.tile == TileId(2, 2) {
+                x += 1;
+                if let NodeType::West(..) = node.typ {
+                    c += 1;
+                    println!("Some Nodes are Other {}", node.id)
+                }
             }
         }
         println!("counted: {c}/{}", graph.nodes.len());
+        println!("counted: {x} nodes in tile 1,1");
         let tile_manager = Arc::new(TileManager::from_file(&format!("tests/data/bel_{XXXXXX}x{XXXXXX}.txt")).unwrap());
 
         let fabric_scene = Some(build_fabric_scene(&graph, &tile_manager));
@@ -670,10 +674,14 @@ const LUT_MARGIN: f64 = 10.0;
 const LUT_SPACING: f64 = 9.0;
 
 const PIN_LEN: f64 = 1.0;
+const LUTS_PER_ROW: usize = ((TILE_WIDTH - (2.0 * LUT_MARGIN)) / (LUT_WIDTH + LUT_SPACING))
+    .floor()
+    .max(1.0) as usize;
 
 fn build_fabric_scene(graph: &FabricGraph, tile_manager: &TileManager) -> Scene {
     let mut scene = vello::Scene::new();
 
+    let mut lut_map = HashMap::new();
     for (tile_id, tile) in &tile_manager.0 {
         let (tx, ty) = get_tile_pos(tile_id);
 
@@ -686,17 +694,14 @@ fn build_fabric_scene(graph: &FabricGraph, tile_manager: &TileManager) -> Scene 
             &rect,
         );
 
-        let luts_per_row = ((TILE_WIDTH - (2.0 * LUT_MARGIN)) / (LUT_WIDTH + LUT_SPACING))
-            .floor()
-            .max(1.0) as usize;
-
         for (i, lut) in tile.luts.iter().enumerate() {
-            let row = i / luts_per_row;
-            let col = i % luts_per_row;
+            let row = i / LUTS_PER_ROW;
+            let col = i % LUTS_PER_ROW;
 
             let lx = tx + LUT_MARGIN + (col as f64 * (LUT_WIDTH + LUT_SPACING));
             let ly = ty + LUT_MARGIN + (row as f64 * (LUT_HEIGHT + LUT_SPACING));
             let lut_rect = vello::kurbo::Rect::new(lx, ly, lx + LUT_WIDTH, ly + LUT_HEIGHT);
+            lut_map.insert((*tile_id, lut.bel_index), (lx, ly));
 
             scene.stroke(
                 &vello::kurbo::Stroke::new(1.5),
@@ -705,33 +710,60 @@ fn build_fabric_scene(graph: &FabricGraph, tile_manager: &TileManager) -> Scene 
                 None,
                 &lut_rect,
             );
-
-            let num_inputs = lut.input_pin.len();
-            for (j, (_pin_name, _state)) in lut.input_pin.iter().enumerate() {
-                let spacing = LUT_HEIGHT / (num_inputs as f64 + 1.0);
-                let py = ly + (spacing * (j as f64 + 1.0));
-
-                let line = vello::kurbo::Line::new((lx - PIN_LEN, py), (lx, py));
-                scene.stroke(
-                    &vello::kurbo::Stroke::new(0.5),
-                    vello::kurbo::Affine::IDENTITY,
-                    vello::peniko::Color::WHITE,
-                    None,
-                    &line,
-                );
-            }
-
-            let py = ly + LUT_HEIGHT / 2.0;
-            let out_line = vello::kurbo::Line::new((lx + LUT_WIDTH, py), (lx + LUT_WIDTH + PIN_LEN, py));
-            scene.stroke(
-                &vello::kurbo::Stroke::new(0.5),
-                vello::kurbo::Affine::IDENTITY,
-                vello::peniko::Color::rgb8(0, 255, 150),
-                None,
-                &out_line,
-            );
         }
     }
-    // Output Label would be at (lx + LUT_WIDTH + PIN_LEN + 2.0, oy)
+    let mut map_nodes = HashMap::new();
+    let mut positions = HashSet::new();
+    for node in &graph.nodes {
+        if let Some(position) = get_node_pos(node, &lut_map) {
+            if positions.insert((position.0.to_be_bytes(), position.1.to_be_bytes())) {
+                println!("Adding point in an already point position, {:?}", node.typ);
+            }
+            map_nodes.insert(node, position);
+        }
+    }
+    for node_pos in map_nodes.values() {
+        let circle = vello::kurbo::Circle::new(*node_pos, 0.1);
+        scene.fill(Fill::NonZero, Affine::IDENTITY, Color::rgb8(38, 139, 210), None, &circle);
+    }
+    println!("Drew {} nodes", map_nodes.len());
     scene
+}
+fn get_node_pos(node: &Node, luts: &HashMap<(TileId, char), (f64, f64)>) -> Option<(f64, f64)> {
+    let (tx, ty) = get_tile_pos(&node.tile);
+    match &node.typ {
+        NodeType::North(direction) => Some((tx - 5.0 - direction.id as f64, ty + 20.0)),
+        NodeType::South(direction) => Some((tx - 5.5 - direction.id as f64, ty + TILE_WIDTH - 20.0)),
+        NodeType::West(direction) => Some((tx - 5.5 - direction.id as f64, ty + TILE_WIDTH - 20.0)),
+        NodeType::East(direction) => Some((tx + TILE_WIDTH - 20.0, ty - 5.5 - direction.id as f64)),
+        NodeType::LutInput(lut, pin) => {
+            let (lut_x, lut_y) = *luts.get(&(node.tile, *lut)).unwrap();
+            Some((lut_x, lut_y + (*pin as f64 - 2.0) * 2.0 + LUT_HEIGHT / 2.0))
+        }
+        NodeType::LutOutput(lut) => {
+            let (lut_x, lut_y) = *luts.get(&(node.tile, *lut)).unwrap();
+            Some((lut_x + LUT_WIDTH, lut_y + LUT_HEIGHT / 2.0))
+        }
+        NodeType::LutCarryOut(lut) => {
+            let (lut_x, lut_y) = *luts.get(&(node.tile, *lut)).unwrap();
+            Some((lut_x + LUT_WIDTH / 2.0, lut_y))
+        }
+        NodeType::LutCarryIn(lut) => {
+            let (lut_x, lut_y) = *luts.get(&(node.tile, *lut)).unwrap();
+            Some((lut_x + LUT_WIDTH / 2.0, lut_y + LUT_HEIGHT))
+        }
+        NodeType::LutSetReset(lut) => {
+            let (lut_x, lut_y) = *luts.get(&(node.tile, *lut)).unwrap();
+            Some((lut_x + 3.2 * LUT_WIDTH / 4.0, lut_y + LUT_HEIGHT))
+        }
+        NodeType::LutEnable(lut) => {
+            let (lut_x, lut_y) = *luts.get(&(node.tile, *lut)).unwrap();
+            Some((lut_x + 3.0 * LUT_WIDTH / 4.0, lut_y + LUT_HEIGHT))
+        }
+        NodeType::CarryIn(_id) => Some((tx + TILE_WIDTH / 2.0 + 4.0, ty + 1.0)),
+        NodeType::CarryOut(_id) => Some((tx + TILE_WIDTH / 2.0 + 4.0, ty + TILE_HEIGHT - 1.0)),
+        NodeType::VCC(_id) => Some((tx + 1.0, ty + 1.0)),
+        NodeType::Ground(_id) => Some((tx + 2.0, ty + 1.0)),
+        _ => None,
+    }
 }

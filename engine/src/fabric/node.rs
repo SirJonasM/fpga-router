@@ -138,6 +138,7 @@ impl Display for Node {
 #[derive(Hash, Eq, PartialEq, Clone, Debug)]
 pub enum CablePoint {
     Begin,
+    BeginB,
     Mid,
     End,
 }
@@ -148,15 +149,16 @@ pub enum NodeType {
     LutOutput(char),
     LutCarryIn(char),
     LutCarryOut(char),
-    LutCarryEnable(char),
-    LutCarrySetReset(char),
-    North(u8, u8, u8, CablePoint),
-    East(u8, u8, u8, CablePoint),
-    South(u8, u8, u8, CablePoint),
-    West(u8, u8, u8, CablePoint),
+    LutEnable(char),
+    LutSetReset(char),
+    North(Direction),
+    East(Direction),
+    South(Direction),
+    West(Direction),
     CarryIn(u8),
     CarryOut(u8),
     Ground(u8),
+    VCC(u8),
     Other,
 }
 impl NodeType {}
@@ -184,6 +186,7 @@ impl From<&str> for NodeType {
                 'W' => Self::parse_west(chars),
                 'C' => Self::parse_carry(chars),
                 'G' => Self::parse_ground(chars),
+                'V' => Self::parse_vcc(chars),
                 _ => Self::Other,
             };
         }
@@ -219,27 +222,38 @@ impl NodeType {
     }
     fn parse_lut_carry(mut chars: std::str::Chars<'_>, bel_id: char) -> Self {
         #[allow(clippy::cast_possible_truncation)]
-        match chars.next(){
-            Some('i') =>  Self::LutCarryIn(bel_id),
-            Some('o') =>  Self::LutCarryOut(bel_id),
-            _ => Self::Other
+        match chars.next() {
+            Some('i') => Self::LutCarryIn(bel_id),
+            Some('o') => Self::LutCarryOut(bel_id),
+            _ => Self::Other,
         }
     }
     fn parse_lut_enable(mut chars: std::str::Chars<'_>, bel_id: char) -> Self {
         #[allow(clippy::cast_possible_truncation)]
-        match chars.next(){
-            Some('N') =>  Self::LutCarryEnable(bel_id),
-            _ => Self::Other
+        match chars.next() {
+            Some('N') => Self::LutEnable(bel_id),
+            _ => Self::Other,
         }
     }
     fn parse_lut_set_reset(mut chars: std::str::Chars<'_>, bel_id: char) -> Self {
         #[allow(clippy::cast_possible_truncation)]
-        match chars.next(){
-            Some('R') =>  Self::LutCarrySetReset(bel_id),
-            _ => Self::Other
+        match chars.next() {
+            Some('R') => Self::LutSetReset(bel_id),
+            _ => Self::Other,
         }
     }
 
+    fn parse_vcc(chars: std::str::Chars<'_>) -> Self {
+        if chars.as_str().starts_with("CC") {
+            let mut chars = chars.skip(2);
+            #[allow(clippy::cast_possible_truncation)]
+            return chars
+                .next()
+                .and_then(|a| a.to_digit(10))
+                .map_or(Self::Other, |a| Self::VCC(a as u8));
+        }
+        Self::Other
+    }
     fn parse_ground(chars: std::str::Chars<'_>) -> Self {
         if chars.as_str().starts_with("ND") {
             let mut chars = chars.skip(2);
@@ -268,63 +282,73 @@ impl NodeType {
     }
 
     fn parse_north(chars: std::str::Chars<'_>) -> Self {
-        if let Some((x, x1, x2, x3)) = Self::parse_direction(chars, 'N') {
-            return Self::North(x, x1, x2, x3);
+        if let Some(direction) = Self::parse_direction(chars, 'N') {
+            return Self::North(direction);
         }
         Self::Other
     }
 
     fn parse_east(chars: std::str::Chars<'_>) -> Self {
-        if let Some((x, x1, x2, x3)) = Self::parse_direction(chars, 'E') {
-            return Self::East(x, x1, x2, x3);
+        if let Some(direction) = Self::parse_direction(chars, 'E') {
+            return Self::East(direction);
         }
         Self::Other
     }
 
     fn parse_south(chars: std::str::Chars<'_>) -> Self {
-        if let Some((x, x1, x2, x3)) = Self::parse_direction(chars, 'S') {
-            return Self::South(x, x1, x2, x3);
+        if let Some(direction) = Self::parse_direction(chars, 'S') {
+            return Self::South(direction);
         }
         Self::Other
     }
 
     fn parse_west(chars: std::str::Chars<'_>) -> Self {
-        if let Some((x, x1, x2, x3)) = Self::parse_direction(chars, 'W') {
-            return Self::West(x, x1, x2, x3);
+        if let Some(direction) = Self::parse_direction(chars, 'W') {
+            return Self::West(direction);
         }
         Self::Other
     }
-    fn parse_direction(mut chars: std::str::Chars<'_>, direction: char) -> Option<(u8, u8, u8, CablePoint)> {
-        let mut length = 1u32;
-        let mut index_1 = 0;
+    fn parse_direction(mut chars: std::str::Chars<'_>, direction: char) -> Option<Direction> {
+        let mut direction_s = Direction {
+            double: false,
+            length: 0,
+            id: 0,
+            cable_point: CablePoint::Begin,
+        };
         if let Some(char) = chars.next() {
             let char = if char == direction {
-                length = 2;
+                direction_s.double = true;
                 chars.next()?
             } else {
                 char
             };
-            if let Some(id) = char.to_digit(10) {
-                index_1 = id;
+            #[allow(clippy::cast_possible_truncation)]
+            if let Some(length) = char.to_digit(10) {
+                direction_s.length = length as u8;
             } else {
                 return None;
             }
         }
-        let cable_point = if chars.as_str().starts_with("BEG") {
-            CablePoint::Begin
+        let mut chars = if chars.as_str().starts_with("BEGb") {
+            direction_s.cable_point = CablePoint::BeginB;
+            chars.skip(4)
+        } else if chars.as_str().starts_with("BEG") {
+            direction_s.cable_point = CablePoint::Begin;
+            chars.skip(3)
         } else if chars.as_str().starts_with("MID") {
-            CablePoint::Mid
+            direction_s.cable_point = CablePoint::Mid;
+            chars.skip(3)
         } else if chars.as_str().starts_with("END") {
-            CablePoint::End
+            direction_s.cable_point = CablePoint::End;
+            chars.skip(3)
         } else {
             return None;
         };
-        let mut chars = chars.skip(3);
         #[allow(clippy::cast_possible_truncation)]
-        chars
-            .next()
-            .and_then(|a| a.to_digit(10))
-            .map(|digit| (index_1 as u8, digit as u8, length as u8, cable_point))
+        chars.next().and_then(|a| a.to_digit(10)).map(|id| {
+            direction_s.id = id as u8;
+            direction_s
+        })
     }
 }
 
@@ -416,6 +440,13 @@ impl Costs {
     pub(crate) fn new() -> Self {
         Self::default()
     }
+}
+#[derive(Hash, Eq, PartialEq, Clone, Debug)]
+pub struct Direction {
+    pub double: bool,
+    pub length: u8,
+    pub id: u8,
+    pub cable_point: CablePoint,
 }
 
 #[cfg(test)]
