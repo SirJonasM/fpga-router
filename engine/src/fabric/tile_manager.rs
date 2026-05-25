@@ -61,6 +61,14 @@ impl TileManager {
             })?;
             // Skip comments and empty lines
             if line.starts_with('#') || line.trim().is_empty() {
+                if line.starts_with("#Tile_X") {
+                    let tile_id =
+                        TileId::from_str_coords(&line[6..]).map_err(|e| FabricError::ParseError { line_number, source: e })?;
+                    tiles.entry(tile_id).or_insert_with(|| Tile {
+                        id: tile_id,
+                        luts: Vec::new(),
+                    });
+                }
                 continue;
             }
 
@@ -92,7 +100,6 @@ impl TileManager {
                 ],
             };
 
-            // Insert into the tile manager
             tiles
                 .entry(tile_id)
                 .or_insert_with(|| Tile {

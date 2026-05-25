@@ -3,6 +3,9 @@ name = "gui"
 version = "0.1.0"
 edition = "2021"
 
+[features] 
+big = []
+
 [dependencies]
 router = { path = "../engine" }
 pollster = "0.3"

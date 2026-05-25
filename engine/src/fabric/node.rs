@@ -353,14 +353,17 @@ impl NodeType {
 }
 
 impl Node {
+    #[must_use]
     pub const fn new(id: String, tile: TileId, typ: NodeType) -> Self {
         Self { id, tile, typ }
     }
+    /// # Errors
     pub fn parse(id: &str, coords: &str) -> Result<Self, ParseError> {
         let tile = TileId::from_str_coords(coords)?;
         let typ = id.into();
         Ok(Self::new(id.to_string(), tile, typ))
     }
+    #[must_use]
     pub fn id(&self) -> String {
         format!("{}.{}", self.tile, self.id)
     }
