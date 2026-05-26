@@ -46,10 +46,10 @@ impl<T> std::ops::IndexMut<NodeId> for Vec<T> {
         &mut self[index]
     }
 }
+type NodeIdType = u32;
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy, Ord, PartialOrd)]
 pub struct TileId(pub u8, pub u8);
-type NodeIdType = u32;
 
 /// Programmable Connectio between nodes
 #[derive(Debug, Clone)]

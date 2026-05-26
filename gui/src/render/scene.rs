@@ -139,24 +139,22 @@ fn draw_visible_edges(
                     let is_connected = Some(edge.source_node) == selected_node || Some(edge.target_node) == selected_node;
                     let stroke_width = if is_connected { SELECTED_WIDTH } else { DEFAULT_WIDTH };
                     if Some((edge.source_node, edge.target_node)) == selected_edge {
-                    scene.stroke(
-                        &vello::kurbo::Stroke::new(stroke_width),
-                        vello::kurbo::Affine::IDENTITY,
+                        scene.stroke(
+                            &vello::kurbo::Stroke::new(stroke_width),
+                            vello::kurbo::Affine::IDENTITY,
                             vello::peniko::Color::WHITE,
-                        None,
-                        &line,
-                    );
+                            None,
+                            &line,
+                        );
                     } else {
-                    scene.stroke(
-                        &vello::kurbo::Stroke::new(stroke_width),
-                        vello::kurbo::Affine::IDENTITY,
-                        &vello::peniko::Brush::Gradient(gradient),
-                        None,
-                        &line,
-                    );
+                        scene.stroke(
+                            &vello::kurbo::Stroke::new(stroke_width),
+                            vello::kurbo::Affine::IDENTITY,
+                            &vello::peniko::Brush::Gradient(gradient),
+                            None,
+                            &line,
+                        );
                     };
-
-
                 }
             }
         }
