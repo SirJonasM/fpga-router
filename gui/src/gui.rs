@@ -19,12 +19,19 @@ pub fn draw_ui(app: &mut App, ppp: f32) -> egui::Rect {
             {
                 let node_start = graph.get_node(start).id();
                 let node_end = graph.get_node(end).id();
-                ui.label(format!("Selected Edge: {node_start}->{node_end}", ));
+                ui.label(format!("Selected Edge: {node_start}->{node_end}",));
             }
             if let Some(node) = app.selected_node
                 && let Some(graph) = &app.router.current_graph
             {
-                ui.label(format!("Selected Node: {}", graph.get_node(node).id()));
+                let node_id = graph.get_node(node).id();
+                ui.label(format!("Selected Node: {node_id}",));
+                ui.separator();
+                ui.label("Connected to: ");
+                graph.get_neighbours(node).iter().enumerate().for_each(|(i, a)| {
+                    let id = graph.get_node(*a).id();
+                    ui.label(format!("{i}, {id}"));
+                });
             }
         });
 

@@ -246,7 +246,10 @@ impl App {
                     self.selected_edge = None;
                 } else if let Some(edge) = find_edge_at_pos(world_pos, spatial_grid) {
                     self.selected_edge = Some(edge);
-                    self.selected_node = None
+                    self.selected_node = None;
+                }else {
+                    self.selected_node = None;
+                    self.selected_edge = None;
                 }
             }
         });

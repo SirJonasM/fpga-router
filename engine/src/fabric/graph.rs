@@ -197,11 +197,11 @@ impl FabricGraph {
             edges.iter().map(move |edge| (source_id, edge))
         })
     }
-    #[must_use]
     /// Returns the edge that connects `start` to `end`
     ///
     /// # Panics
     /// This panics when the graph does not contain that edge
+    #[must_use]
     pub fn get_edge_panic(&self, start: NodeId, end: NodeId) -> &Edge {
         self.map[start].iter().find(|a| a.node_id == end).unwrap_or_else(|| {
             panic!(
@@ -210,6 +210,15 @@ impl FabricGraph {
                 end.name(self)
             )
         })
+    }
+    /// Returns the Neighbours of `node`
+    #[must_use]
+    pub fn get_neighbours(&self, start: NodeId) -> Vec<NodeId> {
+        self.map[start]
+            .iter()
+            .chain(&self.map_reversed[start])
+            .map(|a| a.node_id)
+            .collect::<Vec<NodeId>>()
     }
 
     /// Returns the edge that connects `start` to `end`
