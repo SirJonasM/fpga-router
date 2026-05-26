@@ -1,6 +1,6 @@
 use egui_wgpu::{Renderer as EguiRenderer, ScreenDescriptor};
 use egui_winit::State as EguiWinitState;
-use router::{FabricGraph, TileManager};
+use router::{FabricGraph, Node, NodeId, TileId, TileManager};
 use std::sync::{
     Arc,
     mpsc::{Receiver, channel},
@@ -14,7 +14,12 @@ use wgpu::{
 use winit::{dpi::PhysicalSize, window::Window};
 
 use crate::{
-    LoadStatus, constants::{MAX_ZOOM, MIN_ZOOM}, gui::{draw_ui, render_loading, render_vello}, input::{Command, InputHandler}, render::{build_fabric_scene, calculate_visible_tiles}
+    LoadStatus,
+    constants::*,
+    gui::{draw_ui, render_loading, render_vello},
+    input::{Command, InputHandler},
+    layout::find_location_at_world_pos,
+    render::{build_fabric_scene, calculate_visible_tiles},
 };
 use crate::{XXXXXX, render::SpatialFabricGrid};
 
@@ -41,9 +46,13 @@ pub struct App {
     pub router: Router,
 
     pub queues: Messages,
-    pub load_status: LoadStatus, 
+    pub load_status: LoadStatus,
+    pub is_moving: bool,
+    pub selected_node: Option<NodeId>,
+    pub selected_edge: Option<(NodeId, NodeId)>,
 }
 
+#[derive(Debug)]
 pub struct ViewTransform {
     pub pan: vello::kurbo::Vec2,
     pub scale: f64,
@@ -80,8 +89,8 @@ impl Default for ViewTransform {
 // pub view_transform: ViewTransform,
 #[derive(Default)]
 pub struct Router {
-    current_graph: Option<Arc<FabricGraph>>,
-    current_tile_manager: Option<Arc<TileManager>>,
+    pub current_graph: Option<Arc<FabricGraph>>,
+    pub current_tile_manager: Option<Arc<TileManager>>,
 }
 
 #[derive(Default)]
@@ -182,11 +191,14 @@ impl App {
             scene,
             _routing_scene: routing_scene,
             spatial_grid,
-            input_handler: Default::default(),
             router,
+            is_moving: false,
+            view_transform: Default::default(),
+            load_status: Default::default(),
+            input_handler: Default::default(),
             queues: Default::default(),
-            load_status: LoadStatus::Idle,
-            view_transform: ViewTransform::default(),
+            selected_node: Default::default(),
+            selected_edge: Default::default(),
         }
     }
 
@@ -217,39 +229,58 @@ impl App {
 
         self.egui_ctx.begin_frame(raw_input);
 
-        let viewport = draw_ui(self);
+        let ppp = self.egui_ctx.pixels_per_point();
+        let viewport_vello = draw_ui(self, ppp);
+
+        self.scene.reset();
+        self.egui_ctx.input(|i| {
+            if i.pointer.any_released()
+                && !self.is_moving
+                && let Some(mouse_pos) = i.pointer.latest_pos()
+                && let Some(ref spatial_grid) = self.spatial_grid
+            {
+                let world_pos = screen_to_world(mouse_pos, viewport_vello, &self.view_transform, ppp);
+
+                if let Some(node) = find_node_at_pos(world_pos, spatial_grid) {
+                    self.selected_node = Some(node);
+                    self.selected_edge = None;
+                } else if let Some(edge) = find_edge_at_pos(world_pos, spatial_grid) {
+                    self.selected_edge = Some(edge);
+                    self.selected_node = None
+                }
+            }
+        });
 
         let full_output = self.egui_ctx.end_frame();
 
-        let paint_jobs = self.egui_ctx.tessellate(full_output.shapes, self.egui_ctx.pixels_per_point());
+        let paint_jobs = self.egui_ctx.tessellate(full_output.shapes, ppp);
 
         // Upload egui textures
         for (id, image_delta) in &full_output.textures_delta.set {
             self.egui_renderer.update_texture(&self.device, &self.queue, *id, image_delta);
         }
-
         // --- render vello ---
-        let view_port_rect = self.egui_ctx.screen_rect();
-
-        self.scene.reset();
-
-        let transform = vello::kurbo::Affine::translate((
-            viewport.min.x as f64 + self.view_transform.pan.x,
-            viewport.min.y as f64 + self.view_transform.pan.y,
-        )) * vello::kurbo::Affine::scale(self.view_transform.scale);
-
-        if let (Some(graph), Some(tile_manager), Some(spatial_grid)) = (
-            &self.router.current_graph,
-            &self.router.current_tile_manager,
-            &self.spatial_grid,
-        ) {
-            let visible_range = calculate_visible_tiles(view_port_rect, &self.view_transform);
-            let current_fram_fabric =
-                build_fabric_scene(graph, tile_manager, spatial_grid, &visible_range, self.view_transform.scale);
-            self.scene.append(&current_fram_fabric, Some(transform));
+        if let (Some(tile_manager), Some(spatial_grid)) = (&self.router.current_tile_manager, &self.spatial_grid) {
+            let world_min = screen_to_world(viewport_vello.min, viewport_vello, &self.view_transform, ppp);
+            let world_max = screen_to_world(viewport_vello.max, viewport_vello, &self.view_transform, ppp);
+            let visible_range = calculate_visible_tiles(world_min, world_max);
+            let current_frame_fabric = build_fabric_scene(
+                tile_manager,
+                spatial_grid,
+                &visible_range,
+                self.view_transform.scale,
+                self.is_moving,
+                self.selected_node,
+                self.selected_edge,
+            );
+            let transform = vello::kurbo::Affine::translate((
+                (viewport_vello.min.x * ppp) as f64 + self.view_transform.pan.x,
+                (viewport_vello.min.y * ppp) as f64 + self.view_transform.pan.y,
+            )) * vello::kurbo::Affine::scale(self.view_transform.scale);
+            self.scene.append(&current_frame_fabric, Some(transform));
         } else {
-            // Fallback to your placeholder shapes if no graph is loaded
-            render_vello(self, viewport);
+            let place_holder = render_vello(viewport_vello);
+            self.scene.append(&place_holder, None);
         }
 
         let mut encoder = self.device.create_command_encoder(&CommandEncoderDescriptor {
@@ -395,4 +426,131 @@ impl App {
             }
         }
     }
+}
+
+/// Translates a screen-space pixel position (e.g., from egui mouse inputs)
+/// into the underlying world-space coordinates of your FPGA fabric.
+pub fn screen_to_world(
+    screen_pos: egui::Pos2,
+    viewport: egui::Rect,
+    view_transform: &ViewTransform,
+    pixels_per_point: f32,
+) -> vello::kurbo::Point {
+    let sx = screen_pos.x as f64 * pixels_per_point as f64;
+    let sy = screen_pos.y as f64 * pixels_per_point as f64;
+
+    let vx = viewport.min.x as f64 * pixels_per_point as f64;
+    let vy = viewport.min.y as f64 * pixels_per_point as f64;
+
+    vello::kurbo::Point::new(
+        (sx - vx - view_transform.pan.x) / view_transform.scale,
+        (sy - vy - view_transform.pan.y) / view_transform.scale,
+    )
+}
+
+/// Translates a world-space coordinate back into an absolute screen-space
+/// pixel position relative to the window.
+pub fn world_to_screen(
+    world_pos: vello::kurbo::Point,
+    viewport: egui::Rect,
+    view_transform: &ViewTransform,
+    pixels_per_point: f32,
+) -> egui::Pos2 {
+    let screen_x = (world_pos.x * view_transform.scale) + viewport.min.x as f64 + view_transform.pan.x;
+    let screen_y = (world_pos.y * view_transform.scale) + viewport.min.y as f64 + view_transform.pan.y;
+
+    egui::Pos2::new(screen_x as f32, screen_y as f32)
+}
+
+pub fn find_edge_at_pos(
+    world_point: vello::kurbo::Point,
+    spatial_grid: &SpatialFabricGrid,
+) -> Option<(NodeId, NodeId)> {
+    let world_x = world_point.x;
+    let world_y = world_point.y;
+    let p = find_location_at_world_pos(world_x, world_y);
+    let target_tile_id = match p {
+        crate::layout::TargetLocation::Outer(tile_id) => tile_id,
+        crate::layout::TargetLocation::Inner(tile_id, _) => tile_id,
+        crate::layout::TargetLocation::InnerEmpty(tile_id) => tile_id,
+        crate::layout::TargetLocation::None => return None,
+    };
+    let bucket = spatial_grid.buckets.get(&target_tile_id)?;
+
+    const CLICK_TOLERANCE: f64 = WIRE_LINE_WIDTH * 10.0;
+    const TOLERANCE_SQ: f64 = CLICK_TOLERANCE * CLICK_TOLERANCE;
+
+    let mut closest_edge = None;
+    let mut min_distance_sq = TOLERANCE_SQ;
+
+    for edge in &bucket.edge_data {
+        let dist_sq = distance_to_segment(world_point, edge.start_pos, edge.end_pos);
+
+        if dist_sq < min_distance_sq {
+            min_distance_sq = dist_sq;
+            closest_edge = Some((edge.source_node, edge.target_node));
+        }
+    }
+
+    closest_edge
+}
+
+fn find_node_at_pos(world_point: vello::kurbo::Point, spatial_grid: &SpatialFabricGrid) -> Option<NodeId> {
+    let world_x = world_point.x;
+    let world_y = world_point.y;
+
+    let p = find_location_at_world_pos(world_x, world_y);
+    let target_tile_id = match p {
+        crate::layout::TargetLocation::Outer(tile_id) => tile_id,
+        crate::layout::TargetLocation::Inner(tile_id, _) => tile_id,
+        crate::layout::TargetLocation::InnerEmpty(tile_id) => tile_id,
+        crate::layout::TargetLocation::None => return None,
+    };
+
+    let bucket = spatial_grid.buckets.get(&target_tile_id)?;
+
+    const RADIUS: f64 = WIRE_NODE_RADIUS * 1.2;
+    const RADIUS_SQ: f64 = (WIRE_NODE_RADIUS * 1.2) * (WIRE_NODE_RADIUS * 1.2);
+    let min_x = world_x - RADIUS;
+    let max_x = world_x + RADIUS;
+
+    let start_idx = match bucket
+        .node_data
+        .binary_search_by(|(_, pos)| pos.x.partial_cmp(&min_x).unwrap())
+    {
+        Ok(idx) => idx,
+        Err(idx) => idx,
+    };
+    for &(node_id, node_pos) in &bucket.node_data[start_idx..] {
+        if node_pos.x > max_x {
+            break;
+        }
+        let dx = world_x - node_pos.x;
+        let dy = world_y - node_pos.y;
+        let distance = dx * dx + dy * dy;
+
+        if distance <= RADIUS_SQ {
+            return Some(node_id);
+        }
+    }
+
+    None
+}
+/// Calculates the shortest distance squared from point `p` to line segment `a_to_b`.
+fn distance_to_segment(point: vello::kurbo::Point, segment_a: vello::kurbo::Point, segment_b: vello::kurbo::Point) -> f64 {
+    let ab = vello::kurbo::Vec2::new(segment_b.x - segment_a.x, segment_b.y - segment_a.y);
+    let ap = vello::kurbo::Vec2::new(point.x - segment_a.x, point.y - segment_a.y);
+
+    let ab_len_sq = ab.dot(ab);
+    if ab_len_sq == 0.0 {
+        return ap.dot(ap);
+    }
+
+    let t = (ap.dot(ab) / ab_len_sq).clamp(0.0, 1.0);
+
+    let closest_point = vello::kurbo::Point::new(segment_a.x + t * ab.x, segment_a.y + t * ab.y);
+
+    let dx = point.x - closest_point.x;
+    let dy = point.y - closest_point.y;
+    dx * dx + dy * dy
 }

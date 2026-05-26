@@ -6,10 +6,12 @@ edition = "2024"
 [features] 
 big = []
 diagnostics = []
+default = ["big", "diagnostics"]
 
 [dependencies]
 router = { path = "../engine" }
 pollster = "0.3"
+
 
 winit = "0.29"
 wgpu = "0.20"

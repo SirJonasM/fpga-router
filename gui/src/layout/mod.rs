@@ -1,14 +1,14 @@
 use router::{Node, NodeType, TileId};
-pub use builder::{LayoutBuilder, AtTile};
+pub use builder::{LayoutBuilder, AtTileOuter, AtTileInner, find_location_at_world_pos, TargetLocation};
 
-use crate::constants::*;
+use crate::{constants::*, layout::builder::Compass};
 mod builder;
 
 
 pub fn get_tile_pos(tile: &TileId) -> (f64, f64) {
     (
-        tile.0 as f64 * (TILE_WIDTH + TILE_PADDING),
-        tile.1 as f64 * (TILE_WIDTH + TILE_PADDING),
+        tile.0 as f64 * (TILE_WIDTH),
+        tile.1 as f64 * (TILE_HEIGHT),
     )
 }
 pub fn get_lut_offset(bel_index: char) -> (f64, f64) {
@@ -22,12 +22,12 @@ pub fn get_lut_offset(bel_index: char) -> (f64, f64) {
     (lx, ly)
 }
 pub fn get_node_pos(node: &Node) -> Option<vello::kurbo::Point> {
-    let position_builder = LayoutBuilder::new().tile(&node.tile);
+    let position_builder = LayoutBuilder::new().tile(&node.tile).tile_inner();
     let point = match &node.typ {
-        NodeType::North(direction) => position_builder.cable_north(direction).build(),
-        NodeType::South(direction) => position_builder.cable_south(direction).build(),
-        NodeType::East(direction) => position_builder.cable_east(direction).build(),
-        NodeType::West(direction) => position_builder.cable_west(direction).build(),
+        NodeType::North(direction) => position_builder.cable_oriented(direction, Compass::North).build(),
+        NodeType::South(direction) => position_builder.cable_oriented(direction, Compass::South).build(),
+        NodeType::East(direction) => position_builder.cable_oriented(direction, Compass::East).build(),
+        NodeType::West(direction) => position_builder.cable_oriented(direction, Compass::West).build(),
         NodeType::CarryIn(_id) => position_builder.carry_in().build(),
         NodeType::CarryOut(_id) => position_builder.carry_out().build(),
         NodeType::VCC(_id) => position_builder.vdd().build(),

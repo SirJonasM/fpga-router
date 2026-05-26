@@ -1,17 +1,16 @@
-mod render;
-mod layout;
 mod app;
-mod input;
-mod gui;
 mod constants;
+mod gui;
+mod input;
+mod layout;
+mod render;
 
 use std::sync::Arc;
 use winit::keyboard::Key;
 use winit::{dpi::PhysicalSize, event::*, event_loop::EventLoop, window::WindowBuilder};
 
 use crate::app::App;
-use crate::input::{InputHandlerState};
-
+use crate::input::InputHandlerState;
 
 #[cfg(feature = "big")]
 pub const XXXXXX: usize = 8;
@@ -52,14 +51,16 @@ fn main() {
                     WindowEvent::RedrawRequested => {
                         app.render();
                     }
-                    WindowEvent::KeyboardInput { event, .. } if !event.state.is_pressed() => match event.logical_key {
-                        Key::Character(ref c) if c == ":" => {
-                            app.input_handler.state = InputHandlerState::Command;
+                    WindowEvent::KeyboardInput { event, .. } if !event.state.is_pressed() => {
+                        match event.logical_key {
+                            Key::Character(ref c) if c == ":" => {
+                                app.input_handler.state = InputHandlerState::Command;
+                            }
+                            Key::Named(named_key) => app.input_handler.handle_named_key(named_key),
+                            Key::Character(c) => app.input_handler.handle_char(c),
+                            _ => {}
                         }
-                        Key::Named(named_key) => app.input_handler.handle_named_key(named_key),
-                        Key::Character(c) => app.input_handler.handle_char(c),
-                        _ => {}
-                    },
+                    }
                     _ => {}
                 }
             }
@@ -67,16 +68,14 @@ fn main() {
             Event::AboutToWait => {
                 app.window.request_redraw();
             }
-
             _ => {}
         })
         .unwrap();
 }
 
-
+#[derive(Default)]
 enum LoadStatus {
     Loading(String),
+    #[default]
     Idle,
 }
-
-

@@ -138,6 +138,43 @@ pub struct FabricGraph {
     /// Index of String ids from PIPS file to internal `NodeId`
     pub index: HashMap<String, NodeId>,
 }
+pub struct FabricGraphEdgeIterator<'a> {
+    map: &'a [Vec<Edge>],
+    current_node_idx: usize,
+    current_edge_idx: usize,
+}
+
+impl<'a> Iterator for FabricGraphEdgeIterator<'a> {
+    type Item = (NodeId, &'a Edge);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.current_node_idx < self.map.len() {
+            let edges = &self.map[self.current_node_idx];
+
+            if self.current_edge_idx < edges.len() {
+                let edge = &edges[self.current_edge_idx];
+                let source_node_id = NodeId::new(self.current_node_idx);
+                self.current_edge_idx += 1;
+                return Some((source_node_id, edge));
+            }
+            self.current_node_idx += 1;
+            self.current_edge_idx = 0;
+        }
+
+        // Entire map has been traversed
+        None
+    }
+}
+
+impl<'a> FabricGraphEdgeIterator<'a> {
+    pub fn new(graph: &'a FabricGraph) -> Self {
+        Self {
+            map: &graph.map,
+            current_node_idx: 0,
+            current_edge_idx: 0,
+        }
+    }
+}
 
 impl FabricGraph {
     #[must_use]
@@ -150,6 +187,15 @@ impl FabricGraph {
     }
     pub fn get_costs_mut(&mut self, node_id: NodeId) -> &mut Costs {
         &mut self.costs[node_id]
+    }
+    /// Iterates over all forward edges in the graph, returning
+    /// the source `NodeId` and a reference to the `Edge`.
+    pub fn edges(&self) -> impl Iterator<Item = (NodeId, &Edge)> {
+        self.map.iter().enumerate().flat_map(move |(idx, edges)| {
+            let source_id = NodeId::new(idx);
+
+            edges.iter().map(move |edge| (source_id, edge))
+        })
     }
     #[must_use]
     /// Returns the edge that connects `start` to `end`
@@ -223,7 +269,7 @@ impl FabricGraph {
     }
 
     #[must_use]
-    /// Expects a full node id. 
+    /// Expects a full node id.
     /// So use the `Node::id(&self)` function from the Node.
     pub fn get_node_id(&self, id: &str) -> Option<&NodeId> {
         self.index.get(id)
@@ -299,9 +345,9 @@ mod tests {
                     set
                 });
         }
-        let mut l = map.into_iter().map(|(a,b)|(a, b.len())).collect::<Vec<(TileId,usize)>>();
-        l.sort_by(|(a,_b), (a1,_b1)|a.cmp(a1));
-        for (tile, nodes) in l  {
+        let mut l = map.into_iter().map(|(a, b)| (a, b.len())).collect::<Vec<(TileId, usize)>>();
+        l.sort_by(|(a, _b), (a1, _b1)| a.cmp(a1));
+        for (tile, nodes) in l {
             println!("Tile {tile}: {nodes} nodes");
         }
     }
