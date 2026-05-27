@@ -1,7 +1,7 @@
-use egui::{CentralPanel, Id, Pos2, Response, SidePanel, TopBottomPanel, panel::TopBottomSide};
+use egui::{CentralPanel, Id, Label, Response, SidePanel, TopBottomPanel, panel::TopBottomSide};
 use vello::Scene;
 
-use crate::{App, LoadStatus, input::InputHandlerState, layout::Position, render::render_placeholder_vello};
+use crate::{App, LoadStatus, render::render_placeholder_vello};
 
 pub fn draw_ui(app: &mut App) -> Response {
     CentralPanel::default()
@@ -65,7 +65,6 @@ pub fn draw_sidepanel(app: &App) {
         .show(&app.egui_ctx, |ui| {
             ui.heading("FPGA Router");
 
-
             ui.separator();
 
             if let Some((start, end)) = app.selected_edge
@@ -82,7 +81,7 @@ pub fn draw_sidepanel(app: &App) {
                 ui.label(format!("Selected Node: {node_id}",));
                 ui.separator();
                 ui.label("Previous:");
-                graph.get_previous(node).iter().for_each(| a| {
+                graph.get_previous(node).iter().for_each(|a| {
                     let id = graph.get_node(*a).id();
                     ui.label(id);
                 });

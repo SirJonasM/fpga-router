@@ -245,20 +245,7 @@ impl App {
         self.egui_ctx.begin_frame(raw_input);
 
         let ppp = self.egui_ctx.pixels_per_point();
-        let mouse_position = self.egui_ctx.input(|i| i.pointer.latest_pos());
-        self.position = if let Some(mouse_position) = mouse_position
-            && let Some(spatial_grid) = &self.spatial_grid
-        {
-            let world_position = screen_to_world(mouse_position, &self.central_rect, &self.view_transform, ppp);
-            let p = find_location_at_world_pos(world_position.x, world_position.y, spatial_grid);
-            Some(Position {
-                mouse_position,
-                world_position,
-                location: p,
-            })
-        } else {
-            None
-        };
+        self.set_position(ppp);
 
         let _ = draw_status_line(self);
         draw_sidepanel(self);
@@ -271,29 +258,12 @@ impl App {
         if self.input_handler.state == InputHandlerState::Command {
             render_command_palette(self);
         }
+
         let viewport_vello = response_central.rect;
         self.handle_pan_movement(&response_central);
-
+        self.find_entities();
 
         self.scene.reset();
-        self.egui_ctx.input(|i| {
-            if i.pointer.any_released()
-                && !self.is_moving
-                && let Some(position) = &self.position
-                && let Some(ref spatial_grid) = self.spatial_grid
-            {
-                if let Some(node) = find_node_at_pos(position, spatial_grid) {
-                    self.selected_node = Some(node);
-                    self.selected_edge = None;
-                } else if let Some(edge) = find_edge_at_pos(position, spatial_grid) {
-                    self.selected_edge = Some(edge);
-                    self.selected_node = None;
-                } else {
-                    self.selected_node = None;
-                    self.selected_edge = None;
-                }
-            }
-        });
 
         let full_output = self.egui_ctx.end_frame();
 
@@ -304,46 +274,13 @@ impl App {
             self.egui_renderer.update_texture(&self.device, &self.queue, *id, image_delta);
         }
         // --- render vello ---
-        if let (Some(tile_manager), Some(spatial_grid)) = (&self.router.current_tile_manager, &self.spatial_grid) {
-            let world_min = screen_to_world(viewport_vello.min, &viewport_vello, &self.view_transform, ppp);
-            let world_max = screen_to_world(viewport_vello.max, &viewport_vello, &self.view_transform, ppp);
-            let visible_range = calculate_visible_tiles(world_min, world_max);
-            let current_frame_fabric = build_fabric_scene(
-                tile_manager,
-                spatial_grid,
-                &visible_range,
-                self.view_transform.scale,
-                self.is_moving,
-                self.selected_node,
-                self.selected_edge,
-            );
-            let transform = vello::kurbo::Affine::translate((
-                (viewport_vello.min.x * ppp) as f64 + self.view_transform.pan.x,
-                (viewport_vello.min.y * ppp) as f64 + self.view_transform.pan.y,
-            )) * vello::kurbo::Affine::scale(self.view_transform.scale);
-            self.scene.append(&current_frame_fabric, Some(transform));
-        } else {
-            let place_holder = render_vello(viewport_vello);
-            self.scene.append(&place_holder, None);
-        }
+        let (scene, transform) = self.render_vello(ppp);
+        self.scene.append(&scene, transform);
 
         let mut encoder = self.device.create_command_encoder(&CommandEncoderDescriptor {
             label: Some("main encoder"),
         });
-        if let Some(focus) = self.focus_point.take() {
-            let target_world_pos = focus.0;
-            let scale = focus.1;
-
-            self.view_transform.scale = scale;
-
-            let viewport_center_x = viewport_vello.min.x as f64 + (viewport_vello.width() as f64 / 2.0);
-            let viewport_center_y = viewport_vello.min.y as f64 + (viewport_vello.height() as f64 / 2.0);
-
-            let pan_x = viewport_center_x - (target_world_pos.x * scale);
-            let pan_y = viewport_center_y - (target_world_pos.y * scale);
-
-            self.view_transform.pan = vello::kurbo::Vec2::new(pan_x, pan_y);
-        }
+        self.focus_point();
 
         self.vello_renderer
             .render_to_surface(
@@ -394,6 +331,22 @@ impl App {
         // Cleanup egui textures
         for id in &full_output.textures_delta.free {
             self.egui_renderer.free_texture(id);
+        }
+    }
+    fn focus_point(&mut self){ 
+        if let Some(focus) = self.focus_point.take() {
+            let target_world_pos = focus.0;
+            let scale = focus.1;
+
+            self.view_transform.scale = scale;
+
+            let viewport_center_x = self.central_rect.min.x as f64 + (self.central_rect.width() as f64 / 2.0);
+            let viewport_center_y = self.central_rect.min.y as f64 + (self.central_rect.height() as f64 / 2.0);
+
+            let pan_x = viewport_center_x - (target_world_pos.x * scale);
+            let pan_y = viewport_center_y - (target_world_pos.y * scale);
+
+            self.view_transform.pan = vello::kurbo::Vec2::new(pan_x, pan_y);
         }
     }
     pub fn process_command(&mut self, command: Command) {
@@ -476,6 +429,66 @@ impl App {
             },
             _ => {}
         }
+    }
+
+    fn render_vello(&self, ppp: f32) -> (Scene, Option<vello::kurbo::Affine>) {
+        if let (Some(tile_manager), Some(spatial_grid)) = (&self.router.current_tile_manager, &self.spatial_grid) {
+            let world_min = screen_to_world(self.central_rect.min, &self.central_rect, &self.view_transform, ppp);
+            let world_max = screen_to_world(self.central_rect.max, &self.central_rect, &self.view_transform, ppp);
+            let visible_range = calculate_visible_tiles(world_min, world_max);
+            let current_scene_fabric = build_fabric_scene(
+                tile_manager,
+                spatial_grid,
+                &visible_range,
+                self.view_transform.scale,
+                self.is_moving,
+                self.selected_node,
+                self.selected_edge,
+            );
+            let transform = vello::kurbo::Affine::translate((
+                (self.central_rect.min.x * ppp) as f64 + self.view_transform.pan.x,
+                (self.central_rect.min.y * ppp) as f64 + self.view_transform.pan.y,
+            )) * vello::kurbo::Affine::scale(self.view_transform.scale);
+            (current_scene_fabric, Some(transform))
+        } else {
+            (render_vello(self.central_rect), None)
+        }
+    }
+    fn find_entities(&mut self) {
+        self.egui_ctx.input(|i| {
+            if i.pointer.any_released()
+                && !self.is_moving
+                && let Some(position) = &self.position
+                && let Some(ref spatial_grid) = self.spatial_grid
+            {
+                if let Some(node) = find_node_at_pos(position, spatial_grid) {
+                    self.selected_node = Some(node);
+                    self.selected_edge = None;
+                } else if let Some(edge) = find_edge_at_pos(position, spatial_grid) {
+                    self.selected_edge = Some(edge);
+                    self.selected_node = None;
+                } else {
+                    self.selected_node = None;
+                    self.selected_edge = None;
+                }
+            }
+        });
+    }
+    fn set_position(&mut self, ppp: f32) {
+        let mouse_position = self.egui_ctx.input(|i| i.pointer.latest_pos());
+        self.position = if let Some(mouse_position) = mouse_position
+            && let Some(spatial_grid) = &self.spatial_grid
+        {
+            let world_position = screen_to_world(mouse_position, &self.central_rect, &self.view_transform, ppp);
+            let p = find_location_at_world_pos(world_position.x, world_position.y, spatial_grid);
+            Some(Position {
+                mouse_position,
+                world_position,
+                location: p,
+            })
+        } else {
+            None
+        };
     }
 
     pub fn check_background_tasks(&mut self) {
