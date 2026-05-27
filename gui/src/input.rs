@@ -2,7 +2,6 @@ use std::{collections::VecDeque, str::SplitWhitespace};
 
 use winit::keyboard::{NamedKey, SmolStr};
 
-
 #[derive(Default)]
 pub struct InputHandler {
     pub buffer: String,
@@ -18,8 +17,34 @@ pub enum InputHandlerState {
 }
 
 #[derive(Debug)]
+pub enum Goto {
+    Tile {
+        x: usize,
+        y: usize,
+    },
+    Lut {
+        x: usize,
+        y: usize,
+        bel: char,
+    },
+    Edge {
+        x1: usize,
+        y1: usize,
+        id1: String,
+        x2: usize,
+        y2: usize,
+        id2: String,
+    },
+    Node {
+        x: usize,
+        y: usize,
+        id: String,
+    },
+}
+#[derive(Debug)]
 pub enum Command {
     Next(usize),
+    Goto(Goto),
     LoadBel(String),
     LoadPips(String),
     LoadGraph,
@@ -36,6 +61,7 @@ impl Command {
                 "pause" => Some(Self::Pause),
                 "load-bel" => Self::parse_load_bel(full_command),
                 "load-pips" => Self::parse_load_pips(full_command),
+                "goto" => Self::parse_goto(full_command),
                 _ => None,
             };
         }
@@ -52,6 +78,53 @@ impl Command {
     }
     pub fn parse_load_pips(mut arguments: SplitWhitespace) -> Option<Self> {
         arguments.next().map(|file| Self::LoadPips(file.to_string()))
+    }
+    pub fn parse_goto(mut arguments: SplitWhitespace) -> Option<Self> {
+        let parse_int = |x: Option<&str>| -> Option<usize> { x?.parse::<usize>().ok() };
+        match arguments.next() {
+            Some("tile") => {
+                let x = parse_int(arguments.next())?;
+                let y = parse_int(arguments.next())?;
+                Some(Command::Goto(Goto::Tile { x, y }))
+            }
+            Some("lut") => {
+                let x = parse_int(arguments.next())?;
+                let y = parse_int(arguments.next())?;
+                let bel = arguments.next()?;
+                let bel = if bel.len() == 1 {
+                    bel.chars().next().unwrap()
+                } else {
+                    return None;
+                };
+                Some(Command::Goto(Goto::Lut { x, y, bel }))
+            }
+            Some("node") => {
+                let x = parse_int(arguments.next())?;
+                let y = parse_int(arguments.next())?;
+                let id = arguments.next()?;
+                let id = id.to_string();
+                Some(Command::Goto(Goto::Node { x, y, id }))
+            }
+            Some("edge") => {
+                let x1 = parse_int(arguments.next())?;
+                let y1 = parse_int(arguments.next())?;
+                let id1 = arguments.next()?;
+                let id1 = id1.to_string();
+                let x2 = parse_int(arguments.next())?;
+                let y2 = parse_int(arguments.next())?;
+                let id2 = arguments.next()?;
+                let id2 = id2.to_string();
+                Some(Command::Goto(Goto::Edge {
+                    x1,
+                    y1,
+                    id1,
+                    x2,
+                    y2,
+                    id2,
+                }))
+            }
+            _ => None,
+        }
     }
 }
 

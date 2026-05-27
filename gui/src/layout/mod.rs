@@ -1,5 +1,5 @@
 use router::{Node, NodeType, TileId};
-pub use builder::{LayoutBuilder, AtTileOuter, AtTileInner, find_location_at_world_pos, TargetLocation};
+pub use builder::{LayoutBuilder, AtTileOuter, AtTileInner, find_location_at_world_pos, TargetLocation, Position};
 
 use crate::{constants::*, layout::builder::Compass};
 mod builder;

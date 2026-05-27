@@ -1,9 +1,13 @@
+use egui::Response;
 use egui_wgpu::{Renderer as EguiRenderer, ScreenDescriptor};
 use egui_winit::State as EguiWinitState;
 use router::{FabricGraph, Node, NodeId, TileId, TileManager};
-use std::sync::{
-    Arc,
-    mpsc::{Receiver, channel},
+use std::{
+    sync::{
+        Arc,
+        mpsc::{Receiver, channel},
+    },
+    time::Instant,
 };
 use vello::{Renderer, RendererOptions, Scene, peniko::Color};
 use wgpu::{
@@ -13,15 +17,23 @@ use wgpu::{
 };
 use winit::{dpi::PhysicalSize, window::Window};
 
+#[cfg(feature = "diagnostics")]
+use crate::gui::draw_diagnostics;
+use crate::{
+    GRAPH_SIZE,
+    gui::{draw_sidepanel, draw_status_line, render_command_palette},
+    input::InputHandlerState,
+    layout::Position,
+    render::SpatialFabricGrid,
+};
 use crate::{
     LoadStatus,
     constants::*,
     gui::{draw_ui, render_loading, render_vello},
-    input::{Command, InputHandler},
-    layout::find_location_at_world_pos,
+    input::{Command, Goto, InputHandler},
+    layout::{LayoutBuilder, find_location_at_world_pos},
     render::{build_fabric_scene, calculate_visible_tiles},
 };
-use crate::{XXXXXX, render::SpatialFabricGrid};
 
 pub struct App {
     pub window: Arc<Window>,
@@ -35,11 +47,11 @@ pub struct App {
     pub egui_ctx: egui::Context,
     pub egui_renderer: EguiRenderer,
 
+    pub central_rect: egui::Rect,
     pub view_transform: ViewTransform,
     pub vello_renderer: Renderer,
     pub scene: Scene,
     pub spatial_grid: Option<SpatialFabricGrid>,
-    pub _routing_scene: Option<Scene>,
 
     pub input_handler: InputHandler,
 
@@ -50,6 +62,8 @@ pub struct App {
     pub is_moving: bool,
     pub selected_node: Option<NodeId>,
     pub selected_edge: Option<(NodeId, NodeId)>,
+    pub focus_point: Option<(vello::kurbo::Point, f64)>,
+    pub(crate) position: Option<Position>,
 }
 
 #[derive(Debug)]
@@ -166,13 +180,12 @@ impl App {
         .unwrap();
 
         let scene = Scene::new();
-        let routing_scene = None;
 
-        let graph = Arc::new(FabricGraph::from_file(&format!("tests/data/pips_{XXXXXX}x{XXXXXX}.txt"), None).unwrap());
-        let tile_manager = Arc::new(TileManager::from_file(&format!("tests/data/bel_{XXXXXX}x{XXXXXX}.txt")).unwrap());
+        let graph = Arc::new(FabricGraph::from_file(&format!("tests/data/pips_{GRAPH_SIZE}x{GRAPH_SIZE}.txt"), None).unwrap());
+        let tile_manager = Arc::new(TileManager::from_file(&format!("tests/data/bel_{GRAPH_SIZE}x{GRAPH_SIZE}.txt")).unwrap());
 
         // 1. Build your new spatial acceleration grid here once on load!
-        let spatial_grid = Some(SpatialFabricGrid::build_from_graph(&graph));
+        let spatial_grid = Some(SpatialFabricGrid::build_from_graph(&graph, &tile_manager));
         let router = Router {
             current_graph: Some(graph),
             current_tile_manager: Some(tile_manager),
@@ -189,7 +202,6 @@ impl App {
             egui_renderer,
             vello_renderer,
             scene,
-            _routing_scene: routing_scene,
             spatial_grid,
             router,
             is_moving: false,
@@ -199,6 +211,9 @@ impl App {
             queues: Default::default(),
             selected_node: Default::default(),
             selected_edge: Default::default(),
+            focus_point: Default::default(),
+            central_rect: egui::Rect::NOTHING,
+            position: Default::default(),
         }
     }
 
@@ -230,24 +245,50 @@ impl App {
         self.egui_ctx.begin_frame(raw_input);
 
         let ppp = self.egui_ctx.pixels_per_point();
-        let viewport_vello = draw_ui(self, ppp);
+        let mouse_position = self.egui_ctx.input(|i| i.pointer.latest_pos());
+        self.position = if let Some(mouse_position) = mouse_position
+            && let Some(spatial_grid) = &self.spatial_grid
+        {
+            let world_position = screen_to_world(mouse_position, &self.central_rect, &self.view_transform, ppp);
+            let p = find_location_at_world_pos(world_position.x, world_position.y, spatial_grid);
+            Some(Position {
+                mouse_position,
+                world_position,
+                location: p,
+            })
+        } else {
+            None
+        };
+
+        let _ = draw_status_line(self);
+        draw_sidepanel(self);
+        let response_central = draw_ui(self);
+        self.central_rect = response_central.rect;
+
+        #[cfg(feature = "diagnostics")]
+        draw_diagnostics(self);
+
+        if self.input_handler.state == InputHandlerState::Command {
+            render_command_palette(self);
+        }
+        let viewport_vello = response_central.rect;
+        self.handle_pan_movement(&response_central);
+
 
         self.scene.reset();
         self.egui_ctx.input(|i| {
             if i.pointer.any_released()
                 && !self.is_moving
-                && let Some(mouse_pos) = i.pointer.latest_pos()
+                && let Some(position) = &self.position
                 && let Some(ref spatial_grid) = self.spatial_grid
             {
-                let world_pos = screen_to_world(mouse_pos, viewport_vello, &self.view_transform, ppp);
-
-                if let Some(node) = find_node_at_pos(world_pos, spatial_grid) {
+                if let Some(node) = find_node_at_pos(position, spatial_grid) {
                     self.selected_node = Some(node);
                     self.selected_edge = None;
-                } else if let Some(edge) = find_edge_at_pos(world_pos, spatial_grid) {
+                } else if let Some(edge) = find_edge_at_pos(position, spatial_grid) {
                     self.selected_edge = Some(edge);
                     self.selected_node = None;
-                }else {
+                } else {
                     self.selected_node = None;
                     self.selected_edge = None;
                 }
@@ -264,8 +305,8 @@ impl App {
         }
         // --- render vello ---
         if let (Some(tile_manager), Some(spatial_grid)) = (&self.router.current_tile_manager, &self.spatial_grid) {
-            let world_min = screen_to_world(viewport_vello.min, viewport_vello, &self.view_transform, ppp);
-            let world_max = screen_to_world(viewport_vello.max, viewport_vello, &self.view_transform, ppp);
+            let world_min = screen_to_world(viewport_vello.min, &viewport_vello, &self.view_transform, ppp);
+            let world_max = screen_to_world(viewport_vello.max, &viewport_vello, &self.view_transform, ppp);
             let visible_range = calculate_visible_tiles(world_min, world_max);
             let current_frame_fabric = build_fabric_scene(
                 tile_manager,
@@ -289,6 +330,20 @@ impl App {
         let mut encoder = self.device.create_command_encoder(&CommandEncoderDescriptor {
             label: Some("main encoder"),
         });
+        if let Some(focus) = self.focus_point.take() {
+            let target_world_pos = focus.0;
+            let scale = focus.1;
+
+            self.view_transform.scale = scale;
+
+            let viewport_center_x = viewport_vello.min.x as f64 + (viewport_vello.width() as f64 / 2.0);
+            let viewport_center_y = viewport_vello.min.y as f64 + (viewport_vello.height() as f64 / 2.0);
+
+            let pan_x = viewport_center_x - (target_world_pos.x * scale);
+            let pan_y = viewport_center_y - (target_world_pos.y * scale);
+
+            self.view_transform.pan = vello::kurbo::Vec2::new(pan_x, pan_y);
+        }
 
         self.vello_renderer
             .render_to_surface(
@@ -305,7 +360,6 @@ impl App {
             )
             .unwrap();
 
-        // --- render egui on top ---
         let screen_descriptor = ScreenDescriptor {
             size_in_pixels: [self.config.width, self.config.height],
             pixels_per_point: self.egui_ctx.pixels_per_point(),
@@ -386,6 +440,40 @@ impl App {
                     }
                 });
             }
+            Command::Goto(sub_command) => match sub_command {
+                Goto::Tile { x, y } => {
+                    let cord = LayoutBuilder::new()
+                        .tile(&TileId(x as u8, y as u8))
+                        .tile_middle_point()
+                        .build();
+                    const SCALE: f64 = 6.0;
+                    self.focus_point = Some((cord, SCALE));
+                }
+                Goto::Lut { x, y, bel } => {
+                    let time = Instant::now();
+                    let cord = LayoutBuilder::new()
+                        .tile(&TileId(x as u8, y as u8))
+                        .tile_inner()
+                        .lut(bel)
+                        .lut_middle_point()
+                        .build();
+                    println!("Calculated lut positon in {:?}", time.elapsed());
+                    let time = Instant::now();
+                    if let Some((_, cord)) = &self.spatial_grid.as_ref().and_then(|grid| {
+                        grid.buckets
+                            .get(&TileId(x as u8, y as u8))
+                            .and_then(|bucket| bucket.lut_data.iter().find(|a| a.0.eq_ignore_ascii_case(&bel)))
+                    }) {
+                        println!("Found lut positon in {:?}", time.elapsed());
+                        const SCALE: f64 = 10.0;
+                        self.focus_point = Some((*cord, SCALE));
+                    }
+
+                    const SCALE: f64 = 10.0;
+                    self.focus_point = Some((cord, SCALE));
+                }
+                _ => todo!(),
+            },
             _ => {}
         }
     }
@@ -429,13 +517,30 @@ impl App {
             }
         }
     }
+    fn handle_pan_movement(&mut self, response: &Response) {
+        let rect = response.rect;
+        let scroll_delta = self.egui_ctx.input(|i| i.smooth_scroll_delta.y);
+        if scroll_delta != 0.0
+            && let Some(mouse_pos) = self.egui_ctx.input(|i| i.pointer.hover_pos())
+        {
+            self.view_transform.zoom_at_point(scroll_delta, mouse_pos, rect);
+        }
+
+        let is_dragged = response.dragged_by(egui::PointerButton::Primary);
+        if is_dragged {
+            let delta = response.drag_delta();
+            self.view_transform.pan.x += delta.x as f64;
+            self.view_transform.pan.y += delta.y as f64;
+        }
+        self.is_moving = is_dragged || scroll_delta != 0.0;
+    }
 }
 
 /// Translates a screen-space pixel position (e.g., from egui mouse inputs)
 /// into the underlying world-space coordinates of your FPGA fabric.
 pub fn screen_to_world(
     screen_pos: egui::Pos2,
-    viewport: egui::Rect,
+    viewport: &egui::Rect,
     view_transform: &ViewTransform,
     pixels_per_point: f32,
 ) -> vello::kurbo::Point {
@@ -465,13 +570,10 @@ pub fn world_to_screen(
     egui::Pos2::new(screen_x as f32, screen_y as f32)
 }
 
-pub fn find_edge_at_pos(
-    world_point: vello::kurbo::Point,
-    spatial_grid: &SpatialFabricGrid,
-) -> Option<(NodeId, NodeId)> {
-    let world_x = world_point.x;
-    let world_y = world_point.y;
-    let p = find_location_at_world_pos(world_x, world_y);
+pub fn find_edge_at_pos(position: &Position, spatial_grid: &SpatialFabricGrid) -> Option<(NodeId, NodeId)> {
+    let world_x = position.world_position.x;
+    let world_y = position.world_position.y;
+    let p = find_location_at_world_pos(world_x, world_y, spatial_grid);
     let target_tile_id = match p {
         crate::layout::TargetLocation::Outer(tile_id) => tile_id,
         crate::layout::TargetLocation::Inner(tile_id, _) => tile_id,
@@ -487,7 +589,7 @@ pub fn find_edge_at_pos(
     let mut min_distance_sq = TOLERANCE_SQ;
 
     for edge in &bucket.edge_data {
-        let dist_sq = distance_to_segment(world_point, edge.start_pos, edge.end_pos);
+        let dist_sq = distance_to_segment(position.world_position, edge.start_pos, edge.end_pos);
 
         if dist_sq < min_distance_sq {
             min_distance_sq = dist_sq;
@@ -498,12 +600,11 @@ pub fn find_edge_at_pos(
     closest_edge
 }
 
-fn find_node_at_pos(world_point: vello::kurbo::Point, spatial_grid: &SpatialFabricGrid) -> Option<NodeId> {
-    let world_x = world_point.x;
-    let world_y = world_point.y;
+fn find_node_at_pos(position: &Position, spatial_grid: &SpatialFabricGrid) -> Option<NodeId> {
+    let world_x = position.world_position.x;
+    let world_y = position.world_position.y;
 
-    let p = find_location_at_world_pos(world_x, world_y);
-    let target_tile_id = match p {
+    let target_tile_id = match position.location {
         crate::layout::TargetLocation::Outer(tile_id) => tile_id,
         crate::layout::TargetLocation::Inner(tile_id, _) => tile_id,
         crate::layout::TargetLocation::InnerEmpty(tile_id) => tile_id,

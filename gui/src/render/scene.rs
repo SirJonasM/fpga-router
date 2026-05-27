@@ -240,8 +240,17 @@ pub struct SpatialFabricGrid {
     // Keys are the structural Tile locations (e.g., TileId(x, y))
     pub buckets: HashMap<TileId, TileBucket>,
 }
+#[derive(Debug)]
+pub struct TileBucket {
+    // Left top edge of TILE
+    pub tile_data: vello::kurbo::Point,
+    // Left top edge of LUT
+    pub lut_data: Vec<(char, vello::kurbo::Point)>,
+    pub node_data: Vec<(NodeId, vello::kurbo::Point)>,
+    pub edge_data: Vec<SpatialEdgeData>,
+}
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct SpatialEdgeData {
     pub source_node: NodeId,
     pub target_node: NodeId,
@@ -249,22 +258,29 @@ pub struct SpatialEdgeData {
     pub end_pos: vello::kurbo::Point,
 }
 
-pub struct TileBucket {
-    /// Stores tuples of (original_node_id, cached_pixel_position)
-    pub node_data: Vec<(NodeId, vello::kurbo::Point)>,
-    pub edge_data: Vec<SpatialEdgeData>,
-}
-
 impl SpatialFabricGrid {
-    pub fn build_from_graph(graph: &router::FabricGraph) -> Self {
+    pub fn build_from_graph(graph: &router::FabricGraph, tile_manager: &router::TileManager) -> Self {
         let mut grid = Self::default();
+        for tile in tile_manager.0.values() {
+            let pos = LayoutBuilder::new().tile(&tile.id).build();
+
+            let bucket = grid.buckets.entry(tile.id).or_insert_with(|| TileBucket {
+                tile_data: pos,
+                lut_data: Vec::new(),
+                node_data: Vec::new(),
+                edge_data: Vec::new(),
+            });
+            let mut lut_list = vec![];
+            for lut in &tile.luts {
+                let pos = LayoutBuilder::new().tile(&tile.id).tile_inner().lut(lut.bel_index).build();
+                lut_list.push((lut.bel_index, pos))
+            }
+            bucket.lut_data = lut_list;
+        }
 
         for node in graph.nodes.iter() {
             if let Some(pos) = crate::layout::get_node_pos(node) {
-                let bucket = grid.buckets.entry(node.tile).or_insert_with(|| TileBucket {
-                    node_data: Vec::new(),
-                    edge_data: Vec::new(),
-                });
+                let bucket = grid.buckets.get_mut(&node.tile).expect("Error in pips and bel definition.");
                 let node_id = graph.get_node_id(&node.id()).unwrap();
                 bucket.node_data.push((*node_id, pos));
             }
@@ -284,10 +300,7 @@ impl SpatialFabricGrid {
                 let crossed_tiles = get_tiles_intersected_by_line(pos1, pos2);
 
                 for tile_id in crossed_tiles {
-                    let bucket = grid.buckets.entry(tile_id).or_insert_with(|| TileBucket {
-                        node_data: Vec::new(),
-                        edge_data: Vec::new(),
-                    });
+                    let bucket = grid.buckets.get_mut(&tile_id).expect("Error in pips and bel definition.");
                     bucket.edge_data.push(edge_data);
                 }
             }

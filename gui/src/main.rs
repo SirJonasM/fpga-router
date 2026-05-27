@@ -13,9 +13,9 @@ use crate::app::App;
 use crate::input::InputHandlerState;
 
 #[cfg(feature = "big")]
-pub const XXXXXX: usize = 8;
+pub const GRAPH_SIZE: usize = 8;
 #[cfg(not(feature = "big"))]
-pub const XXXXXX: usize = 4;
+pub const GRAPH_SIZE: usize = 4;
 
 fn main() {
     let event_loop = EventLoop::new().unwrap();

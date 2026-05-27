@@ -1,3 +1,5 @@
+use std::ops::RangeInclusive;
+
 use vello::peniko::Color;
 
 pub const LUT_ZOOM_THRESHOLD: f64 = 0.4;
@@ -13,6 +15,8 @@ pub const TILE_OUTER_LINE_WIDTH: f64 = 0.1;
 pub const TILE_PADDING: f64 = 40.0;
 pub const TILE_WIDTH: f64 = TILE_BOUNDING_BOX_WIDTH + TILE_PADDING;
 pub const TILE_HEIGHT: f64 = TILE_BOUNDING_BOX_HEIGHT + TILE_PADDING;
+pub const TILE_INNER_RANGE_X:RangeInclusive<f64> = (TILE_PADDING/2.0)..=(TILE_WIDTH - TILE_PADDING /2.0);
+pub const TILE_INNER_RANGE_Y:RangeInclusive<f64> = (TILE_PADDING/2.0)..=(TILE_HEIGHT - TILE_PADDING /2.0);
 
 pub const LUT_WIDTH: f64 = 20.0;
 pub const LUT_HEIGHT: f64 = 15.0;

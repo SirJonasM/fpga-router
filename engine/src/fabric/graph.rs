@@ -167,6 +167,7 @@ impl<'a> Iterator for FabricGraphEdgeIterator<'a> {
 }
 
 impl<'a> FabricGraphEdgeIterator<'a> {
+    #[must_use]
     pub fn new(graph: &'a FabricGraph) -> Self {
         Self {
             map: &graph.map,
@@ -210,6 +211,22 @@ impl FabricGraph {
                 end.name(self)
             )
         })
+    }
+    /// Returns the next nodes
+    #[must_use]
+    pub fn get_previous(&self, start: NodeId) -> Vec<NodeId> {
+        self.map_reversed[start]
+            .iter()
+            .map(|a| a.node_id)
+            .collect::<Vec<NodeId>>()
+    }
+    /// Returns the next nodes
+    #[must_use]
+    pub fn get_next(&self, start: NodeId) -> Vec<NodeId> {
+        self.map[start]
+            .iter()
+            .map(|a| a.node_id)
+            .collect::<Vec<NodeId>>()
     }
     /// Returns the Neighbours of `node`
     #[must_use]

@@ -1,4 +1,8 @@
+use std::fmt::Display;
+
 use router::{CablePoint, Direction};
+
+use crate::render::SpatialFabricGrid;
 
 use super::*;
 
@@ -53,6 +57,11 @@ impl LayoutBuilder<AtTileOuter> {
             _marker: std::marker::PhantomData,
         }
     }
+    pub fn tile_middle_point(mut self) -> Self {
+        self.x += TILE_WIDTH / 2.0;
+        self.y += TILE_HEIGHT / 2.0;
+        self
+    }
 }
 pub enum Compass {
     North,
@@ -82,18 +91,9 @@ impl LayoutBuilder<AtTileInner> {
 
         let (rotated_x, rotated_y) = match orientation {
             Compass::North => (local_x, local_y),
-
-            Compass::East => {
-                (cx - (local_y - cy), cy + (local_x - cx))
-            }
-
-            Compass::South => {
-                (cx - (local_x - cx), cy - (local_y - cy))
-            }
-
-            Compass::West => {
-                (cx + (local_y - cy), cy - (local_x - cx))
-            }
+            Compass::East => (cx - (local_y - cy), cy + (local_x - cx)),
+            Compass::South => (cx - (local_x - cx), cy - (local_y - cy)),
+            Compass::West => (cx + (local_y - cy), cy - (local_x - cx)),
         };
 
         // 4. Apply the rotated local coordinates back to your absolute position
@@ -128,6 +128,11 @@ impl LayoutBuilder<AtTileInner> {
 
 // Methods available ONLY after you are inside a LUT context
 impl LayoutBuilder<AtLut> {
+    pub fn lut_middle_point(mut self) -> Self {
+        self.x += LUT_WIDTH / 2.0;
+        self.y += LUT_HEIGHT / 2.0;
+        self
+    }
     pub fn input(mut self, pin: u8) -> Self {
         self.y += (LUT_HEIGHT / 2.0) + (pin as f64 - 2.0) * 2.0;
         self
@@ -171,19 +176,33 @@ impl<State> LayoutBuilder<State> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Position {
+    pub location: TargetLocation,
+    pub world_position: vello::kurbo::Point,
+    pub mouse_position: egui::Pos2,
+}
+#[derive(Debug, Clone, PartialEq)]
 pub enum TargetLocation {
     /// The coordinates are within the tile's outer padding/cabling region.
     Outer(TileId),
-    /// The coordinates land cleanly inside a specific LUT within the logic block.
     Inner(TileId, char),
     /// The coordinates land in the inner block, but are touching empty routing space between LUTs.
     InnerEmpty(TileId),
     /// The coordinates land completely outside the layout grid.
     None,
 }
+impl Display for TargetLocation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TargetLocation::Outer(TileId(x, y)) => writeln!(f, "Tile({x} {y}): Outer",),
+            TargetLocation::Inner(TileId(x, y), bel) => writeln!(f, "Tile({x} {y}): LUT {}", bel.to_ascii_uppercase()),
+            TargetLocation::InnerEmpty(TileId(x, y)) => writeln!(f, "Tile({x} {y}): Inner"),
+            TargetLocation::None => writeln!(f, "Empty space."),
+        }
+    }
+}
 
-pub fn find_location_at_world_pos(x: f64, y: f64) -> TargetLocation {
-    // 1. Grid tracking: Tiles are placed edge-to-edge using TILE_WIDTH/HEIGHT
+pub fn find_location_at_world_pos(x: f64, y: f64, spatial_grid: &SpatialFabricGrid) -> TargetLocation {
     if x < 0.0 || y < 0.0 {
         return TargetLocation::None;
     }
@@ -191,61 +210,27 @@ pub fn find_location_at_world_pos(x: f64, y: f64) -> TargetLocation {
     let tile_x = (x / TILE_WIDTH).floor() as u8;
     let tile_y = (y / TILE_HEIGHT).floor() as u8;
     let tile_id = TileId(tile_x, tile_y);
-
-    // 2. Localize coordinates relative to this specific tile's top-left origin
-    let (tile_origin_x, tile_origin_y) = get_tile_pos(&tile_id);
-    let local_x = x - tile_origin_x;
-    let local_y = y - tile_origin_y;
-
-    // Safety check against the hard tile boundaries
-    if local_x > TILE_WIDTH || local_y > TILE_HEIGHT {
+    let Some(bucket) = spatial_grid.buckets.get(&tile_id) else {
         return TargetLocation::None;
-    }
-
-    // 3. Define the Inner Box threshold boundaries (matching your tile_inner() layout code)
-    let inner_start_x = TILE_PADDING / 2.0;
-    let inner_start_y = TILE_PADDING / 2.0;
-    let inner_end_x = inner_start_x + TILE_BOUNDING_BOX_WIDTH;
-    let inner_end_y = inner_start_y + TILE_BOUNDING_BOX_HEIGHT;
-
-    let is_inner = local_x >= inner_start_x && local_x <= inner_end_x && local_y >= inner_start_y && local_y <= inner_end_y;
-
-    if !is_inner {
+    };
+    let tile_pos = bucket.tile_data;
+    let tile_x_offset = x - tile_pos.x;
+    let tile_y_offset = y - tile_pos.y;
+    let is_in_inner_box = TILE_INNER_RANGE_X.contains(&tile_x_offset) && TILE_INNER_RANGE_Y.contains(&tile_y_offset);
+    if !is_in_inner_box {
         return TargetLocation::Outer(tile_id);
     }
-
-    let logic_x = local_x - inner_start_x;
-    let logic_y = local_y - inner_start_y;
-
-    for lut_index in 0..8 {
-        let lut_id = match lut_index {
-            0 => 'A',
-            1 => 'B',
-            2 => 'C',
-            3 => 'D',
-            4 => 'E',
-            5 => 'F',
-            6 => 'G',
-            7 => 'H',
-            _ => break,
-        };
-
-        let row = lut_index / LUTS_PER_ROW;
-        let col = lut_index % LUTS_PER_ROW;
-
-        let lut_offset_x = LUT_MARGIN + (col as f64 * (LUT_WIDTH + LUT_SPACING));
-        let lut_offset_y = LUT_MARGIN + (row as f64 * (LUT_HEIGHT + LUT_SPACING));
-
-        let inside_lut = logic_x >= lut_offset_x
-            && logic_x <= (lut_offset_x + LUT_WIDTH)
-            && logic_y >= lut_offset_y
-            && logic_y <= (lut_offset_y + LUT_HEIGHT);
-
-        if inside_lut {
-            return TargetLocation::Inner(tile_id, lut_id);
+    if let Some(bel) = bucket.lut_data.iter().find_map(|(bel, pos)| {
+        let lut_x_offset = x - pos.x;
+        let lut_y_offset = y - pos.y;
+        if (0.0..=LUT_WIDTH).contains(&lut_x_offset) & (0.0..=LUT_HEIGHT).contains(&lut_y_offset) {
+            Some(bel)
+        } else {
+            None
         }
+    }) {
+        return TargetLocation::Inner(tile_id, *bel);
     }
-
     TargetLocation::InnerEmpty(tile_id)
 }
 fn cable_offset(x: &CablePoint) -> f64 {
