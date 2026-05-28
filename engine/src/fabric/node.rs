@@ -136,7 +136,7 @@ impl Display for Node {
 }
 
 #[derive(Hash, Eq, PartialEq, Clone, Debug)]
-pub enum CablePoint {
+pub enum WirePoint {
     Begin,
     BeginB,
     Mid,
@@ -313,7 +313,7 @@ impl NodeType {
             double: false,
             length: 0,
             id: 0,
-            cable_point: CablePoint::Begin,
+            cable_point: WirePoint::Begin,
         };
         if let Some(char) = chars.next() {
             let char = if char == direction {
@@ -330,16 +330,16 @@ impl NodeType {
             }
         }
         let mut chars = if chars.as_str().starts_with("BEGb") {
-            direction_s.cable_point = CablePoint::BeginB;
+            direction_s.cable_point = WirePoint::BeginB;
             chars.skip(4)
         } else if chars.as_str().starts_with("BEG") {
-            direction_s.cable_point = CablePoint::Begin;
+            direction_s.cable_point = WirePoint::Begin;
             chars.skip(3)
         } else if chars.as_str().starts_with("MID") {
-            direction_s.cable_point = CablePoint::Mid;
+            direction_s.cable_point = WirePoint::Mid;
             chars.skip(3)
         } else if chars.as_str().starts_with("END") {
-            direction_s.cable_point = CablePoint::End;
+            direction_s.cable_point = WirePoint::End;
             chars.skip(3)
         } else {
             return None;
@@ -449,7 +449,7 @@ pub struct Direction {
     pub double: bool,
     pub length: u8,
     pub id: u8,
-    pub cable_point: CablePoint,
+    pub cable_point: WirePoint,
 }
 
 #[cfg(test)]

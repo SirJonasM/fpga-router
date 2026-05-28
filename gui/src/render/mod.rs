@@ -1,2 +1,5 @@
-mod scene;
-pub use scene::{SpatialFabricGrid, build_fabric_scene, calculate_visible_tiles, render_placeholder_vello};
+mod fabric_scene;
+mod placeholder;
+
+pub use fabric_scene::fabric_scene;
+pub use placeholder::render_placeholder_vello;

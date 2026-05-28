@@ -118,7 +118,7 @@ const fn distance(a: &Node, b: &Node) -> f32 {
 mod test {
     use crate::{
         Direction,
-        fabric::node::{CablePoint, NodeType, TileId},
+        fabric::node::{NodeType, TileId, WirePoint},
     };
 
     use super::*;
@@ -153,7 +153,7 @@ mod test {
                 double: true,
                 id: 3,
                 length: 1,
-                cable_point: CablePoint::End,
+                cable_point: WirePoint::End,
             }),
         };
         let node2_expected = Node {
@@ -163,7 +163,7 @@ mod test {
                 double: false,
                 id: 0,
                 length: 1,
-                cable_point: CablePoint::Begin,
+                cable_point: WirePoint::Begin,
             }),
         };
         let PipsLine {

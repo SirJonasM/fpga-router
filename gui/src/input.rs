@@ -30,15 +30,15 @@ pub enum Goto {
     Edge {
         x1: usize,
         y1: usize,
-        id1: String,
+        label1: String,
         x2: usize,
         y2: usize,
-        id2: String,
+        label2: String,
     },
     Node {
         x: usize,
         y: usize,
-        id: String,
+        label: String,
     },
 }
 #[derive(Debug)]
@@ -103,7 +103,7 @@ impl Command {
                 let y = parse_int(arguments.next())?;
                 let id = arguments.next()?;
                 let id = id.to_string();
-                Some(Command::Goto(Goto::Node { x, y, id }))
+                Some(Command::Goto(Goto::Node { x, y, label: id }))
             }
             Some("edge") => {
                 let x1 = parse_int(arguments.next())?;
@@ -126,10 +126,10 @@ impl Command {
                 Some(Command::Goto(Goto::Edge {
                     x1,
                     y1,
-                    id1,
+                    label1: id1,
                     x2,
                     y2,
-                    id2,
+                    label2: id2,
                 }))
             }
             _ => None,

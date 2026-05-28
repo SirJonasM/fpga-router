@@ -129,19 +129,12 @@ pub fn build_design(
     while changed {
         changed = false;
         for pip in &fixed_pips {
-            // Check existence to avoid re-adding
-            // Note: design.entry...or_default() is cheap but checking contains_key is cheaper
-
-            // Check if already in design
-            if let Some(d) = design.get(&pip.src) {
-                if d.contains_key(&pip.dst) {
-                    continue;
-                }
+            if let Some(d) = design.get(&pip.src)
+                && d.contains_key(&pip.dst)
+            {
+                continue;
             }
 
-            // Connection Logic:
-            // Connect if Source is Active (Drivers -> routing)
-            // OR if Dest is Active (Routing -> Inputs)
             let src_active = active_nodes.contains(&pip.src);
             let dst_active = active_nodes.contains(&pip.dst);
 

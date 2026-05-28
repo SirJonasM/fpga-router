@@ -2,7 +2,7 @@ use egui::{CentralPanel, Id, Response, SidePanel, TopBottomPanel, panel::TopBott
 use router::NodeId;
 use vello::Scene;
 
-use crate::{App, LoadStatus, render::render_placeholder_vello};
+use crate::{App, LoadStatus, core::Entity, render::render_placeholder_vello};
 
 pub fn draw_ui(app: &mut App) -> Response {
     CentralPanel::default()
@@ -74,21 +74,21 @@ pub fn draw_sidepanel(app: &App) -> Option<NodeId> {
                 let node_end = graph.get_node(end).id();
                 ui.label(format!("Selected Edge: {node_start}->{node_end}",));
             }
-            if let Some(node) = app.selected_node
+            if let Some(Entity::Node(node)) = app.selected_entity
                 && let Some(graph) = &app.router.current_graph
             {
-                let node_id = graph.get_node(node).id();
+                let node_id = graph.get_node(node.id).id();
                 ui.label(format!("Selected Node: {node_id}",));
                 ui.separator();
                 ui.label("Previous:");
                 let mut responses = vec![];
-                graph.get_previous(node).iter().for_each(|a| {
+                graph.get_previous(node.id).iter().for_each(|a| {
                     let id = graph.get_node(*a).id();
                     let response = ui.label(id).interact(egui::Sense::click());
                     responses.push((*a, response))
                 });
                 ui.label("Next");
-                graph.get_next(node).iter().for_each(|a| {
+                graph.get_next(node.id).iter().for_each(|a| {
                     let id = graph.get_node(*a).id();
                     let response = ui.label(id).interact(egui::Sense::click());
                     responses.push((*a, response))

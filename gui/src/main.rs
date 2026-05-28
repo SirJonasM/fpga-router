@@ -1,8 +1,8 @@
 mod app;
 mod constants;
+mod core;
 mod gui;
 mod input;
-mod layout;
 mod render;
 
 use std::sync::Arc;
