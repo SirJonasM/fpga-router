@@ -1,10 +1,18 @@
-use std::{cmp::Ordering, collections::{BinaryHeap, HashSet}};
+use std::{
+    cmp::Ordering,
+    collections::{BinaryHeap, HashSet},
+};
 
 use crate::fabric::{graph::FabricGraph, node::NodeId};
 
 impl FabricGraph {
     #[must_use]
-    pub fn dijkstra_find_one(&self, start: NodeId, end: &HashSet<NodeId>, criticallity: f32) -> Option<(NodeId, Vec<NodeId>, f32)> {
+    pub fn dijkstra_find_one(
+        &self,
+        start: NodeId,
+        end: &HashSet<NodeId>,
+        criticallity: f32,
+    ) -> Option<(NodeId, Vec<NodeId>, f32)> {
         let mut targets = end.clone();
         let n = self.nodes.len();
 
@@ -71,7 +79,7 @@ impl FabricGraph {
         let n = self.nodes.len();
 
         let mut dist: Vec<f32> = vec![f32::MAX; n];
-        let mut prev: Vec<Option<NodeId>> = vec![None; n]; 
+        let mut prev: Vec<Option<NodeId>> = vec![None; n];
 
         let mut heap = BinaryHeap::new();
 

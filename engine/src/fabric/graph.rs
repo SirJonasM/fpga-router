@@ -215,18 +215,12 @@ impl FabricGraph {
     /// Returns the next nodes
     #[must_use]
     pub fn get_previous(&self, start: NodeId) -> Vec<NodeId> {
-        self.map_reversed[start]
-            .iter()
-            .map(|a| a.node_id)
-            .collect::<Vec<NodeId>>()
+        self.map_reversed[start].iter().map(|a| a.node_id).collect::<Vec<NodeId>>()
     }
     /// Returns the next nodes
     #[must_use]
     pub fn get_next(&self, start: NodeId) -> Vec<NodeId> {
-        self.map[start]
-            .iter()
-            .map(|a| a.node_id)
-            .collect::<Vec<NodeId>>()
+        self.map[start].iter().map(|a| a.node_id).collect::<Vec<NodeId>>()
     }
     /// Returns the Neighbours of `node`
     #[must_use]

@@ -31,11 +31,10 @@ pub fn build_design(
 
     // 1. Add tile-internal pips enabled in FASM (Programmable)
     for config in configurations {
-        if let Some(pip) = pips.iter().find(|pip| {
-            pip.src.tile == config.tile
-                && pip.src.pin == config.src_pin
-                && pip.dst.pin == config.dst_pin
-        }) {
+        if let Some(pip) = pips
+            .iter()
+            .find(|pip| pip.src.tile == config.tile && pip.src.pin == config.src_pin && pip.dst.pin == config.dst_pin)
+        {
             design
                 .entry(pip.src.clone())
                 .or_default()
@@ -80,9 +79,7 @@ pub fn build_design(
                 let lut_idx = first_char as u32 - 'A' as u32;
 
                 // Check if this LUT has a used flip-flop in the same tile
-                let is_flopped = flops
-                    .iter()
-                    .any(|flop| flop.tile == sink.tile && flop.lut == lut_idx);
+                let is_flopped = flops.iter().any(|flop| flop.tile == sink.tile && flop.lut == lut_idx);
 
                 if !is_flopped {
                     // Combinational
@@ -222,10 +219,7 @@ pub fn build_design(
         }
 
         for (src, dst, delay) in new_edges {
-            design
-                .entry(src)
-                .or_default()
-                .insert(dst, Connection { delay });
+            design.entry(src).or_default().insert(dst, Connection { delay });
         }
     }
 
@@ -242,9 +236,7 @@ pub fn node_key(node: &Node) -> String {
 }
 
 // Convert the design map into a JSON-friendly map with String keys
-pub fn design_to_json_map(
-    design: &HashMap<Node, HashMap<Node, Connection>>,
-) -> HashMap<String, HashMap<String, Connection>> {
+pub fn design_to_json_map(design: &HashMap<Node, HashMap<Node, Connection>>) -> HashMap<String, HashMap<String, Connection>> {
     let mut out: HashMap<String, HashMap<String, Connection>> = HashMap::new();
     for (src, dsts) in design {
         let src_key = node_key(src);
@@ -287,12 +279,9 @@ pub fn design_stats(design: &HashMap<Node, HashMap<Node, Connection>>, flops: &[
     let flop_sources: Vec<Node> = all_nodes
         .iter()
         .filter(|src| {
-            flops.iter().any(|flop| {
-                flop.tile == src.tile
-                    && src
-                        .pin
-                        .contains(&format!("L{}_O", (flop.lut as u8 + b'A') as char))
-            })
+            flops
+                .iter()
+                .any(|flop| flop.tile == src.tile && src.pin.contains(&format!("L{}_O", (flop.lut as u8 + b'A') as char)))
         })
         .cloned()
         .collect();
@@ -316,11 +305,7 @@ pub fn design_stats(design: &HashMap<Node, HashMap<Node, Connection>>, flops: &[
     }
 
     // Identify Sink Nodes (Nodes pointing nowhere)
-    let sink_nodes: Vec<Node> = all_nodes
-        .iter()
-        .filter(|node| !design.contains_key(node))
-        .cloned()
-        .collect();
+    let sink_nodes: Vec<Node> = all_nodes.iter().filter(|node| !design.contains_key(node)).cloned().collect();
 
     log::info!("Graph sink nodes (outdeg=0): {}", sink_nodes.len());
 
@@ -331,11 +316,7 @@ pub fn design_stats(design: &HashMap<Node, HashMap<Node, Connection>>, flops: &[
     }
 
     // Identify Flopped Sink Nodes (FF Data Inputs)
-    let flopped_sinks: Vec<Node> = sink_nodes
-        .iter()
-        .filter(|node| node.pin.contains("FF_D"))
-        .cloned()
-        .collect();
+    let flopped_sinks: Vec<Node> = sink_nodes.iter().filter(|node| node.pin.contains("FF_D")).cloned().collect();
 
     log::info!("Flopped sink nodes (FF Data In): {}", flopped_sinks.len());
 

@@ -26,7 +26,7 @@ pub const LUT_LINE_WIDTH: f64 = 0.5;
 
 pub const WIRE_LINE_WIDTH: f64 = 0.005;
 pub const WIRE_NODE_RADIUS: f64 = 0.1;
-pub const SELECTED_WIRE_LINE_WIDTH: f64 = WIRE_LINE_WIDTH * 4.0; 
+pub const SELECTED_WIRE_LINE_WIDTH: f64 = WIRE_LINE_WIDTH * 4.0;
 
 pub const LUTS_PER_ROW: usize = ((TILE_BOUNDING_BOX_WIDTH - (2.0 * LUT_MARGIN)) / (LUT_WIDTH + LUT_SPACING))
     .floor()

@@ -177,7 +177,6 @@ fn draw_visible_luts(visible_range: &VisibleTileRange, tile_manager: &TileManage
     }
 }
 
-
 #[derive(Default)]
 pub struct SpatialFabricGrid {
     // Keys are the structural Tile locations (e.g., TileId(x, y))

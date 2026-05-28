@@ -55,7 +55,6 @@ impl NetListInternal {
         let hash = Some(graph.calculate_structure_hash());
         NetListExternal { hash, plan }
     }
-
 }
 impl NetInternal {
     /// Transforms a `NetExternal` to a `Self` by mapping the name ids to internal used ids
@@ -99,11 +98,7 @@ impl NetInternal {
         let sinks = self.sinks.iter().map(|a| graph.get_node(*a).clone()).collect();
         let result = self.result.as_ref().map(|r| r.to_external(graph));
 
-        NetExternal {
-            sinks,
-            signal,
-            result,
-        }
+        NetExternal { sinks, signal, result }
     }
 }
 

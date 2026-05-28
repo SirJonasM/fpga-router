@@ -1,15 +1,11 @@
+pub use builder::{LayoutBuilder, Position, TargetLocation, find_location_at_world_pos};
 use router::{Node, NodeType, TileId};
-pub use builder::{LayoutBuilder, AtTileOuter, AtTileInner, find_location_at_world_pos, TargetLocation, Position};
 
 use crate::{constants::*, layout::builder::Compass};
 mod builder;
 
-
 pub fn get_tile_pos(tile: &TileId) -> (f64, f64) {
-    (
-        tile.0 as f64 * (TILE_WIDTH),
-        tile.1 as f64 * (TILE_HEIGHT),
-    )
+    (tile.0 as f64 * (TILE_WIDTH), tile.1 as f64 * (TILE_HEIGHT))
 }
 pub fn get_lut_offset(bel_index: char) -> (f64, f64) {
     let lowercase_char = bel_index.to_ascii_lowercase();
@@ -42,4 +38,3 @@ pub fn get_node_pos(node: &Node) -> Option<vello::kurbo::Point> {
     };
     Some(point)
 }
-

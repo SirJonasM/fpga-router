@@ -1,7 +1,15 @@
 use std::{collections::HashSet, io, path::PathBuf};
 use thiserror::Error;
 
-use crate::{IterationResult, fabric::{error::ParseError, node::{Node, TileId}}, netlist::error::MapExternalError, path_finder::CongestionReportExtern};
+use crate::{
+    IterationResult,
+    fabric::{
+        error::ParseError,
+        node::{Node, TileId},
+    },
+    netlist::error::MapExternalError,
+    path_finder::CongestionReportExtern,
+};
 
 // A shorthand for results in your library
 pub type FabricResult<T> = Result<T, FabricError>;
@@ -19,7 +27,7 @@ pub enum FabricError {
 
     #[error("The String does not represent a valid Node Id '{0}'.")]
     InvalidStringNodeId(String),
-    
+
     #[error("Tried to unwrap the result field in Net but it was none.")]
     NetNotSolved,
 

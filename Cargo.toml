@@ -1,9 +1,9 @@
 [workspace]
+  edition = "2024"
   members = [
 	"engine",
 	"cli",
 	"testing_utils",
-	"sta",
 	"gui"
   ]
   resolver = "3"

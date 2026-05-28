@@ -1,6 +1,8 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use router::{FabricGraph, Logging, RoutingConfigBuilder, SimpleSteinerSolver, SteinerSolver, TileManager, create_fasm, create_test, route};
+use router::{
+    FabricGraph, Logging, RoutingConfigBuilder, SimpleSteinerSolver, SteinerSolver, TileManager, create_fasm, create_test, route,
+};
 use testing_utils::get_test_data_path;
 
 struct MockLogger {

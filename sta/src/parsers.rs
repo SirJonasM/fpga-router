@@ -1,5 +1,8 @@
 use regex::Regex;
-use std::{fs::{self, File}, io::BufReader};
+use std::{
+    fs::{self, File},
+    io::BufReader,
+};
 
 use crate::{Configuration, Flop, Node, Pip, TimingConstraints, TimingModel};
 
@@ -7,8 +10,7 @@ pub fn pips_parser(file_path: &str) -> Vec<Pip> {
     let pips_file_content = fs::read_to_string(file_path).unwrap_or_else(|_| "".to_string());
     let mut pips: Vec<Pip> = Vec::new();
     // Regex to match PIPs like X1Y0,N1END3,X1Y0,S1BEG0
-    let pip_regex = match Regex::new(r"^X(\d+)Y(\d+),([^,]+),X(\d+)Y(\d+),([^,]+),(\d+(?:\.\d+)?)")
-    {
+    let pip_regex = match Regex::new(r"^X(\d+)Y(\d+),([^,]+),X(\d+)Y(\d+),([^,]+),(\d+(?:\.\d+)?)") {
         Ok(re) => re,
         Err(_) => return Vec::new(),
     };
@@ -51,8 +53,7 @@ pub fn fasm_parser_string(content: &str) -> Result<(Vec<Configuration>, Vec<Flop
     let mut configurations: Vec<Configuration> = Vec::new();
     let mut flops: Vec<Flop> = Vec::new();
 
-    let pip_regex = match Regex::new(r"^X(\d+)Y(\d+)\.([a-zA-Z0-9_\[\]:]+)\.([a-zA-Z0-9_\[\]:]+)$")
-    {
+    let pip_regex = match Regex::new(r"^X(\d+)Y(\d+)\.([a-zA-Z0-9_\[\]:]+)\.([a-zA-Z0-9_\[\]:]+)$") {
         Ok(re) => re,
         Err(_) => return Err(()),
     };

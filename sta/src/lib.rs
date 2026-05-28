@@ -8,8 +8,8 @@ pub mod report;
 pub use analysis::perform_timing_analysis;
 pub use design::{build_design, design_stats, design_to_json_map, make_fabric, node_key};
 pub use parsers::{
-    fasm_parser_string, parse_all_timing_constraints, parse_all_timing_models, parse_timing_constraints,
-    parse_timing_model, pips_parser,
+    fasm_parser_string, parse_all_timing_constraints, parse_all_timing_models, parse_timing_constraints, parse_timing_model,
+    pips_parser,
 };
 pub use report::report_violations;
 
@@ -95,7 +95,6 @@ impl TimingNode {
     }
 }
 
-
 impl std::fmt::Display for TimingNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -148,4 +147,3 @@ pub fn generate_slack_report(
     // Using the broadened perform_timing_analysis we discussed
     Ok(perform_timing_analysis(&design, &flops))
 }
-

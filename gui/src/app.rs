@@ -277,7 +277,7 @@ impl App {
             render_command_palette(self);
         }
 
-        let viewport_vello = response_central.rect;
+        let _viewport_vello = response_central.rect;
         self.handle_pan_movement(&response_central);
         self.find_entities();
 
@@ -640,7 +640,7 @@ pub fn world_to_screen(
     world_pos: vello::kurbo::Point,
     viewport: egui::Rect,
     view_transform: &ViewTransform,
-    pixels_per_point: f32,
+    _pixels_per_point: f32,
 ) -> egui::Pos2 {
     let screen_x = (world_pos.x * view_transform.scale) + viewport.min.x as f64 + view_transform.pan.x;
     let screen_y = (world_pos.y * view_transform.scale) + viewport.min.y as f64 + view_transform.pan.y;

@@ -133,11 +133,9 @@ pub fn create_test(graph: &FabricGraph, percentage: f32, destinations: usize) ->
     let input_count = (percentage * outputs.len() as f32) as usize;
     let output_count = input_count * destinations;
 
-
     if output_count > inputs.len() {
         return Err(FabricError::CreatingTestBadParameters(
-            "Too many resulting input luts for given parameters."
-                .to_string(),
+            "Too many resulting input luts for given parameters.".to_string(),
         ));
     }
 

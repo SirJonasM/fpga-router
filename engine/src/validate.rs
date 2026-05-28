@@ -1,8 +1,8 @@
 use std::collections::{HashSet, VecDeque};
 
 use crate::{
-    netlist::NetListInternal,
     fabric::{graph::FabricGraph, node::NodeId},
+    netlist::NetListInternal,
 };
 
 pub fn validate(net_list: &NetListInternal, graph: &FabricGraph) -> Result<(), String> {
@@ -31,7 +31,8 @@ pub fn validate(net_list: &NetListInternal, graph: &FabricGraph) -> Result<(), S
                 println!("Sink in nodes: {}", result.nodes.contains(&sink));
                 return Err(format!(
                     "sink {} is NOT reachable from signal {} using tree nodes",
-                    sink.name(graph), tree.signal.name(graph),
+                    sink.name(graph),
+                    tree.signal.name(graph),
                 ));
             }
         }

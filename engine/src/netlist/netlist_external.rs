@@ -1,9 +1,12 @@
-use std::{collections::{HashMap, HashSet},  fs, path::Path};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::Path,
+};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{FabricError, FabricResult, fabric::node::Node};
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetListExternal {
@@ -65,7 +68,17 @@ impl NetListExternal {
         x2.sort();
         x1.into_iter()
             .zip(x2)
-            .filter_map(|((signal, sink_old), (signal2, sink_new))| if signal == signal2 && sink_new != sink_old {Some(Swap {signal, sink_old, sink_new})} else { None })
+            .filter_map(|((signal, sink_old), (signal2, sink_new))| {
+                if signal == signal2 && sink_new != sink_old {
+                    Some(Swap {
+                        signal,
+                        sink_old,
+                        sink_new,
+                    })
+                } else {
+                    None
+                }
+            })
             .collect::<Vec<Swap>>()
     }
 }
@@ -81,9 +94,7 @@ impl std::fmt::Display for Swap {
         write!(
             f,
             "Signal: {:<15} | {:<20} -> {:<20}",
-            self.signal.id, 
-            self.sink_old.id, 
-            self.sink_new.id
+            self.signal.id, self.sink_old.id, self.sink_new.id
         )
     }
 }

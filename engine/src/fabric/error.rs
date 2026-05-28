@@ -5,7 +5,8 @@ pub enum ParseError {
     #[error("Parsing failed content: '{content}'")]
     LineError {
         content: String,
-        #[source] source: Box<Self>,
+        #[source]
+        source: Box<Self>,
     },
 
     #[error("Wrong Pips line format. Expecting 6 parts.")]

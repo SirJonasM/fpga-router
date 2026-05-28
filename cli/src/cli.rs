@@ -26,8 +26,6 @@ pub struct CreateTestArgs {
     pub percentage: f32,
 }
 
-
-
 #[derive(Parser, Debug)]
 pub struct RouteArgs {
     #[arg(short, long)]

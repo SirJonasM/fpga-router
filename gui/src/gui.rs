@@ -1,4 +1,4 @@
-use egui::{CentralPanel, Id, Pos2, Response, SidePanel, TopBottomPanel, panel::TopBottomSide};
+use egui::{CentralPanel, Id, Response, SidePanel, TopBottomPanel, panel::TopBottomSide};
 use router::NodeId;
 use vello::Scene;
 
@@ -59,7 +59,7 @@ pub fn draw_diagnostics(app: &App) {
         });
 }
 
-pub fn draw_sidepanel(app: &App) -> Option<NodeId>{
+pub fn draw_sidepanel(app: &App) -> Option<NodeId> {
     let x = SidePanel::left("left_panel")
         .resizable(true)
         .default_width(200.0)
@@ -93,7 +93,7 @@ pub fn draw_sidepanel(app: &App) -> Option<NodeId>{
                     let response = ui.label(id).interact(egui::Sense::click());
                     responses.push((*a, response))
                 });
-                return responses.iter().find_map(|a| if a.1.clicked() {Some(a.0)} else {None})
+                return responses.iter().find_map(|a| if a.1.clicked() { Some(a.0) } else { None });
             }
             None
         });

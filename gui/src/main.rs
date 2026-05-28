@@ -51,16 +51,14 @@ fn main() {
                     WindowEvent::RedrawRequested => {
                         app.render();
                     }
-                    WindowEvent::KeyboardInput { event, .. } if !event.state.is_pressed() => {
-                        match event.logical_key {
-                            Key::Character(ref c) if c == ":" => {
-                                app.input_handler.state = InputHandlerState::Command;
-                            }
-                            Key::Named(named_key) => app.input_handler.handle_named_key(named_key),
-                            Key::Character(c) => app.input_handler.handle_char(c),
-                            _ => {}
+                    WindowEvent::KeyboardInput { event, .. } if !event.state.is_pressed() => match event.logical_key {
+                        Key::Character(ref c) if c == ":" => {
+                            app.input_handler.state = InputHandlerState::Command;
                         }
-                    }
+                        Key::Named(named_key) => app.input_handler.handle_named_key(named_key),
+                        Key::Character(c) => app.input_handler.handle_char(c),
+                        _ => {}
+                    },
                     _ => {}
                 }
             }

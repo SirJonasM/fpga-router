@@ -5,7 +5,11 @@ use std::{
 
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::{Fabric, FabricResult, RouteNet, fabric::node::NodeId, netlist::{NetInternal, NetResultInternal}};
+use crate::{
+    Fabric, FabricResult, RouteNet,
+    fabric::node::NodeId,
+    netlist::{NetInternal, NetResultInternal},
+};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SteinerSolver;
@@ -42,7 +46,9 @@ impl RouteNet for SteinerSolver {
                 let Some((base_path, mut costs)) = fabric.graph.dijkstra(start, base_sink, 0.0) else {
                     let start_name = fabric.graph.get_node(start).id();
                     let base_sink_name = fabric.graph.get_node(base_sink).id();
-                    return Err(format!("Could not find a base path start: {start_name}, base sink: {base_sink_name}"));
+                    return Err(format!(
+                        "Could not find a base path start: {start_name}, base sink: {base_sink_name}"
+                    ));
                 };
 
                 // Calculate the cost of connecting all other sinks to this base path

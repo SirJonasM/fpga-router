@@ -116,7 +116,10 @@ const fn distance(a: &Node, b: &Node) -> f32 {
 
 #[cfg(test)]
 mod test {
-    use crate::{Direction, fabric::node::{CablePoint, NodeType, TileId}};
+    use crate::{
+        Direction,
+        fabric::node::{CablePoint, NodeType, TileId},
+    };
 
     use super::*;
 
@@ -146,12 +149,22 @@ mod test {
         let node1_expected = Node {
             id: "NN1END3".to_string(),
             tile: TileId(1, 0),
-            typ: NodeType::North(Direction{double: true, id: 3, length:1,cable_point: CablePoint::End}),
+            typ: NodeType::North(Direction {
+                double: true,
+                id: 3,
+                length: 1,
+                cable_point: CablePoint::End,
+            }),
         };
         let node2_expected = Node {
             id: "S1BEG0".to_string(),
             tile: TileId(1, 0),
-            typ: NodeType::South(Direction{double: false, id: 0, length:1,cable_point: CablePoint::Begin}),
+            typ: NodeType::South(Direction {
+                double: false,
+                id: 0,
+                length: 1,
+                cable_point: CablePoint::Begin,
+            }),
         };
         let PipsLine {
             start_node, end_node, ..
