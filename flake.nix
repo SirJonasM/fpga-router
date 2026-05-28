@@ -30,6 +30,7 @@
         ];
 
         commonInputs = with pkgs; [
+		  pre-commit
           cmake
           pkg-config # Essential for finding system libs
         ] ++ runtimeLibs;
