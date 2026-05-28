@@ -1,6 +1,6 @@
 use crate::constants::*;
 use router::NodeId;
-use router::{FabricGraph, TileId, TileManager};
+use router::{TileId, TileManager};
 use std::collections::{HashMap, HashSet};
 use vello::{
     Scene,
@@ -25,10 +25,10 @@ pub fn build_fabric_scene(
         draw_visible_luts(visible_range, tile_manager, &mut scene);
     }
     if (!is_moving && scale > EDGE_ZOOM_THRESHOLD_UNDER_MOVING) || scale > EDGE_ZOOM_THRESHOLD {
-        draw_visible_edges(visible_range, spatial_grid, selected_node, selected_edge, &mut scene);
+        draw_visible_edges(visible_range, spatial_grid, selected_edge, &mut scene);
     }
     if (!is_moving && scale > NODE_ZOOM_THRESHOLD_UNDER_MOVING) || scale > NODE_ZOOM_THRESHOLD {
-        draw_visible_nodes(visible_range, spatial_grid, selected_node, selected_edge, &mut scene);
+        draw_visible_nodes(visible_range, spatial_grid, selected_node, &mut scene);
     }
 
     scene
@@ -73,7 +73,6 @@ fn draw_visible_nodes(
     visible_range: &VisibleTileRange,
     spatial_grid: &SpatialFabricGrid,
     selected_node: Option<NodeId>,
-    selected_edge: Option<(NodeId, NodeId)>,
     scene: &mut vello::Scene,
 ) {
     for x in visible_range.min_x..=visible_range.max_x {
@@ -106,18 +105,10 @@ fn draw_visible_nodes(
 fn draw_visible_edges(
     visible_range: &VisibleTileRange,
     spatial_grid: &SpatialFabricGrid,
-    selected_node: Option<NodeId>,
     selected_edge: Option<(NodeId, NodeId)>,
     scene: &mut vello::Scene,
 ) {
     let mut drawn_edges = HashSet::new();
-
-    const DEFAULT_WIDTH: f64 = WIRE_LINE_WIDTH;
-    const SELECTED_WIDTH: f64 = WIRE_LINE_WIDTH * 2.5;
-
-    const COLOR_START: vello::peniko::Color = vello::peniko::Color::GREEN;
-    const COLOR_END: vello::peniko::Color = vello::peniko::Color::BLUE;
-
     for x in visible_range.min_x..=visible_range.max_x {
         for y in visible_range.min_y..=visible_range.max_y {
             if x < 0 || y < 0 {
@@ -135,12 +126,10 @@ fn draw_visible_edges(
                     let line = vello::kurbo::Line::new(edge.start_pos, edge.end_pos);
 
                     let gradient = vello::peniko::Gradient::new_linear(edge.start_pos, edge.end_pos)
-                        .with_stops([(0.0, COLOR_START), (1.0, COLOR_END)].as_slice());
-                    let is_connected = Some(edge.source_node) == selected_node || Some(edge.target_node) == selected_node;
-                    let stroke_width = if is_connected { SELECTED_WIDTH } else { DEFAULT_WIDTH };
+                        .with_stops([(0.0, COLOR_EDGE_START), (1.0, COLOR_EDGE_END)].as_slice());
                     if Some((edge.source_node, edge.target_node)) == selected_edge {
                         scene.stroke(
-                            &vello::kurbo::Stroke::new(stroke_width),
+                            &vello::kurbo::Stroke::new(SELECTED_WIRE_LINE_WIDTH),
                             vello::kurbo::Affine::IDENTITY,
                             vello::peniko::Color::WHITE,
                             None,
@@ -148,7 +137,7 @@ fn draw_visible_edges(
                         );
                     } else {
                         scene.stroke(
-                            &vello::kurbo::Stroke::new(stroke_width),
+                            &vello::kurbo::Stroke::new(WIRE_LINE_WIDTH),
                             vello::kurbo::Affine::IDENTITY,
                             &vello::peniko::Brush::Gradient(gradient),
                             None,
@@ -188,52 +177,6 @@ fn draw_visible_luts(visible_range: &VisibleTileRange, tile_manager: &TileManage
     }
 }
 
-fn draw_edges(nodes: &[(NodeId, vello::kurbo::Point)], graph: &FabricGraph, scene: &mut Scene, selected_node: Option<NodeId>) {
-    for &(me, position_start) in nodes {
-        let mut process_edges = |edge_list: &[router::Edge], is_reversed: bool| {
-            for other in edge_list {
-                let other_id = other.node_id;
-
-                if me > other_id {
-                    let end_node = graph.get_node(other_id);
-                    if let Some(position_end) = crate::layout::get_node_pos(end_node) {
-                        let (p_start, p_end) = if is_reversed {
-                            (position_end, position_start)
-                        } else {
-                            (position_start, position_end)
-                        };
-
-                        let line = vello::kurbo::Line::new(p_start, p_end);
-
-                        let is_connected_to_selection = Some(me) == selected_node || Some(other_id) == selected_node;
-                        let (stroke_width, gradient) = if is_connected_to_selection {
-                            let gradient = vello::peniko::Gradient::new_linear(p_start, p_end).with_stops(
-                                [(0.0, COLOR_OUTGOING_HIGHLIGHTED), (1.0, COLOR_END_INCOMING_HIGHLIGHTED)].as_slice(),
-                            );
-                            (SELECTED_WIRE_WIDTH, gradient)
-                        } else {
-                            let gradient = vello::peniko::Gradient::new_linear(p_start, p_end)
-                                .with_stops([(0.0, COLOR_OUTGOING), (1.0, COLOR_END_INCOMING)].as_slice());
-                            (DEFAULT_WIRE_WIDTH, gradient)
-                        };
-                        let brush = vello::peniko::Brush::Gradient(gradient);
-
-                        scene.stroke(
-                            &vello::kurbo::Stroke::new(stroke_width),
-                            vello::kurbo::Affine::IDENTITY,
-                            &brush,
-                            None,
-                            &line,
-                        );
-                    }
-                }
-            }
-        };
-
-        process_edges(&graph.map[me], false);
-        process_edges(&graph.map_reversed[me], true);
-    }
-}
 
 #[derive(Default)]
 pub struct SpatialFabricGrid {

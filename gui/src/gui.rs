@@ -1,4 +1,5 @@
-use egui::{CentralPanel, Id, Label, Response, SidePanel, TopBottomPanel, panel::TopBottomSide};
+use egui::{CentralPanel, Id, Pos2, Response, SidePanel, TopBottomPanel, panel::TopBottomSide};
+use router::NodeId;
 use vello::Scene;
 
 use crate::{App, LoadStatus, render::render_placeholder_vello};
@@ -58,13 +59,12 @@ pub fn draw_diagnostics(app: &App) {
         });
 }
 
-pub fn draw_sidepanel(app: &App) {
-    SidePanel::left("left_panel")
+pub fn draw_sidepanel(app: &App) -> Option<NodeId>{
+    let x = SidePanel::left("left_panel")
         .resizable(true)
         .default_width(200.0)
         .show(&app.egui_ctx, |ui| {
             ui.heading("FPGA Router");
-
             ui.separator();
 
             if let Some((start, end)) = app.selected_edge
@@ -81,17 +81,23 @@ pub fn draw_sidepanel(app: &App) {
                 ui.label(format!("Selected Node: {node_id}",));
                 ui.separator();
                 ui.label("Previous:");
+                let mut responses = vec![];
                 graph.get_previous(node).iter().for_each(|a| {
                     let id = graph.get_node(*a).id();
-                    ui.label(id);
+                    let response = ui.label(id).interact(egui::Sense::click());
+                    responses.push((*a, response))
                 });
                 ui.label("Next");
                 graph.get_next(node).iter().for_each(|a| {
                     let id = graph.get_node(*a).id();
-                    ui.label(id);
+                    let response = ui.label(id).interact(egui::Sense::click());
+                    responses.push((*a, response))
                 });
+                return responses.iter().find_map(|a| if a.1.clicked() {Some(a.0)} else {None})
             }
+            None
         });
+    x.inner
 }
 
 pub fn render_command_palette(app: &mut App) {

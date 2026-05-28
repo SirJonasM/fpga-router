@@ -1,13 +1,10 @@
 use egui::Response;
 use egui_wgpu::{Renderer as EguiRenderer, ScreenDescriptor};
 use egui_winit::State as EguiWinitState;
-use router::{FabricGraph, Node, NodeId, TileId, TileManager};
-use std::{
-    sync::{
-        Arc,
-        mpsc::{Receiver, channel},
-    },
-    time::Instant,
+use router::{FabricGraph, NodeId, TileId, TileManager};
+use std::sync::{
+    Arc,
+    mpsc::{Receiver, channel},
 };
 use vello::{Renderer, RendererOptions, Scene, peniko::Color};
 use wgpu::{
@@ -31,7 +28,7 @@ use crate::{
     constants::*,
     gui::{draw_ui, render_loading, render_vello},
     input::{Command, Goto, InputHandler},
-    layout::{LayoutBuilder, find_location_at_world_pos},
+    layout::find_location_at_world_pos,
     render::{build_fabric_scene, calculate_visible_tiles},
 };
 
@@ -71,6 +68,7 @@ pub struct ViewTransform {
     pub pan: vello::kurbo::Vec2,
     pub scale: f64,
 }
+
 impl ViewTransform {
     pub fn zoom_at_point(&mut self, scroll_delta: f32, mouse_pos: egui::Pos2, viewport: egui::Rect) {
         let raw_zoom_factor = (scroll_delta as f64 * 0.001).exp();
@@ -248,7 +246,27 @@ impl App {
         self.set_position(ppp);
 
         let _ = draw_status_line(self);
-        draw_sidepanel(self);
+        let next_node = draw_sidepanel(self);
+        if let Some(next_node) = next_node {
+            let Some(graph) = &self.router.current_graph else {
+                return;
+            };
+            let Some(spatial_grid) = &self.spatial_grid else {
+                return;
+            };
+            let node = graph.get_node(next_node);
+
+            if let Some((node, cord)) = spatial_grid
+                .buckets
+                .get(&node.tile)
+                .and_then(|bucket| bucket.node_data.iter().find(|(a, _b)| *a == next_node))
+            {
+                const SCALE: f64 = 80.0;
+                self.focus_point = Some((*cord, SCALE));
+                self.selected_node = Some(*node);
+            }
+        }
+
         let response_central = draw_ui(self);
         self.central_rect = response_central.rect;
 
@@ -280,7 +298,8 @@ impl App {
         let mut encoder = self.device.create_command_encoder(&CommandEncoderDescriptor {
             label: Some("main encoder"),
         });
-        self.focus_point();
+
+        self.set_focus_point(ppp as f64);
 
         self.vello_renderer
             .render_to_surface(
@@ -333,18 +352,21 @@ impl App {
             self.egui_renderer.free_texture(id);
         }
     }
-    fn focus_point(&mut self){ 
+    pub fn set_focus_point(&mut self, ppp: f64) {
         if let Some(focus) = self.focus_point.take() {
             let target_world_pos = focus.0;
             let scale = focus.1;
 
             self.view_transform.scale = scale;
+            let min_x_pixels = self.central_rect.min.x as f64 * ppp;
+            let min_y_pixels = self.central_rect.min.y as f64 * ppp;
+            let width_pixels = self.central_rect.width() as f64 * ppp;
+            let height_pixels = self.central_rect.height() as f64 * ppp;
 
-            let viewport_center_x = self.central_rect.min.x as f64 + (self.central_rect.width() as f64 / 2.0);
-            let viewport_center_y = self.central_rect.min.y as f64 + (self.central_rect.height() as f64 / 2.0);
-
-            let pan_x = viewport_center_x - (target_world_pos.x * scale);
-            let pan_y = viewport_center_y - (target_world_pos.y * scale);
+            let viewport_center_x = min_x_pixels + (width_pixels / 2.0);
+            let viewport_center_y = min_y_pixels + (height_pixels / 2.0);
+            let pan_x = viewport_center_x - (target_world_pos.x * scale) - min_x_pixels;
+            let pan_y = viewport_center_y - (target_world_pos.y * scale) - min_y_pixels;
 
             self.view_transform.pan = vello::kurbo::Vec2::new(pan_x, pan_y);
         }
@@ -395,37 +417,80 @@ impl App {
             }
             Command::Goto(sub_command) => match sub_command {
                 Goto::Tile { x, y } => {
-                    let cord = LayoutBuilder::new()
-                        .tile(&TileId(x as u8, y as u8))
-                        .tile_middle_point()
-                        .build();
-                    const SCALE: f64 = 6.0;
-                    self.focus_point = Some((cord, SCALE));
+                    let Some(spatial_grid) = &self.spatial_grid else {
+                        return;
+                    };
+                    let tile_id = TileId(x as u8, y as u8);
+                    if let Some(cord) = spatial_grid.buckets.get(&tile_id).map(|a| a.tile_data) {
+                        const SCALE: f64 = 10.0;
+                        self.focus_point = Some((cord, SCALE));
+                    }
                 }
                 Goto::Lut { x, y, bel } => {
-                    let time = Instant::now();
-                    let cord = LayoutBuilder::new()
-                        .tile(&TileId(x as u8, y as u8))
-                        .tile_inner()
-                        .lut(bel)
-                        .lut_middle_point()
-                        .build();
-                    println!("Calculated lut positon in {:?}", time.elapsed());
-                    let time = Instant::now();
-                    if let Some((_, cord)) = &self.spatial_grid.as_ref().and_then(|grid| {
-                        grid.buckets
-                            .get(&TileId(x as u8, y as u8))
-                            .and_then(|bucket| bucket.lut_data.iter().find(|a| a.0.eq_ignore_ascii_case(&bel)))
+                    let Some(spatial_grid) = &self.spatial_grid else {
+                        return;
+                    };
+                    let tile_id = TileId(x as u8, y as u8);
+                    if let Some(cord) = spatial_grid.buckets.get(&tile_id).and_then(|bucket| {
+                        bucket
+                            .lut_data
+                            .iter()
+                            .find_map(|(a, b)| if bel == *a { Some(b) } else { None })
                     }) {
-                        println!("Found lut positon in {:?}", time.elapsed());
                         const SCALE: f64 = 10.0;
                         self.focus_point = Some((*cord, SCALE));
                     }
-
-                    const SCALE: f64 = 10.0;
-                    self.focus_point = Some((cord, SCALE));
                 }
-                _ => todo!(),
+                Goto::Edge {
+                    x1,
+                    y1,
+                    id1,
+                    x2: _,
+                    y2: _,
+                    id2,
+                } => {
+                    let Some(graph) = &self.router.current_graph else {
+                        return;
+                    };
+                    let Some(spatial_grid) = &self.spatial_grid else {
+                        return;
+                    };
+                    let tile_id1 = TileId(x1 as u8, y1 as u8);
+                    println!("Trying to find edge.");
+                    if let Some(edge_data) = spatial_grid.buckets.get(&tile_id1).and_then(|bucket| {
+                        bucket.edge_data.iter().find(|edge_data| {
+                            graph.get_node(edge_data.source_node).id == id1 && graph.get_node(edge_data.target_node).id == id2
+                                || graph.get_node(edge_data.source_node).id == id2
+                                    && graph.get_node(edge_data.target_node).id == id1
+                        })
+                    }) {
+                        let vec_x = edge_data.end_pos.x - edge_data.start_pos.x;
+                        let vec_y = edge_data.end_pos.y - edge_data.start_pos.y;
+                        let len = ((vec_x * vec_x) + (vec_y * vec_y)).sqrt();
+                        let mid_point_x = edge_data.start_pos.x + vec_x * 0.5;
+                        let mid_point_y = edge_data.start_pos.y + vec_y * 0.5;
+                        self.focus_point = Some((vello::kurbo::Point::new(mid_point_x, mid_point_y), 1000.0 / len));
+                        self.selected_edge = Some((edge_data.source_node, edge_data.target_node));
+                    }
+                }
+                Goto::Node { x, y, id } => {
+                    let Some(graph) = &self.router.current_graph else {
+                        return;
+                    };
+                    let Some(spatial_grid) = &self.spatial_grid else {
+                        return;
+                    };
+                    let tile_id = TileId(x as u8, y as u8);
+                    if let Some((node, cord)) = spatial_grid
+                        .buckets
+                        .get(&tile_id)
+                        .and_then(|bucket| bucket.node_data.iter().find(|(a, _b)| graph.get_node(*a).id == id))
+                    {
+                        const SCALE: f64 = 80.0;
+                        self.focus_point = Some((*cord, SCALE));
+                        self.selected_node = Some(*node);
+                    }
+                }
             },
             _ => {}
         }

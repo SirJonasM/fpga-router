@@ -15,8 +15,8 @@ pub const TILE_OUTER_LINE_WIDTH: f64 = 0.1;
 pub const TILE_PADDING: f64 = 40.0;
 pub const TILE_WIDTH: f64 = TILE_BOUNDING_BOX_WIDTH + TILE_PADDING;
 pub const TILE_HEIGHT: f64 = TILE_BOUNDING_BOX_HEIGHT + TILE_PADDING;
-pub const TILE_INNER_RANGE_X:RangeInclusive<f64> = (TILE_PADDING/2.0)..=(TILE_WIDTH - TILE_PADDING /2.0);
-pub const TILE_INNER_RANGE_Y:RangeInclusive<f64> = (TILE_PADDING/2.0)..=(TILE_HEIGHT - TILE_PADDING /2.0);
+pub const TILE_INNER_RANGE_X: RangeInclusive<f64> = (TILE_PADDING / 2.0)..=(TILE_WIDTH - TILE_PADDING / 2.0);
+pub const TILE_INNER_RANGE_Y: RangeInclusive<f64> = (TILE_PADDING / 2.0)..=(TILE_HEIGHT - TILE_PADDING / 2.0);
 
 pub const LUT_WIDTH: f64 = 20.0;
 pub const LUT_HEIGHT: f64 = 15.0;
@@ -26,6 +26,7 @@ pub const LUT_LINE_WIDTH: f64 = 0.5;
 
 pub const WIRE_LINE_WIDTH: f64 = 0.005;
 pub const WIRE_NODE_RADIUS: f64 = 0.1;
+pub const SELECTED_WIRE_LINE_WIDTH: f64 = WIRE_LINE_WIDTH * 4.0; 
 
 pub const LUTS_PER_ROW: usize = ((TILE_BOUNDING_BOX_WIDTH - (2.0 * LUT_MARGIN)) / (LUT_WIDTH + LUT_SPACING))
     .floor()
@@ -34,10 +35,5 @@ pub const LUTS_PER_ROW: usize = ((TILE_BOUNDING_BOX_WIDTH - (2.0 * LUT_MARGIN)) 
 pub const MIN_ZOOM: f64 = 0.05;
 pub const MAX_ZOOM: f64 = 250.0;
 
-pub const DEFAULT_WIRE_WIDTH: f64 = WIRE_LINE_WIDTH;
-pub const SELECTED_WIRE_WIDTH: f64 = WIRE_LINE_WIDTH * 2.5; // Constant thick stroke
-
-pub const COLOR_OUTGOING: Color = Color::GRAY;
-pub const COLOR_OUTGOING_HIGHLIGHTED: Color = Color::BLUE;
-pub const COLOR_END_INCOMING: Color = Color::DARK_GRAY;
-pub const COLOR_END_INCOMING_HIGHLIGHTED: Color = Color::RED;
+pub const COLOR_EDGE_START: Color = Color::GREEN;
+pub const COLOR_EDGE_END: Color = Color::BLUE;

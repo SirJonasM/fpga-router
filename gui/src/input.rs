@@ -110,10 +110,19 @@ impl Command {
                 let y1 = parse_int(arguments.next())?;
                 let id1 = arguments.next()?;
                 let id1 = id1.to_string();
-                let x2 = parse_int(arguments.next())?;
-                let y2 = parse_int(arguments.next())?;
-                let id2 = arguments.next()?;
-                let id2 = id2.to_string();
+                let (x2, y2, id2) = {
+                    let next = arguments.next()?;
+                    println!("Next: {next:?}");
+                    if let Ok(x2) = next.parse::<usize>() {
+                        let y2 = parse_int(arguments.next())?;
+                        let id2 = arguments.next()?;
+                        let id2 = id2.to_string();
+                        (x2, y2, id2)
+                    } else {
+                        (x1, y1, next.to_string())
+                    }
+                };
+
                 Some(Command::Goto(Goto::Edge {
                     x1,
                     y1,
