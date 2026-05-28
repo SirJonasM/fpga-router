@@ -52,7 +52,6 @@ pub enum Command {
 }
 impl Command {
     pub fn parse_command(command: &str) -> Option<Self> {
-        println!("parsing command: {command}");
         let mut full_command = command.split_whitespace();
         if let Some(m) = full_command.next() {
             return match m {

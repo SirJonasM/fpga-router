@@ -28,11 +28,13 @@ impl SpatialFabricGrid {
     pub fn build_from_graph(graph: &router::FabricGraph, tile_manager: &router::TileManager) -> Self {
         let mut grid = Self::default();
         for tile in tile_manager.0.values() {
-            let pos = LayoutBuilder::new().tile(&tile.id).build();
+            let position_outer = LayoutBuilder::new().tile(&tile.id).build();
+            let position_inner = LayoutBuilder::new().tile(&tile.id).tile_inner().build();
 
             let bucket = grid.buckets.entry(tile.id).or_insert_with(|| TileBucket {
                 tile_data: Tile {
-                    position: pos,
+                    position_outer,
+                    position_inner,
                     id: tile.id,
                 },
                 lut_data: Vec::new(),
@@ -53,7 +55,10 @@ impl SpatialFabricGrid {
 
         for node in graph.nodes.iter() {
             if let Some(pos) = get_node_pos(node) {
-                let bucket = grid.buckets.get_mut(&node.tile).expect("Error in pips and bel definition.");
+                let bucket = grid
+                    .buckets
+                    .get_mut(&node.tile)
+                    .unwrap_or_else(|| panic!("Error in pips and bel definition. Tile: {:?}", node.tile));
                 let node_id = graph.get_node_id(&node.id()).unwrap();
                 bucket.node_data.push(Node {
                     id: *node_id,
@@ -99,7 +104,7 @@ impl SpatialFabricGrid {
         let Some(bucket) = self.buckets.get(&tile_id) else {
             return TargetLocation::None;
         };
-        let tile_pos = bucket.tile_data.position;
+        let tile_pos = bucket.tile_data.position_outer;
         let tile_x_offset = x - tile_pos.x;
         let tile_y_offset = y - tile_pos.y;
         let is_in_inner_box = TILE_INNER_RANGE_X.contains(&tile_x_offset) && TILE_INNER_RANGE_Y.contains(&tile_y_offset);

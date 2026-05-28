@@ -11,6 +11,7 @@ use std::fmt::Display;
 pub use tile::Tile;
 pub use tile::get_tile_pos;
 
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Entity {
     Tile(Tile),
     Lut(Lut),

@@ -2,7 +2,7 @@ use router::{NodeId, NodeType};
 
 use crate::core::layout::{Compass, LayoutBuilder};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Node {
     pub id: NodeId,
     pub position: vello::kurbo::Point,

@@ -1,29 +1,25 @@
 use crate::constants::*;
 use crate::core::Entity;
-use crate::core::LayoutBuilder;
 use crate::core::SpatialFabricGrid;
 use crate::core::VisibleTileRange;
-use router::NodeId;
-use router::{TileId, TileManager};
+use router::TileId;
 use std::collections::HashSet;
 use vello::Scene;
 
 pub fn fabric_scene(
-    tile_manager: &TileManager,
     spatial_grid: &SpatialFabricGrid,
     visible_range: &VisibleTileRange,
     scale: f64,
     is_moving: bool,
-    selected_entity: &Option<Entity>,
-    selected_edge: Option<(NodeId, NodeId)>,
+    selected_entity: Option<Entity>,
 ) -> vello::Scene {
     let mut scene = vello::Scene::new();
-    draw_visible_tiles(visible_range, tile_manager, &mut scene);
+    draw_visible_tiles(visible_range, spatial_grid, selected_entity, &mut scene);
     if scale > LUT_ZOOM_THRESHOLD {
-        draw_visible_luts(visible_range, tile_manager, &mut scene);
+        draw_visible_luts(visible_range, spatial_grid, selected_entity, &mut scene);
     }
     if (!is_moving && scale > EDGE_ZOOM_THRESHOLD_UNDER_MOVING) || scale > EDGE_ZOOM_THRESHOLD {
-        draw_visible_edges(visible_range, spatial_grid, selected_edge, &mut scene);
+        draw_visible_edges(visible_range, spatial_grid, selected_entity, &mut scene);
     }
     if (!is_moving && scale > NODE_ZOOM_THRESHOLD_UNDER_MOVING) || scale > NODE_ZOOM_THRESHOLD {
         draw_visible_nodes(visible_range, spatial_grid, selected_entity, &mut scene);
@@ -31,36 +27,52 @@ pub fn fabric_scene(
 
     scene
 }
-fn draw_visible_tiles(visible_range: &VisibleTileRange, tile_manager: &TileManager, scene: &mut Scene) {
+fn draw_visible_tiles(
+    visible_range: &VisibleTileRange,
+    spatial_grid: &SpatialFabricGrid,
+    selected_entity: Option<Entity>,
+    scene: &mut Scene,
+) {
     for x in visible_range.min_x..=visible_range.max_x {
         for y in visible_range.min_y..=visible_range.max_y {
             if x < 0 || y < 0 {
                 continue;
             }
             let tile_id = TileId(x as u8, y as u8);
-            if !tile_manager.0.contains_key(&tile_id) {
+            let Some(buckets) = spatial_grid.buckets.get(&tile_id) else {
                 continue;
             };
-            let cord = LayoutBuilder::new().tile(&tile_id);
-            let rect = vello::kurbo::Rect::new(cord.x, cord.y, cord.x + TILE_WIDTH, cord.y + TILE_HEIGHT);
+            let tile = buckets.tile_data;
+            let (color1, color2) = if let Some(Entity::Tile(selected_entity)) = selected_entity
+                && selected_entity.id == tile_id
+            {
+                (vello::peniko::Color::RED, vello::peniko::Color::DARK_RED)
+            } else {
+                (vello::peniko::Color::rgb8(25, 25, 25), vello::peniko::Color::rgb8(25, 25, 25))
+            };
+            let rect = vello::kurbo::Rect::new(
+                tile.position_outer.x,
+                tile.position_outer.y,
+                tile.position_outer.x + TILE_WIDTH,
+                tile.position_outer.y + TILE_HEIGHT,
+            );
             scene.stroke(
                 &vello::kurbo::Stroke::new(TILE_OUTER_LINE_WIDTH),
                 vello::kurbo::Affine::IDENTITY,
-                vello::peniko::Color::rgb8(25, 25, 25),
+                color1,
                 None,
                 &rect,
             );
-            let cord = cord.tile_inner();
             let rect = vello::kurbo::Rect::new(
-                cord.x,
-                cord.y,
-                cord.x + TILE_BOUNDING_BOX_WIDTH,
-                cord.y + TILE_BOUNDING_BOX_HEIGHT,
+                tile.position_inner.x,
+                tile.position_inner.y,
+                tile.position_inner.x + TILE_BOUNDING_BOX_WIDTH,
+                tile.position_inner.y + TILE_BOUNDING_BOX_HEIGHT,
             );
             scene.stroke(
                 &vello::kurbo::Stroke::new(TILE_INNER_LINE_WIDTH),
                 vello::kurbo::Affine::IDENTITY,
-                vello::peniko::Color::rgb8(25, 25, 25),
+                color2,
                 None,
                 &rect,
             );
@@ -70,7 +82,7 @@ fn draw_visible_tiles(visible_range: &VisibleTileRange, tile_manager: &TileManag
 fn draw_visible_nodes(
     visible_range: &VisibleTileRange,
     spatial_grid: &SpatialFabricGrid,
-    selected_entity: &Option<Entity>,
+    selected_entity: Option<Entity>,
     scene: &mut vello::Scene,
 ) {
     for x in visible_range.min_x..=visible_range.max_x {
@@ -105,7 +117,7 @@ fn draw_visible_nodes(
 fn draw_visible_edges(
     visible_range: &VisibleTileRange,
     spatial_grid: &SpatialFabricGrid,
-    selected_edge: Option<(NodeId, NodeId)>,
+    selected_entity: Option<Entity>,
     scene: &mut vello::Scene,
 ) {
     let mut drawn_edges = HashSet::new();
@@ -127,7 +139,9 @@ fn draw_visible_edges(
 
                     let gradient = vello::peniko::Gradient::new_linear(edge.start_position, edge.end_position)
                         .with_stops([(0.0, COLOR_EDGE_START), (1.0, COLOR_EDGE_END)].as_slice());
-                    if Some((edge.source_node, edge.target_node)) == selected_edge {
+                    if let Some(Entity::Edge(selected_edge)) = selected_entity
+                        && *edge == selected_edge
+                    {
                         scene.stroke(
                             &vello::kurbo::Stroke::new(SELECTED_WIRE_LINE_WIDTH),
                             vello::kurbo::Affine::IDENTITY,
@@ -149,26 +163,41 @@ fn draw_visible_edges(
         }
     }
 }
-fn draw_visible_luts(visible_range: &VisibleTileRange, tile_manager: &TileManager, scene: &mut Scene) {
+fn draw_visible_luts(
+    visible_range: &VisibleTileRange,
+    spatial_grid: &SpatialFabricGrid,
+    selected_entity: Option<Entity>,
+    scene: &mut Scene,
+) {
     for x in visible_range.min_x..=visible_range.max_x {
         for y in visible_range.min_y..=visible_range.max_y {
             if x < 0 || y < 0 {
                 continue;
             }
+
             let tile_id = TileId(x as u8, y as u8);
-            let Some(tile) = tile_manager.0.get(&tile_id) else {
+            let Some(buckets) = spatial_grid.buckets.get(&tile_id) else {
                 continue;
             };
-            let cord = LayoutBuilder::new().tile(&tile_id).tile_inner();
-
-            tile.luts.iter().for_each(|lut| {
-                let lut = cord.lut(lut.bel_index);
-                let lut_rect = vello::kurbo::Rect::new(lut.x, lut.y, lut.x + LUT_WIDTH, lut.y + LUT_HEIGHT);
-
+            buckets.lut_data.iter().for_each(|lut| {
+                let lut_rect = vello::kurbo::Rect::new(
+                    lut.position.x,
+                    lut.position.y,
+                    lut.position.x + LUT_WIDTH,
+                    lut.position.y + LUT_HEIGHT,
+                );
+                let color = if let Some(Entity::Lut(selected_lut)) = selected_entity
+                    && selected_lut.bel_index == lut.bel_index
+                    && selected_lut.tile == lut.tile
+                {
+                    vello::peniko::Color::RED
+                } else {
+                    vello::peniko::Color::rgb8(100, 100, 110)
+                };
                 scene.stroke(
                     &vello::kurbo::Stroke::new(LUT_LINE_WIDTH),
                     vello::kurbo::Affine::IDENTITY,
-                    vello::peniko::Color::rgb8(100, 100, 110),
+                    color,
                     None,
                     &lut_rect,
                 );

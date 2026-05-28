@@ -4,6 +4,7 @@ mod core;
 mod gui;
 mod input;
 mod render;
+mod utils;
 
 use std::sync::Arc;
 use winit::keyboard::Key;

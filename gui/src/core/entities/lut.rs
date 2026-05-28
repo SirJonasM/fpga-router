@@ -2,11 +2,18 @@ use router::TileId;
 use vello::kurbo::Point;
 
 use crate::constants::*;
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Lut {
     pub position: Point,
     pub bel_index: char,
     pub tile: TileId,
+}
+impl Lut {
+    pub fn mid_point(&self) -> Point {
+        let x = self.position.x + LUT_WIDTH * 0.5;
+        let y = self.position.y + LUT_HEIGHT * 0.5;
+        Point::new(x, y)
+    }
 }
 
 pub fn get_lut_offset(bel_index: char) -> (f64, f64) {

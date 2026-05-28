@@ -1,7 +1,7 @@
 use egui::Response;
 use egui_wgpu::{Renderer as EguiRenderer, ScreenDescriptor};
 use egui_winit::State as EguiWinitState;
-use router::{FabricGraph, NodeId, TileId, TileManager};
+use router::{FabricGraph, TileId, TileManager};
 use std::sync::{
     Arc,
     mpsc::{Receiver, channel},
@@ -18,9 +18,10 @@ use winit::{dpi::PhysicalSize, window::Window};
 use crate::gui::draw_diagnostics;
 use crate::{
     GRAPH_SIZE,
-    core::{Entity, Lut, Node, Position, SpatialFabricGrid},
+    core::{Entity, Lut, Position, SpatialFabricGrid, find_entities_at_position},
     gui::{draw_sidepanel, draw_status_line, render_command_palette},
     input::InputHandlerState,
+    utils::screen_to_world,
 };
 use crate::{
     LoadStatus,
@@ -56,8 +57,7 @@ pub struct App {
     pub queues: Messages,
     pub load_status: LoadStatus,
     pub is_moving: bool,
-    pub selected_entity: Option<Entity>,
-    pub selected_edge: Option<(NodeId, NodeId)>,
+    pub selected_entity: SelectionManager,
     pub position: Option<Position>,
     pub ppp: f64,
 }
@@ -207,7 +207,6 @@ impl App {
             input_handler: Default::default(),
             queues: Default::default(),
             selected_entity: Default::default(),
-            selected_edge: Default::default(),
             central_rect: egui::Rect::NOTHING,
             position: Default::default(),
             ppp: 1.0,
@@ -242,13 +241,13 @@ impl App {
         self.egui_ctx.begin_frame(raw_input);
 
         self.ppp = self.egui_ctx.pixels_per_point() as f64;
-        self.set_position();
 
         let _ = draw_status_line(self);
-        let next_node = draw_sidepanel(self);
+        let entity = draw_sidepanel(self);
 
-        if let Some(next_node) = next_node {
-            self.handle_clicked_node(next_node)
+        if let Some(entity) = entity {
+            self.focus_entity(entity);
+            self.selected_entity.select(entity);
         }
 
         let response_central = draw_ui(self);
@@ -260,9 +259,6 @@ impl App {
         if self.input_handler.state == InputHandlerState::Command {
             render_command_palette(self);
         }
-
-        self.handle_pan_movement(&response_central);
-        self.find_entities();
 
         self.scene.reset();
 
@@ -292,6 +288,21 @@ impl App {
                 },
             )
             .unwrap();
+
+        self.handle_pan_movement(&response_central);
+
+        self.position = if let Some(mouse_position) = response_central.hover_pos()
+            && let Some(spatial_grid) = &self.spatial_grid
+        {
+            let position = self.get_position(mouse_position, spatial_grid);
+            if response_central.clicked() {
+                let found_entity = find_entities_at_position(&position, spatial_grid);
+                self.selected_entity.select_from_spatial_query(found_entity);
+            }
+            Some(position)
+        } else {
+            None
+        };
 
         let screen_descriptor = ScreenDescriptor {
             size_in_pixels: [self.config.width, self.config.height],
@@ -332,31 +343,16 @@ impl App {
             self.egui_renderer.free_texture(id);
         }
     }
-    pub fn handle_clicked_node(&mut self, next_node: NodeId) {
-        let Some(graph) = &self.router.current_graph else {
-            return;
-        };
-        let Some(spatial_grid) = &self.spatial_grid else {
-            return;
-        };
-        let node = graph.get_node(next_node);
 
-        if let Some(node) = spatial_grid
-            .buckets
-            .get(&node.tile)
-            .and_then(|bucket| {
-                bucket
-                    .node_data
-                    .iter()
-                    .find(|crate::core::Node { id, position: _ }| *id == next_node)
-            })
-            .copied()
-        {
-            self.focus_point(node.position, 80.0);
-            self.selected_entity = Some(Entity::Node(node));
-        }
+    pub fn focus_entity(&mut self, entity: Entity) {
+        let (point, scale) = match entity {
+            Entity::Tile(tile) => (tile.mid_point(), TILE_FOCUS_SCALE),
+            Entity::Lut(lut) => (lut.mid_point(), LUT_FOCUS_SCALE),
+            Entity::Node(node) => (node.position, NODE_FOCUS_SCALE),
+            Entity::Edge(edge) => (edge.mid_point(), edge.focus()),
+        };
+        self.focus_point(point, scale);
     }
-
     pub fn focus_point(&mut self, point: vello::kurbo::Point, scale: f64) {
         self.view_transform.scale = scale;
         let min_x_pixels = self.central_rect.min.x as f64 * self.ppp;
@@ -415,108 +411,103 @@ impl App {
                     }
                 });
             }
-            Command::Goto(sub_command) => match sub_command {
-                Goto::Tile { x, y } => {
-                    let Some(spatial_grid) = &self.spatial_grid else {
-                        return;
-                    };
-                    let tile_id = TileId(x as u8, y as u8);
-                    if let Some(cord) = spatial_grid.buckets.get(&tile_id).map(|a| a.tile_data) {
-                        const SCALE: f64 = 10.0;
+            Command::Goto(sub_command) => {
+                let entity = match sub_command {
+                    Goto::Tile { x, y } => {
+                        let Some(spatial_grid) = &self.spatial_grid else {
+                            return;
+                        };
+                        let tile_id = TileId(x as u8, y as u8);
+                        spatial_grid.buckets.get(&tile_id).map(|tile| Entity::Tile(tile.tile_data))
+                    }
+                    Goto::Lut { x, y, bel } => {
+                        let Some(spatial_grid) = &self.spatial_grid else {
+                            return;
+                        };
+                        let tile_id = TileId(x as u8, y as u8);
+                        spatial_grid
+                            .buckets
+                            .get(&tile_id)
+                            .and_then(|bucket| {
+                                bucket
+                                    .lut_data
+                                    .iter()
+                                    .find(|Lut { bel_index, .. }| bel.eq_ignore_ascii_case(bel_index))
+                            })
+                            .copied()
+                            .map(Entity::Lut)
+                    }
+                    Goto::Edge {
+                        x1,
+                        y1,
+                        label1,
+                        x2: _,
+                        y2: _,
+                        label2,
+                    } => {
+                        let Some(graph) = &self.router.current_graph else {
+                            return;
+                        };
+                        let Some(spatial_grid) = &self.spatial_grid else {
+                            return;
+                        };
+                        let tile_id1 = TileId(x1 as u8, y1 as u8);
+                        spatial_grid
+                            .buckets
+                            .get(&tile_id1)
+                            .and_then(|bucket| {
+                                bucket.edge_data.iter().find(|edge_data| {
+                                    graph.get_node(edge_data.source_node).id == label1
+                                        && graph.get_node(edge_data.target_node).id == label2
+                                        || graph.get_node(edge_data.source_node).id == label2
+                                            && graph.get_node(edge_data.target_node).id == label1
+                                })
+                            })
+                            .copied()
+                            .map(Entity::Edge)
+                    }
+                    Goto::Node { x, y, label } => {
+                        let Some(graph) = &self.router.current_graph else {
+                            return;
+                        };
+                        let Some(spatial_grid) = &self.spatial_grid else {
+                            return;
+                        };
+                        let tile_id = TileId(x as u8, y as u8);
+                        spatial_grid
+                            .buckets
+                            .get(&tile_id)
+                            .and_then(|bucket| {
+                                bucket
+                                    .node_data
+                                    .iter()
+                                    .find(|crate::core::Node { id, .. }| graph.get_node(*id).id == label)
+                            })
+                            .copied()
+                            .map(Entity::Node)
+                    }
+                };
 
-                        self.focus_point(cord.position, SCALE);
-                    }
+                if let Some(entity) = entity {
+                    self.focus_entity(entity);
+                    self.selected_entity.select(entity);
                 }
-                Goto::Lut { x, y, bel } => {
-                    let Some(spatial_grid) = &self.spatial_grid else {
-                        return;
-                    };
-                    let tile_id = TileId(x as u8, y as u8);
-                    if let Some(cord) = spatial_grid.buckets.get(&tile_id).and_then(|bucket| {
-                        bucket
-                            .lut_data
-                            .iter()
-                            .find_map(|Lut { bel_index, position, .. }| if bel == *bel_index { Some(position) } else { None })
-                    }) {
-                        const SCALE: f64 = 10.0;
-                        self.focus_point(*cord, SCALE)
-                    }
-                }
-                Goto::Edge {
-                    x1,
-                    y1,
-                    label1,
-                    x2: _,
-                    y2: _,
-                    label2,
-                } => {
-                    let Some(graph) = &self.router.current_graph else {
-                        return;
-                    };
-                    let Some(spatial_grid) = &self.spatial_grid else {
-                        return;
-                    };
-                    let tile_id1 = TileId(x1 as u8, y1 as u8);
-                    if let Some(edge_data) = spatial_grid.buckets.get(&tile_id1).and_then(|bucket| {
-                        bucket.edge_data.iter().find(|edge_data| {
-                            graph.get_node(edge_data.source_node).id == label1
-                                && graph.get_node(edge_data.target_node).id == label2
-                                || graph.get_node(edge_data.source_node).id == label2
-                                    && graph.get_node(edge_data.target_node).id == label1
-                        })
-                    }) {
-                        let vec_x = edge_data.end_position.x - edge_data.start_position.x;
-                        let vec_y = edge_data.end_position.y - edge_data.start_position.y;
-                        let len = ((vec_x * vec_x) + (vec_y * vec_y)).sqrt();
-                        let mid_point_x = edge_data.start_position.x + vec_x * 0.5;
-                        let mid_point_y = edge_data.start_position.y + vec_y * 0.5;
-                        let focus_point = vello::kurbo::Point::new(mid_point_x, mid_point_y);
-                        let scale = 1000.0 / len;
-                        self.selected_edge = Some((edge_data.source_node, edge_data.target_node));
-                        self.focus_point(focus_point, scale);
-                    }
-                }
-                Goto::Node { x, y, label } => {
-                    let Some(graph) = &self.router.current_graph else {
-                        return;
-                    };
-                    let Some(spatial_grid) = &self.spatial_grid else {
-                        return;
-                    };
-                    let tile_id = TileId(x as u8, y as u8);
-                    if let Some(node) = spatial_grid
-                        .buckets
-                        .get(&tile_id)
-                        .and_then(|bucket| {
-                            bucket
-                                .node_data
-                                .iter()
-                                .find(|crate::core::Node { id, .. }| graph.get_node(*id).id == label)
-                        })
-                        .copied()
-                    {
-                        self.focus_point(node.position, 80.0);
-                        self.selected_entity = Some(Entity::Node(node));
-                    }
-                }
-            },
+            }
             _ => {}
         }
     }
 
     fn render_vello(&self, ppp: f64) -> (Scene, Option<vello::kurbo::Affine>) {
-        if let (Some(tile_manager), Some(spatial_grid)) = (&self.router.current_tile_manager, &self.spatial_grid) {
+        if let Some(spatial_grid) = &self.spatial_grid {
             let world_min = screen_to_world(self.central_rect.min, &self.central_rect, &self.view_transform, ppp);
             let world_max = screen_to_world(self.central_rect.max, &self.central_rect, &self.view_transform, ppp);
             let visible_range = VisibleTileRange::new(world_min, world_max);
             let current_scene_fabric = fabric_scene(
-                tile_manager,
                 spatial_grid,
                 &visible_range,
                 self.view_transform.scale,
                 self.is_moving,
-                &self.selected_entity,
-                self.selected_edge,
+                self.selected_entity.current,
             );
             let transform = vello::kurbo::Affine::translate((
                 (self.central_rect.min.x * ppp as f32) as f64 + self.view_transform.pan.x,
@@ -527,41 +518,15 @@ impl App {
             (render_vello(self.central_rect), None)
         }
     }
-    fn find_entities(&mut self) {
-        self.egui_ctx.input(|i| {
-            if i.pointer.any_released()
-                && !self.is_moving
-                && let Some(position) = &self.position
-                && let Some(ref spatial_grid) = self.spatial_grid
-            {
-                if let Some(node) = find_node_at_pos(position, spatial_grid) {
-                    self.selected_entity = Some(Entity::Node(node));
-                    self.selected_edge = None;
-                } else if let Some(edge) = find_edge_at_pos(position, spatial_grid) {
-                    self.selected_edge = Some(edge);
-                    self.selected_entity = None;
-                } else {
-                    self.selected_entity = None;
-                    self.selected_edge = None;
-                }
-            }
-        });
-    }
-    fn set_position(&mut self) {
-        let mouse_position = self.egui_ctx.input(|i| i.pointer.latest_pos());
-        self.position = if let Some(mouse_position) = mouse_position
-            && let Some(spatial_grid) = &self.spatial_grid
-        {
-            let world_position = screen_to_world(mouse_position, &self.central_rect, &self.view_transform, self.ppp);
-            let p = spatial_grid.find_location_at_world_pos(world_position.x, world_position.y);
-            Some(Position {
-                mouse_position,
-                world_position,
-                location: p,
-            })
-        } else {
-            None
-        };
+
+    fn get_position(&self, screen_pos: egui::Pos2, spatial_grid: &SpatialFabricGrid) -> Position {
+        let world_position = screen_to_world(screen_pos, &self.central_rect, &self.view_transform, self.ppp);
+        let p = spatial_grid.find_location_at_world_pos(world_position.x, world_position.y);
+        Position {
+            mouse_position: screen_pos,
+            world_position,
+            location: p,
+        }
     }
 
     pub fn check_background_tasks(&mut self) {
@@ -622,112 +587,84 @@ impl App {
     }
 }
 
-/// Translates a screen-space pixel position (e.g., from egui mouse inputs)
-/// into the underlying world-space coordinates of your FPGA fabric.
-pub fn screen_to_world(
-    screen_pos: egui::Pos2,
-    viewport: &egui::Rect,
-    view_transform: &ViewTransform,
-    pixels_per_point: f64,
-) -> vello::kurbo::Point {
-    let sx = screen_pos.x as f64 * pixels_per_point;
-    let sy = screen_pos.y as f64 * pixels_per_point;
+pub const MAX_HISTORY_SIZE: usize = 50;
 
-    let vx = viewport.min.x as f64 * pixels_per_point;
-    let vy = viewport.min.y as f64 * pixels_per_point;
-
-    vello::kurbo::Point::new(
-        (sx - vx - view_transform.pan.x) / view_transform.scale,
-        (sy - vy - view_transform.pan.y) / view_transform.scale,
-    )
+#[derive(Default)]
+pub struct SelectionManager {
+    // The current active selection (replaces your old single variable)
+    pub current: Option<Entity>,
+    // Stacks for navigation
+    history: Vec<Option<Entity>>,
+    future: Vec<Option<Entity>>,
 }
+impl SelectionManager {
+    /// Selects a specific entity. Used for UI lists, labels, or sidebar items
+    /// where the target entity is guaranteed to exist.
+    pub fn select(&mut self, entity: Entity) {
+        let target = Some(entity);
 
-pub fn find_edge_at_pos(position: &Position, spatial_grid: &SpatialFabricGrid) -> Option<(NodeId, NodeId)> {
-    let world_x = position.world_position.x;
-    let world_y = position.world_position.y;
-    let p = spatial_grid.find_location_at_world_pos(world_x, world_y);
-    let target_tile_id = match p {
-        crate::core::TargetLocation::Outer(tile_id) => tile_id,
-        crate::core::TargetLocation::Inner(tile_id, _) => tile_id,
-        crate::core::TargetLocation::InnerEmpty(tile_id) => tile_id,
-        crate::core::TargetLocation::None => return None,
-    };
-    let bucket = spatial_grid.buckets.get(&target_tile_id)?;
+        // If it's already selected, do nothing
+        if self.current == target {
+            return;
+        }
 
-    const CLICK_TOLERANCE: f64 = WIRE_LINE_WIDTH * 10.0;
-    const TOLERANCE_SQ: f64 = CLICK_TOLERANCE * CLICK_TOLERANCE;
+        self.transition_to(target);
+    }
 
-    let mut closest_edge = None;
-    let mut min_distance_sq = TOLERANCE_SQ;
+    /// Updates selection based on a 2D spatial query.
+    /// Missing an entity (None) does nothing. Hitting the same entity toggles it off.
+    pub fn select_from_spatial_query(&mut self, clicked_entity: Option<Entity>) {
+        match clicked_entity {
+            // Case 1: You clicked empty space -> Ignore it completely
+            None => {}
 
-    for edge in &bucket.edge_data {
-        let dist_sq = distance_to_segment(position.world_position, edge.start_position, edge.end_position);
-
-        if dist_sq < min_distance_sq {
-            min_distance_sq = dist_sq;
-            closest_edge = Some((edge.source_node, edge.target_node));
+            // Case 2: You hit an entity
+            Some(entity) => {
+                if self.current == Some(entity.clone()) {
+                    // It's the same entity -> Toggle it off (Deselect)
+                    self.transition_to(None);
+                } else {
+                    // It's a brand new entity -> Select it
+                    self.transition_to(Some(entity));
+                }
+            }
         }
     }
 
-    closest_edge
-}
+    /// Core engine helper that drives the history state machine forward
+    fn transition_to(&mut self, next_state: Option<Entity>) {
+        // 1. Log the current state into the past
+        self.history.push(self.current);
 
-fn find_node_at_pos(position: &Position, spatial_grid: &SpatialFabricGrid) -> Option<Node> {
-    let world_x = position.world_position.x;
-    let world_y = position.world_position.y;
-
-    let target_tile_id = match position.location {
-        crate::core::TargetLocation::Outer(tile_id) => tile_id,
-        crate::core::TargetLocation::Inner(tile_id, _) => tile_id,
-        crate::core::TargetLocation::InnerEmpty(tile_id) => tile_id,
-        crate::core::TargetLocation::None => return None,
-    };
-
-    let bucket = spatial_grid.buckets.get(&target_tile_id)?;
-
-    const RADIUS: f64 = WIRE_NODE_RADIUS * 1.2;
-    const RADIUS_SQ: f64 = (WIRE_NODE_RADIUS * 1.2) * (WIRE_NODE_RADIUS * 1.2);
-    let min_x = world_x - RADIUS;
-    let max_x = world_x + RADIUS;
-
-    let start_idx = match bucket
-        .node_data
-        .binary_search_by(|Node { position, .. }| position.x.partial_cmp(&min_x).unwrap())
-    {
-        Ok(idx) => idx,
-        Err(idx) => idx,
-    };
-    for node in &bucket.node_data[start_idx..] {
-        let pos = node.position;
-        if node.position.x > max_x {
-            break;
+        // 2. Keep the history ring bounded
+        if self.history.len() > MAX_HISTORY_SIZE {
+            self.history.remove(0);
         }
-        let dx = world_x - pos.x;
-        let dy = world_y - pos.y;
-        let distance = dx * dx + dy * dy;
 
-        if distance <= RADIUS_SQ {
-            return Some(*node);
+        // 3. Move to the new state
+        self.current = next_state;
+
+        // 4. Any new branch mutation invalidates the redo/future stack
+        self.future.clear();
+    }
+
+    /// Move back to the previous selection (e.g., when pressing Back / Ctrl+Z)
+    pub fn go_back(&mut self) {
+        if let Some(prev_selection) = self.history.pop() {
+            // Push current state to the future stack so we can go forward again
+            self.future.push(self.current);
+            // Update current
+            self.current = prev_selection;
         }
     }
 
-    None
-}
-/// Calculates the shortest distance squared from point `p` to line segment `a_to_b`.
-fn distance_to_segment(point: vello::kurbo::Point, segment_a: vello::kurbo::Point, segment_b: vello::kurbo::Point) -> f64 {
-    let ab = vello::kurbo::Vec2::new(segment_b.x - segment_a.x, segment_b.y - segment_a.y);
-    let ap = vello::kurbo::Vec2::new(point.x - segment_a.x, point.y - segment_a.y);
-
-    let ab_len_sq = ab.dot(ab);
-    if ab_len_sq == 0.0 {
-        return ap.dot(ap);
+    /// Move forward (e.g., when pressing Forward / Ctrl+Y)
+    pub fn go_forward(&mut self) {
+        if let Some(next_selection) = self.future.pop() {
+            // Push current state back to history
+            self.history.push(self.current);
+            // Update current
+            self.current = next_selection;
+        }
     }
-
-    let t = (ap.dot(ab) / ab_len_sq).clamp(0.0, 1.0);
-
-    let closest_point = vello::kurbo::Point::new(segment_a.x + t * ab.x, segment_a.y + t * ab.y);
-
-    let dx = point.x - closest_point.x;
-    let dy = point.y - closest_point.y;
-    dx * dx + dy * dy
 }

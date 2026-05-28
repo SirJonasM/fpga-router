@@ -13,6 +13,7 @@ pub fn draw_ui(app: &mut App) -> Response {
         })
         .response
         .interact(egui::Sense::drag())
+        .interact(egui::Sense::click())
 }
 
 pub fn draw_status_line(app: &App) -> Response {
@@ -59,7 +60,7 @@ pub fn draw_diagnostics(app: &App) {
         });
 }
 
-pub fn draw_sidepanel(app: &App) -> Option<NodeId> {
+pub fn draw_sidepanel(app: &mut App) -> Option<Entity> {
     let x = SidePanel::left("left_panel")
         .resizable(true)
         .default_width(200.0)
@@ -67,14 +68,29 @@ pub fn draw_sidepanel(app: &App) -> Option<NodeId> {
             ui.heading("FPGA Router");
             ui.separator();
 
-            if let Some((start, end)) = app.selected_edge
+            if let Some(Entity::Edge(edge)) = app.selected_entity.current
                 && let Some(graph) = &app.router.current_graph
             {
-                let node_start = graph.get_node(start).id();
-                let node_end = graph.get_node(end).id();
+                let node_start = graph.get_node(edge.source_node).id();
+                let node_end = graph.get_node(edge.target_node).id();
                 ui.label(format!("Selected Edge: {node_start}->{node_end}",));
             }
-            if let Some(Entity::Node(node)) = app.selected_entity
+
+            let response = ui.button("back");
+            if response.clicked() {
+                app.selected_entity.go_back();
+            }
+            let response = ui.button("forward");
+            if response.clicked() {
+                app.selected_entity.go_forward();
+            }
+            if let Some(current) = app.selected_entity.current {
+                let response = ui.button("focus");
+                if response.clicked() {
+                    return Some(current);
+                }
+            }
+            if let Some(Entity::Node(node)) = app.selected_entity.current
                 && let Some(graph) = &app.router.current_graph
             {
                 let node_id = graph.get_node(node.id).id();
@@ -93,8 +109,22 @@ pub fn draw_sidepanel(app: &App) -> Option<NodeId> {
                     let response = ui.label(id).interact(egui::Sense::click());
                     responses.push((*a, response))
                 });
-                return responses.iter().find_map(|a| if a.1.clicked() { Some(a.0) } else { None });
+                return responses.iter().find_map(|(node_id, response)| {
+                    if response.clicked() {
+                        let node = graph.get_node(*node_id);
+                        let Some(ref spatial_grid) = app.spatial_grid else {
+                            return None;
+                        };
+                        let Some(bucket) = spatial_grid.buckets.get(&node.tile) else {
+                            return None;
+                        };
+                        bucket.node_data.iter().find(|a| a.id == *node_id).map(|a| Entity::Node(*a))
+                    } else {
+                        None
+                    }
+                });
             }
+
             None
         });
     x.inner
