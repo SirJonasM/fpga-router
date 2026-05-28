@@ -295,10 +295,6 @@ impl App {
         let (scene, transform) = self.render_vello(ppp);
         self.scene.append(&scene, transform);
 
-        let mut encoder = self.device.create_command_encoder(&CommandEncoderDescriptor {
-            label: Some("main encoder"),
-        });
-
         self.set_focus_point(ppp as f64);
 
         self.vello_renderer
@@ -321,6 +317,9 @@ impl App {
             pixels_per_point: self.egui_ctx.pixels_per_point(),
         };
 
+        let mut encoder = self.device.create_command_encoder(&CommandEncoderDescriptor {
+            label: Some("main encoder"),
+        });
         self.egui_renderer
             .update_buffers(&self.device, &self.queue, &mut encoder, &paint_jobs, &screen_descriptor);
 
