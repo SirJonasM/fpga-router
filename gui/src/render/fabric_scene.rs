@@ -137,27 +137,58 @@ fn draw_visible_edges(
 
                     let line = vello::kurbo::Line::new(edge.start_position, edge.end_position);
 
-                    let gradient = vello::peniko::Gradient::new_linear(edge.start_position, edge.end_position)
-                        .with_stops([(0.0, COLOR_EDGE_START), (1.0, COLOR_EDGE_END)].as_slice());
-                    if let Some(Entity::Edge(selected_edge)) = selected_entity
-                        && *edge == selected_edge
-                    {
-                        scene.stroke(
-                            &vello::kurbo::Stroke::new(SELECTED_WIRE_LINE_WIDTH),
-                            vello::kurbo::Affine::IDENTITY,
-                            vello::peniko::Color::WHITE,
-                            None,
-                            &line,
-                        );
-                    } else {
-                        scene.stroke(
-                            &vello::kurbo::Stroke::new(WIRE_LINE_WIDTH),
-                            vello::kurbo::Affine::IDENTITY,
-                            &vello::peniko::Brush::Gradient(gradient),
-                            None,
-                            &line,
-                        );
+                    // Determine the brush (color/gradient) for this specific edge
+                    let brush = match selected_entity {
+                        // Case 1: An Edge is explicitly selected (Keep original logic)
+                        Some(Entity::Edge(selected_edge)) if *edge == selected_edge => {
+                            vello::peniko::Brush::Solid(vello::peniko::Color::WHITE)
+                        }
+
+                        // Case 2: A Node is selected -> Highlight its connected edges
+                        Some(Entity::Node(selected_node)) => {
+                            if edge.source_node == selected_node.id {
+                                // Outgoing edge from the selected node
+                                vello::peniko::Brush::Solid(OUTGOING_EDGE_COLOR)
+                            } else if edge.target_node == selected_node.id {
+                                // Incoming edge to the selected node
+                                vello::peniko::Brush::Solid(INCOMING_EDGE_COLOR)
+                            } else {
+                                // Node is selected, but this edge isn't connected to it
+                                let gradient = vello::peniko::Gradient::new_linear(edge.start_position, edge.end_position)
+                                    .with_stops([(0.0, COLOR_EDGE_START), (1.0, COLOR_EDGE_END)].as_slice());
+                                vello::peniko::Brush::Gradient(gradient)
+                            }
+                        }
+
+                        // Case 3: Default fallback (No selection, or non-matching edge/node)
+                        _ => {
+                            let gradient = vello::peniko::Gradient::new_linear(edge.start_position, edge.end_position)
+                                .with_stops([(0.0, COLOR_EDGE_START), (1.0, COLOR_EDGE_END)].as_slice());
+                            vello::peniko::Brush::Gradient(gradient)
+                        }
                     };
+
+                    // Determine line width based on selection status
+                    let width = match selected_entity {
+                        Some(Entity::Edge(selected_edge)) if *edge == selected_edge => SELECTED_WIRE_LINE_WIDTH,
+                        Some(Entity::Node(selected_node))
+                            if edge.source_node == selected_node.id || edge.target_node == selected_node.id =>
+                        {
+                            // Optional: Make highlighted node edges thicker too.
+                            // Change to WIRE_LINE_WIDTH if you want them to remain normal thickness.
+                            SELECTED_WIRE_LINE_WIDTH
+                        }
+                        _ => WIRE_LINE_WIDTH,
+                    };
+
+                    // Render the stroke with the calculated properties
+                    scene.stroke(
+                        &vello::kurbo::Stroke::new(width),
+                        vello::kurbo::Affine::IDENTITY,
+                        &brush,
+                        None,
+                        &line,
+                    );
                 }
             }
         }

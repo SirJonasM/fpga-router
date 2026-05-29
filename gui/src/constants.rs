@@ -46,5 +46,7 @@ pub const MAX_ZOOM: f64 = 250.0;
 
 pub const COLOR_EDGE_START: Color = Color::GREEN;
 pub const COLOR_EDGE_END: Color = Color::BLUE;
+pub const OUTGOING_EDGE_COLOR: Color = Color::YELLOW;
+pub const INCOMING_EDGE_COLOR: Color = Color::RED;
 
 pub const MAX_HISTORY_SIZE: usize = 50;
