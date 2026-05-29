@@ -77,7 +77,7 @@ impl LayoutBuilder<AtTileInner> {
                     WirePoint::Mid => 0.0,
                     WirePoint::End => -1.0,
                 },
-                10.0 + wire.id as f64,
+                10.0 + (wire.id * 10.0) as f64,
             )
         } else if wire.double {
             (
