@@ -5,11 +5,11 @@ use vello::peniko::Color;
 pub const LUT_ZOOM_THRESHOLD: f64 = 0.4;
 pub const NODE_ZOOM_THRESHOLD_UNDER_MOVING: f64 = 2.0;
 pub const EDGE_ZOOM_THRESHOLD_UNDER_MOVING: f64 = 5.0;
-pub const NODE_ZOOM_THRESHOLD: f64 = 25.0;
-pub const EDGE_ZOOM_THRESHOLD: f64 = 25.0;
+pub const NODE_ZOOM_THRESHOLD: f64 = 3.99;
+pub const EDGE_ZOOM_THRESHOLD: f64 = 3.99;
 
-pub const TILE_BOUNDING_BOX_WIDTH: f64 = 110.0;
-pub const TILE_BOUNDING_BOX_HEIGHT: f64 = 100.0;
+pub const TILE_BOUNDING_BOX_WIDTH: f64 = 120.0;
+pub const TILE_BOUNDING_BOX_HEIGHT: f64 = 120.0;
 pub const TILE_INNER_LINE_WIDTH: f64 = 0.75;
 pub const TILE_OUTER_LINE_WIDTH: f64 = 0.1;
 pub const TILE_PADDING: f64 = 40.0;
@@ -46,3 +46,5 @@ pub const MAX_ZOOM: f64 = 250.0;
 
 pub const COLOR_EDGE_START: Color = Color::GREEN;
 pub const COLOR_EDGE_END: Color = Color::BLUE;
+
+pub const MAX_HISTORY_SIZE: usize = 50;

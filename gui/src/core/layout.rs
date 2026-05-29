@@ -1,4 +1,4 @@
-use router::{Direction, TileId, WirePoint};
+use router::{Compass, TileId, Wire, WirePoint};
 
 use crate::{
     constants::*,
@@ -19,13 +19,6 @@ pub struct LayoutBuilder<State> {
     pub x: f64,
     pub y: f64,
     _marker: std::marker::PhantomData<State>,
-}
-
-pub enum Compass {
-    North,
-    South,
-    East,
-    West,
 }
 
 // Methods available at the very beginning
@@ -75,16 +68,39 @@ impl LayoutBuilder<AtTileInner> {
             _marker: std::marker::PhantomData,
         }
     }
-    pub fn cable_oriented(mut self, direction: &Direction, orientation: Compass) -> Self {
-        let xx = cable_offset(&direction.cable_point);
-
-        let local_x = -2.0 - direction.id as f64 - direction.length as f64 * WIRE_NODE_RADIUS * 2.0;
-        let local_y = 10.0 + xx + direction.length as f64;
+    pub fn wire_oriented(mut self, wire: &Wire) -> Self {
+        let (local_x, local_y) = if wire.jump {
+            (
+                0.0 + match wire.wire_point {
+                    WirePoint::Begin => 1.0,
+                    WirePoint::BeginB => -4.0,
+                    WirePoint::Mid => 0.0,
+                    WirePoint::End => -1.0,
+                },
+                10.0 + wire.id as f64,
+            )
+        } else if wire.double {
+            (
+                0.0 + match wire.wire_point {
+                    WirePoint::Begin => -1.0,
+                    WirePoint::BeginB => -4.0,
+                    WirePoint::Mid => 0.0,
+                    WirePoint::End => 1.0,
+                },
+                TILE_BOUNDING_BOX_HEIGHT - 10.0 - wire.id as f64,
+            )
+        } else {
+            let xx = wire_offset(&wire.wire_point);
+            (
+                -2.0 - wire.id as f64 - wire.length as f64 * WIRE_NODE_RADIUS * 2.0,
+                10.0 + xx + wire.length as f64,
+            )
+        };
 
         let cx = TILE_BOUNDING_BOX_WIDTH / 2.0;
         let cy = TILE_BOUNDING_BOX_HEIGHT / 2.0;
 
-        let (rotated_x, rotated_y) = match orientation {
+        let (rotated_x, rotated_y) = match wire.direction {
             Compass::North => (local_x, local_y),
             Compass::East => (cx - (local_y - cy), cy + (local_x - cx)),
             Compass::South => (cx - (local_x - cx), cy - (local_y - cy)),
@@ -163,7 +179,7 @@ impl<State> LayoutBuilder<State> {
     }
 }
 
-const fn cable_offset(x: &WirePoint) -> f64 {
+const fn wire_offset(x: &WirePoint) -> f64 {
     match x {
         router::WirePoint::Begin => 0.0,
         router::WirePoint::BeginB => 20.0,

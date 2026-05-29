@@ -3,6 +3,15 @@ use crate::{
     core::{Edge, Entity, Lut, Node, Position, SpatialFabricGrid, Tile},
     utils::{distance_to_segment, is_on_rect_border},
 };
+pub fn find_entities_at_position(position: &Position, spatial_grid: &SpatialFabricGrid) -> Option<Entity> {
+    find_node_at_pos(position, spatial_grid).map(Entity::Node).or_else(|| {
+        find_edge_at_pos(position, spatial_grid).map(Entity::Edge).or_else(|| {
+            find_lut_at_pos(position, spatial_grid)
+                .map(Entity::Lut)
+                .or_else(|| find_tile_at_pos(position, spatial_grid).map(Entity::Tile))
+        })
+    })
+}
 
 pub fn find_tile_at_pos(position: &Position, spatial_grid: &SpatialFabricGrid) -> Option<Tile> {
     let target_tile_id = match position.location {
@@ -123,13 +132,4 @@ pub fn find_node_at_pos(position: &Position, spatial_grid: &SpatialFabricGrid) -
     }
 
     None
-}
-pub fn find_entities_at_position(position: &Position, spatial_grid: &SpatialFabricGrid) -> Option<Entity> {
-    find_node_at_pos(position, spatial_grid).map(Entity::Node).or_else(|| {
-        find_edge_at_pos(position, spatial_grid).map(Entity::Edge).or_else(|| {
-            find_lut_at_pos(position, spatial_grid)
-                .map(Entity::Lut)
-                .or_else(|| find_tile_at_pos(position, spatial_grid).map(Entity::Tile))
-        })
-    })
 }

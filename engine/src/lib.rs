@@ -24,7 +24,7 @@ pub use error::{FabricError, FabricResult};
 // Public API
 pub use api::*;
 pub use fabric::graph::{Fabric, FabricGraph, FabricGraphEdgeIterator};
-pub use fabric::node::{Direction, Edge, Node, NodeId, NodeType, TileId, WirePoint};
+pub use fabric::node::{Compass, Edge, Node, NodeId, NodeType, TileId, Wire, WirePoint};
 pub use fabric::parser::TimingModel;
 pub use fabric::tile_manager::{Lut, Tile, TileManager};
 pub use netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal, NetResultExternal, NetResultInternal, Swap};

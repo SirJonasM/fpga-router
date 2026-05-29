@@ -81,7 +81,9 @@ impl SpatialFabricGrid {
                 let crossed_tiles = get_tiles_intersected_by_line(pos1, pos2);
 
                 for tile_id in crossed_tiles {
-                    let bucket = grid.buckets.get_mut(&tile_id).expect("Error in pips and bel definition.");
+                    let Some(bucket) = grid.buckets.get_mut(&tile_id) else {
+                        continue;
+                    };
                     bucket.edge_data.push(edge_data);
                 }
             }

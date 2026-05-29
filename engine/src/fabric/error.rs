@@ -2,6 +2,9 @@ use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ParseError {
+    #[error("Parsing Node Type failed.")]
+    InvalidNodeType,
+
     #[error("Parsing failed content: '{content}'")]
     LineError {
         content: String,

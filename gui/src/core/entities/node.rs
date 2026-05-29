@@ -1,6 +1,6 @@
 use router::{NodeId, NodeType};
 
-use crate::core::layout::{Compass, LayoutBuilder};
+use crate::core::layout::LayoutBuilder;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Node {
@@ -11,10 +11,7 @@ pub struct Node {
 pub fn get_node_pos(node: &router::Node) -> Option<vello::kurbo::Point> {
     let position_builder = LayoutBuilder::new().tile(&node.tile).tile_inner();
     let point = match &node.typ {
-        NodeType::North(direction) => position_builder.cable_oriented(direction, Compass::North).build(),
-        NodeType::South(direction) => position_builder.cable_oriented(direction, Compass::South).build(),
-        NodeType::East(direction) => position_builder.cable_oriented(direction, Compass::East).build(),
-        NodeType::West(direction) => position_builder.cable_oriented(direction, Compass::West).build(),
+        NodeType::Wire(direction) => position_builder.wire_oriented(direction).build(),
         NodeType::CarryIn(_id) => position_builder.carry_in().build(),
         NodeType::CarryOut(_id) => position_builder.carry_out().build(),
         NodeType::VCC(_id) => position_builder.vdd().build(),
