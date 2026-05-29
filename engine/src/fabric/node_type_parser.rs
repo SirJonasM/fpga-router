@@ -103,8 +103,8 @@ fn parse_direction(input: &str) -> IResult<&str, NodeType> {
 
 fn parse_wire_point(input: &str) -> IResult<&str, WirePoint> {
     alt((
-        map(tag("BEG"), |_| WirePoint::Begin),
         map(tag("BEGb"), |_| WirePoint::BeginB),
+        map(tag("BEG"), |_| WirePoint::Begin),
         map(tag("MID"), |_| WirePoint::Mid),
         map(tag("END"), |_| WirePoint::End),
     ))
