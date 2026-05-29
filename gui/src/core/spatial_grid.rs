@@ -6,7 +6,7 @@ use crate::{
         layout::LayoutBuilder,
     },
 };
-use router::TileId;
+use router::{NodeType, TileId};
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -53,19 +53,27 @@ impl SpatialFabricGrid {
             bucket.lut_data = lut_list;
         }
 
+        let mut total = 0;
+        let mut other = 0;
         for node in graph.nodes.iter() {
+            if node.typ == NodeType::Other {
+                other += 1;
+            }
+            total += 1;
             if let Some(pos) = get_node_pos(node) {
                 let bucket = grid
                     .buckets
                     .get_mut(&node.tile)
                     .unwrap_or_else(|| panic!("Error in pips and bel definition. Tile: {:?}", node.tile));
                 let node_id = graph.get_node_id(&node.id()).unwrap();
+
                 bucket.node_data.push(Node {
                     id: *node_id,
                     position: pos,
                 });
             }
         }
+        println!("{other}|{total} -> {}%", (1.0 - other as f64 / total as f64) * 100.0);
         for (start_id, edge) in graph.edges() {
             let start_node = graph.get_node(start_id);
             let end_node = graph.get_node(edge.node_id);

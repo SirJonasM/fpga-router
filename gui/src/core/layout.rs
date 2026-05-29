@@ -81,13 +81,15 @@ impl LayoutBuilder<AtTileInner> {
             )
         } else if wire.double {
             (
-                0.0 + match wire.wire_point {
-                    WirePoint::Begin => -1.0,
-                    WirePoint::BeginB => -4.0,
-                    WirePoint::Mid => 0.0,
-                    WirePoint::End => 1.0,
-                },
-                TILE_BOUNDING_BOX_HEIGHT - 10.0 - wire.id as f64,
+                -4.0 - wire.id as f64,
+                TILE_BOUNDING_BOX_HEIGHT
+                    + 10.0
+                    + match wire.wire_point {
+                        WirePoint::Begin => -1.0,
+                        WirePoint::BeginB => -4.0,
+                        WirePoint::Mid => 0.0,
+                        WirePoint::End => 1.0,
+                    },
             )
         } else {
             let xx = wire_offset(&wire.wire_point);
