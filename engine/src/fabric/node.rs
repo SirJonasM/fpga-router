@@ -26,6 +26,10 @@ impl NodeId {
     pub(crate) fn name(self, graph: &FabricGraph) -> String {
         graph.get_node(self).id()
     }
+    #[must_use]
+    pub const fn raw(&self) -> NodeIdType {
+        self.0
+    }
 }
 
 impl<T> std::ops::Index<NodeId> for Vec<T> {

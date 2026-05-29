@@ -3,9 +3,10 @@ mod lut;
 mod node;
 mod tile;
 
-pub use edge::Edge;
-pub use lut::{Lut, get_lut_offset};
-pub use node::{Node, get_node_pos};
+pub use edge::{Edge, EdgeId};
+pub use lut::{Lut, LutId, get_lut_offset};
+pub use node::{NodeMetadata, get_node_pos};
+use router::NodeId;
 use router::TileId;
 use std::fmt::Display;
 pub use tile::Tile;
@@ -13,10 +14,10 @@ pub use tile::get_tile_pos;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Entity {
-    Tile(Tile),
-    Lut(Lut),
-    Node(Node),
-    Edge(Edge),
+    Tile(TileId),
+    Lut(LutId),
+    Node(NodeId),
+    Edge(EdgeId),
 }
 
 #[derive(Debug, Clone, PartialEq)]

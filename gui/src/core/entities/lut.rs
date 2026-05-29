@@ -2,8 +2,10 @@ use router::TileId;
 use vello::kurbo::Point;
 
 use crate::constants::*;
+pub type LutId = usize;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Lut {
+    pub id: LutId,
     pub position: Point,
     pub bel_index: char,
     pub tile: TileId,

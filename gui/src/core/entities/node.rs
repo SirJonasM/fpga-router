@@ -1,11 +1,23 @@
-use router::{NodeId, NodeType};
+use std::fmt::Display;
 
-use crate::core::layout::LayoutBuilder;
+use router::{NodeId, NodeType, TileId};
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Node {
+use crate::core::{entities::EdgeId, layout::LayoutBuilder};
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct NodeMetadata {
     pub id: NodeId,
+    pub label: String,
     pub position: vello::kurbo::Point,
+    pub tile_id: TileId,
+    pub outgoing_edges: Vec<EdgeId>,
+    pub incoming_edges: Vec<EdgeId>,
+}
+
+impl Display for NodeMetadata {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}", self.tile_id, self.label)
+    }
 }
 
 pub fn get_node_pos(node: &router::Node) -> Option<vello::kurbo::Point> {

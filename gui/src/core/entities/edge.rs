@@ -2,9 +2,11 @@ use router::NodeId;
 use vello::kurbo::Point;
 
 use crate::constants::EDGE_FOCUS_SCALER;
+pub type EdgeId = usize;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Edge {
+    pub id: EdgeId,
     pub source_node: NodeId,
     pub target_node: NodeId,
     pub start_position: Point,

@@ -77,25 +77,29 @@ impl LayoutBuilder<AtTileInner> {
                     WirePoint::Mid => 0.0,
                     WirePoint::End => -1.0,
                 },
-                10.0 + (wire.id as f64 * 10.0),
+                TILE_BOUNDING_BOX_HEIGHT / 2.0
+                    + if wire.id.is_multiple_of(2) {
+                        (-(wire.id as i8 + 2) / 2) as f64 * 10.0
+                    } else {
+                        ((wire.id + 2) / 2) as f64 * 10.0
+                    },
             )
         } else if wire.double {
+            let id_offset = (wire.id as f64) * WIRE_NODE_RADIUS * 4.0;
             (
-                -4.0 - wire.id as f64,
-                TILE_BOUNDING_BOX_HEIGHT
-                    + 10.0
-                    + match wire.wire_point {
-                        WirePoint::Begin => -1.0,
-                        WirePoint::BeginB => -4.0,
-                        WirePoint::Mid => 0.0,
-                        WirePoint::End => 1.0,
-                    },
+                -id_offset - 10.0,
+                match wire.wire_point {
+                    WirePoint::Begin => -id_offset,
+                    WirePoint::BeginB => -4.0,
+                    WirePoint::Mid => 0.0,
+                    WirePoint::End => id_offset + TILE_BOUNDING_BOX_HEIGHT,
+                },
             )
         } else {
             let xx = wire_offset(&wire.wire_point);
             (
-                -2.0 - wire.id as f64 - wire.length as f64 * WIRE_NODE_RADIUS * 2.0,
-                10.0 + xx + wire.length as f64,
+                -2.0 - (wire.id as f64) * WIRE_NODE_RADIUS * 4.0 - (wire.length as f64 * 1.5),
+                10.0 + xx + (wire.id as f64) * WIRE_NODE_RADIUS * 4.0,
             )
         };
 

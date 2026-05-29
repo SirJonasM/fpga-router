@@ -18,9 +18,10 @@ use winit::{dpi::PhysicalSize, window::Window};
 use crate::gui::draw_diagnostics;
 use crate::{
     GRAPH_SIZE,
-    core::{Entity, Lut, Position, SpatialFabricGrid, find_entities_at_position},
+    core::{Entity, Position, SpatialFabricGrid},
     gui::{draw_sidepanel, draw_status_line, render_command_palette},
     input::InputHandlerState,
+    render::fabric_highlight_scene,
     utils::{SelectionManager, screen_to_world},
 };
 use crate::{
@@ -29,7 +30,7 @@ use crate::{
     core::VisibleTileRange,
     gui::{draw_ui, render_loading, render_vello},
     input::{Command, Goto, InputHandler},
-    render::fabric_scene,
+    render::fabric_base_scene,
 };
 
 pub struct App {
@@ -48,7 +49,8 @@ pub struct App {
     pub view_transform: ViewTransform,
     pub vello_renderer: Renderer,
     pub scene: Scene,
-    pub spatial_grid: Option<SpatialFabricGrid>,
+    pub spatial_grid: Option<Arc<SpatialFabricGrid>>,
+    pub fabric_scene_state: FabricRendererState,
 
     pub input_handler: InputHandler,
 
@@ -182,7 +184,7 @@ impl App {
         let tile_manager = Arc::new(TileManager::from_file(&format!("tests/data/bel_{GRAPH_SIZE}x{GRAPH_SIZE}.txt")).unwrap());
 
         // 1. Build your new spatial acceleration grid here once on load!
-        let spatial_grid = Some(SpatialFabricGrid::build_from_graph(&graph, &tile_manager));
+        let spatial_grid = Some(Arc::new(SpatialFabricGrid::build_from_graph(&graph, &tile_manager)));
         let router = Router {
             current_graph: Some(graph),
             current_tile_manager: Some(tile_manager),
@@ -210,6 +212,7 @@ impl App {
             central_rect: egui::Rect::NOTHING,
             position: Default::default(),
             ppp: 1.0,
+            fabric_scene_state: Default::default(),
         }
     }
 
@@ -245,11 +248,6 @@ impl App {
         let _ = draw_status_line(self);
         let entity = draw_sidepanel(self);
 
-        if let Some(entity) = entity {
-            self.focus_entity(entity);
-            self.selected_entity.select(entity);
-        }
-
         let response_central = draw_ui(self);
         self.central_rect = response_central.rect;
 
@@ -271,8 +269,7 @@ impl App {
             self.egui_renderer.update_texture(&self.device, &self.queue, *id, image_delta);
         }
         // --- render vello ---
-        let (scene, transform) = self.render_vello(self.ppp);
-        self.scene.append(&scene, transform);
+        self.render_vello(self.ppp);
 
         self.vello_renderer
             .render_to_surface(
@@ -291,12 +288,19 @@ impl App {
 
         self.handle_pan_movement(&response_central);
 
+        if let Some(entity) = entity
+            && let Some(spatial_grid) = &self.spatial_grid
+        {
+            self.focus_entity(entity, &spatial_grid.clone());
+            self.selected_entity.select(entity);
+        }
+
         self.position = if let Some(mouse_position) = response_central.hover_pos()
             && let Some(spatial_grid) = &self.spatial_grid
         {
             let position = self.get_position(mouse_position, spatial_grid);
             if response_central.clicked() {
-                let found_entity = find_entities_at_position(&position, spatial_grid);
+                let found_entity = spatial_grid.find_entities_at_position(&position);
                 self.selected_entity.select_from_spatial_query(found_entity);
             }
             Some(position)
@@ -344,12 +348,22 @@ impl App {
         }
     }
 
-    pub fn focus_entity(&mut self, entity: Entity) {
-        let (point, scale) = match entity {
-            Entity::Tile(tile) => (tile.mid_point(), TILE_FOCUS_SCALE),
-            Entity::Lut(lut) => (lut.mid_point(), LUT_FOCUS_SCALE),
-            Entity::Node(node) => (node.position, NODE_FOCUS_SCALE),
-            Entity::Edge(edge) => (edge.mid_point(), edge.focus()),
+    pub fn focus_entity(&mut self, entity: Entity, spatial_grid: &SpatialFabricGrid) {
+        let Some((point, scale)) = (match entity {
+            Entity::Tile(tile_id) => spatial_grid
+                .get_tile(tile_id)
+                .and_then(|tile| Some((tile.mid_point(), TILE_FOCUS_SCALE))),
+            Entity::Lut(lut_id) => spatial_grid
+                .get_lut(lut_id)
+                .and_then(|lut| Some((lut.mid_point(), LUT_FOCUS_SCALE))),
+            Entity::Node(node_id) => spatial_grid
+                .get_node(node_id)
+                .and_then(|node| Some((node.position, NODE_FOCUS_SCALE))),
+            Entity::Edge(edge_id) => spatial_grid
+                .get_edge(edge_id)
+                .and_then(|edge| Some((edge.mid_point(), edge.focus()))),
+        }) else {
+            return;
         };
         self.focus_point(point, scale);
     }
@@ -412,110 +426,88 @@ impl App {
                 });
             }
             Command::Goto(sub_command) => {
-                let entity = match sub_command {
+                let Some(spatial_grid) = &self.spatial_grid else {
+                    return;
+                };
+                match sub_command {
                     Goto::Tile { x, y } => {
-                        let Some(spatial_grid) = &self.spatial_grid else {
+                        let tile_id = TileId(x as u8, y as u8);
+                        let Some(tile) = spatial_grid.find_tile_existence(tile_id) else {
                             return;
                         };
-                        let tile_id = TileId(x as u8, y as u8);
-                        spatial_grid.buckets.get(&tile_id).map(|tile| Entity::Tile(tile.tile_data))
+                        self.selected_entity.select(Entity::Tile(tile.id));
+                        self.focus_point(tile.mid_point(), LUT_FOCUS_SCALE);
                     }
                     Goto::Lut { x, y, bel } => {
-                        let Some(spatial_grid) = &self.spatial_grid else {
+                        let tile_id = TileId(x as u8, y as u8);
+                        let Some(lut) = spatial_grid.find_lut_by_bel(tile_id, bel) else {
                             return;
                         };
-                        let tile_id = TileId(x as u8, y as u8);
-                        spatial_grid
-                            .buckets
-                            .get(&tile_id)
-                            .and_then(|bucket| {
-                                bucket
-                                    .lut_data
-                                    .iter()
-                                    .find(|Lut { bel_index, .. }| bel.eq_ignore_ascii_case(bel_index))
-                            })
-                            .copied()
-                            .map(Entity::Lut)
+                        self.selected_entity.select(Entity::Lut(lut.id));
+                        self.focus_point(lut.mid_point(), LUT_FOCUS_SCALE);
                     }
                     Goto::Edge {
                         x1,
                         y1,
                         label1,
-                        x2: _,
-                        y2: _,
+                        x2,
+                        y2,
                         label2,
                     } => {
-                        let Some(graph) = &self.router.current_graph else {
-                            return;
-                        };
-                        let Some(spatial_grid) = &self.spatial_grid else {
-                            return;
-                        };
                         let tile_id1 = TileId(x1 as u8, y1 as u8);
-                        spatial_grid
-                            .buckets
-                            .get(&tile_id1)
-                            .and_then(|bucket| {
-                                bucket.edge_data.iter().find(|edge_data| {
-                                    graph.get_node(edge_data.source_node).id == label1
-                                        && graph.get_node(edge_data.target_node).id == label2
-                                        || graph.get_node(edge_data.source_node).id == label2
-                                            && graph.get_node(edge_data.target_node).id == label1
-                                })
-                            })
-                            .copied()
-                            .map(Entity::Edge)
+                        let tile_id2 = TileId(x2 as u8, y2 as u8);
+                        let Some(edge) = spatial_grid.find_edge_by_connections(tile_id1, &label1, tile_id2, &label2) else {
+                            return;
+                        };
+                        self.selected_entity.select(Entity::Edge(edge.id));
+                        self.focus_point(edge.mid_point(), edge.focus());
                     }
                     Goto::Node { x, y, label } => {
-                        let Some(graph) = &self.router.current_graph else {
-                            return;
-                        };
-                        let Some(spatial_grid) = &self.spatial_grid else {
-                            return;
-                        };
                         let tile_id = TileId(x as u8, y as u8);
-                        spatial_grid
-                            .buckets
-                            .get(&tile_id)
-                            .and_then(|bucket| {
-                                bucket
-                                    .node_data
-                                    .iter()
-                                    .find(|crate::core::Node { id, .. }| graph.get_node(*id).id == label)
-                            })
-                            .copied()
-                            .map(Entity::Node)
+                        let Some(node) = spatial_grid.find_node_by_label(tile_id, &label) else {
+                            return;
+                        };
+                        self.selected_entity.select(Entity::Node(node.id));
+                        self.focus_point(node.position, NODE_FOCUS_SCALE);
                     }
-                };
-
-                if let Some(entity) = entity {
-                    self.focus_entity(entity);
-                    self.selected_entity.select(entity);
                 }
             }
             _ => {}
         }
     }
 
-    fn render_vello(&self, ppp: f64) -> (Scene, Option<vello::kurbo::Affine>) {
+    fn render_vello(&mut self, ppp: f64) {
         if let Some(spatial_grid) = &self.spatial_grid {
             let world_min = screen_to_world(self.central_rect.min, &self.central_rect, &self.view_transform, ppp);
             let world_max = screen_to_world(self.central_rect.max, &self.central_rect, &self.view_transform, ppp);
             let visible_range = VisibleTileRange::new(world_min, world_max);
-            let current_scene_fabric = fabric_scene(
-                spatial_grid,
-                &visible_range,
-                self.view_transform.scale,
-                self.is_moving,
-                self.selected_entity.current,
-            );
             let transform = vello::kurbo::Affine::translate((
                 (self.central_rect.min.x * ppp as f32) as f64 + self.view_transform.pan.x,
                 (self.central_rect.min.y * ppp as f32) as f64 + self.view_transform.pan.y,
             )) * vello::kurbo::Affine::scale(self.view_transform.scale);
-            (current_scene_fabric, Some(transform))
+            if self.fabric_scene_state.last_is_moving == self.is_moving
+                && self.fabric_scene_state.last_scale == self.view_transform.scale
+                && self.fabric_scene_state.last_visible_range.as_ref() == Some(&visible_range)
+            {
+                self.scene.append(&self.fabric_scene_state.cached_base_scene, Some(transform));
+            } else {
+                let base_scene = fabric_base_scene(spatial_grid, visible_range, self.view_transform.scale, self.is_moving);
+                self.scene.append(&base_scene, Some(transform));
+                self.fabric_scene_state.cached_base_scene = base_scene;
+                self.fabric_scene_state.last_is_moving = self.is_moving;
+                self.fabric_scene_state.last_scale = self.view_transform.scale;
+                self.fabric_scene_state.last_visible_range = Some(visible_range);
+            }
+            if self.selected_entity.current == self.fabric_scene_state.last_selection {
+                self.scene
+                    .append(&self.fabric_scene_state.cached_highlight_scene, Some(transform));
+            } else if let Some(entity) = self.selected_entity.current {
+                let highlight_scene =
+                    fabric_highlight_scene(spatial_grid, visible_range, self.view_transform.scale, self.is_moving, entity);
+                self.scene.append(&highlight_scene, Some(transform));
+            }
         } else {
-            (render_vello(self.central_rect), None)
+            self.scene.append(&render_vello(self.central_rect), None);
         }
     }
 
@@ -584,5 +576,26 @@ impl App {
             self.view_transform.pan.y += delta.y as f64;
         }
         self.is_moving = is_dragged || scroll_delta != 0.0;
+    }
+}
+
+#[derive(Default)]
+pub struct FabricRendererState {
+    // The big heavy lifting is stored here
+    cached_base_scene: Scene,
+    cached_highlight_scene: Scene,
+
+    // Tracking states to know when to invalidate caches
+    last_visible_range: Option<VisibleTileRange>,
+    last_scale: f64,
+    last_is_moving: bool,
+    last_selection: Option<Entity>,
+}
+
+impl PartialEq for FabricRendererState {
+    fn eq(&self, other: &Self) -> bool {
+        self.last_visible_range == other.last_visible_range
+            && self.last_scale == other.last_scale
+            && self.last_is_moving == other.last_is_moving
     }
 }

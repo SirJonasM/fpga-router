@@ -68,12 +68,13 @@ pub fn draw_sidepanel(app: &mut App) -> Option<Entity> {
             ui.heading("FPGA Router");
             ui.separator();
 
-            if let Some(Entity::Edge(edge)) = app.selected_entity.current
-                && let Some(graph) = &app.router.current_graph
+            if let Some(Entity::Edge(edge_id)) = app.selected_entity.current
+                && let Some(spatial_grid) = &app.spatial_grid
+                && let Some(edge) = spatial_grid.get_edge(edge_id)
+                && let Some(source_node) = spatial_grid.get_node(edge.source_node)
+                && let Some(target_node) = spatial_grid.get_node(edge.target_node)
             {
-                let node_start = graph.get_node(edge.source_node).id();
-                let node_end = graph.get_node(edge.target_node).id();
-                ui.label(format!("Selected Edge: {node_start}->{node_end}",));
+                ui.label(format!("Selected Edge: {source_node}->{target_node}",));
             }
 
             let response = ui.button("back");
@@ -93,18 +94,18 @@ pub fn draw_sidepanel(app: &mut App) -> Option<Entity> {
             if let Some(Entity::Node(node)) = app.selected_entity.current
                 && let Some(graph) = &app.router.current_graph
             {
-                let node_id = graph.get_node(node.id).id();
+                let node_id = graph.get_node(node).id();
                 ui.label(format!("Selected Node: {node_id}",));
                 ui.separator();
                 ui.label("Previous:");
                 let mut responses = vec![];
-                graph.get_previous(node.id).iter().for_each(|a| {
+                graph.get_previous(node).iter().for_each(|a| {
                     let id = graph.get_node(*a).id();
                     let response = ui.label(id).interact(egui::Sense::click());
                     responses.push((*a, response))
                 });
                 ui.label("Next");
-                graph.get_next(node.id).iter().for_each(|a| {
+                graph.get_next(node).iter().for_each(|a| {
                     let id = graph.get_node(*a).id();
                     let response = ui.label(id).interact(egui::Sense::click());
                     responses.push((*a, response))
@@ -118,7 +119,7 @@ pub fn draw_sidepanel(app: &mut App) -> Option<Entity> {
                         let Some(bucket) = spatial_grid.buckets.get(&node.tile) else {
                             return None;
                         };
-                        bucket.node_data.iter().find(|a| a.id == *node_id).map(|a| Entity::Node(*a))
+                        bucket.node_data.iter().find(|a| *a == node_id).map(|a| Entity::Node(*a))
                     } else {
                         None
                     }
