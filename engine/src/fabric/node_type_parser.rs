@@ -196,9 +196,11 @@ mod test {
             jump: false,
             double: false,
             length: 1,
-            wire_point: WirePoint::Begin,
+            wire_point: WirePoint::BeginB,
             id: 1,
         };
+        assert_eq!(parse_node_type("N1BEGb1"), Ok(("", NodeType::Wire(wire.clone()))));
+        wire.wire_point = WirePoint::Begin;
         assert_eq!(parse_node_type("N1BEG1"), Ok(("", NodeType::Wire(wire.clone()))));
         wire.jump = true;
         assert_eq!(parse_node_type("JN1BEG1"), Ok(("", NodeType::Wire(wire.clone()))));
