@@ -21,11 +21,11 @@ pub const TILE_OUTER_SELECT_THRESHOLD: f64 = TILE_OUTER_LINE_WIDTH * 2.0;
 pub const TILE_INNER_SELECT_THRESHOLD: f64 = TILE_INNER_LINE_WIDTH * 2.0;
 pub const TILE_FOCUS_SCALE: f64 = 4.0;
 
-pub const LUT_WIDTH: f64 = 20.0;
+pub const LUT_WIDTH: f64 = 15.0;
 pub const LUT_HEIGHT: f64 = 15.0;
 pub const LUT_LINE_WIDTH: f64 = 0.5;
 pub const LUT_MARGIN: f64 = 10.0;
-pub const LUT_SPACING: f64 = 9.0;
+pub const LUT_SPACING: f64 = 18.0;
 pub const LUT_SELECT_THRESHOLD: f64 = LUT_LINE_WIDTH * 2.0;
 pub const LUT_FOCUS_SCALE: f64 = 20.0;
 
