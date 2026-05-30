@@ -1,5 +1,4 @@
 use egui::{CentralPanel, Id, Response, SidePanel, TopBottomPanel, panel::TopBottomSide};
-use router::NodeId;
 use vello::Scene;
 
 use crate::{App, LoadStatus, core::Entity, render::render_placeholder_vello};
@@ -113,12 +112,8 @@ pub fn draw_sidepanel(app: &mut App) -> Option<Entity> {
                 return responses.iter().find_map(|(node_id, response)| {
                     if response.clicked() {
                         let node = graph.get_node(*node_id);
-                        let Some(ref spatial_grid) = app.spatial_grid else {
-                            return None;
-                        };
-                        let Some(bucket) = spatial_grid.buckets.get(&node.tile) else {
-                            return None;
-                        };
+                        let spatial_grid = app.spatial_grid.as_ref()?;
+                        let bucket = spatial_grid.buckets.get(&node.tile)?;
                         bucket.node_data.iter().find(|a| *a == node_id).map(|a| Entity::Node(*a))
                     } else {
                         None

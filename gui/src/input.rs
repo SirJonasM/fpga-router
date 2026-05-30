@@ -79,6 +79,7 @@ impl Command {
         arguments.next().map(|file| Self::LoadPips(file.to_string()))
     }
     pub fn parse_goto(mut arguments: SplitWhitespace) -> Option<Self> {
+        println!("huh");
         let parse_int = |x: Option<&str>| -> Option<usize> { x?.parse::<usize>().ok() };
         match arguments.next() {
             Some("tile") => {

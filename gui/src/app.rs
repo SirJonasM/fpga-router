@@ -288,21 +288,32 @@ impl App {
 
         self.handle_pan_movement(&response_central);
 
+        // 1. Process Context Window / Goto Events First
+        let mut context_action_occurred = false;
+
         if let Some(entity) = entity
             && let Some(spatial_grid) = &self.spatial_grid
         {
+            // Pass the Arc clone smoothly
             self.focus_entity(entity, &spatial_grid.clone());
             self.selected_entity.select(entity);
+
+            // Mark that a programmatic selection override happened this frame
+            context_action_occurred = true;
         }
 
+        // 2. Track Hover Position & Handle Canvas Clicks Safely
         self.position = if let Some(mouse_position) = response_central.hover_pos()
             && let Some(spatial_grid) = &self.spatial_grid
         {
             let position = self.get_position(mouse_position, spatial_grid);
-            if response_central.clicked() {
+
+            // Only register a canvas click if the user didn't just fire an external context action!
+            if response_central.clicked() && !context_action_occurred {
                 let found_entity = spatial_grid.find_entities_at_position(&position);
                 self.selected_entity.select_from_spatial_query(found_entity);
             }
+
             Some(position)
         } else {
             None
@@ -352,16 +363,10 @@ impl App {
         let Some((point, scale)) = (match entity {
             Entity::Tile(tile_id) => spatial_grid
                 .get_tile(tile_id)
-                .and_then(|tile| Some((tile.mid_point(), TILE_FOCUS_SCALE))),
-            Entity::Lut(lut_id) => spatial_grid
-                .get_lut(lut_id)
-                .and_then(|lut| Some((lut.mid_point(), LUT_FOCUS_SCALE))),
-            Entity::Node(node_id) => spatial_grid
-                .get_node(node_id)
-                .and_then(|node| Some((node.position, NODE_FOCUS_SCALE))),
-            Entity::Edge(edge_id) => spatial_grid
-                .get_edge(edge_id)
-                .and_then(|edge| Some((edge.mid_point(), edge.focus()))),
+                .map(|tile| (tile.mid_point(), TILE_FOCUS_SCALE)),
+            Entity::Lut(lut_id) => spatial_grid.get_lut(lut_id).map(|lut| (lut.mid_point(), LUT_FOCUS_SCALE)),
+            Entity::Node(node_id) => spatial_grid.get_node(node_id).map(|node| (node.position, NODE_FOCUS_SCALE)),
+            Entity::Edge(edge_id) => spatial_grid.get_edge(edge_id).map(|edge| (edge.mid_point(), edge.focus())),
         }) else {
             return;
         };
@@ -502,8 +507,7 @@ impl App {
                 self.scene
                     .append(&self.fabric_scene_state.cached_highlight_scene, Some(transform));
             } else if let Some(entity) = self.selected_entity.current {
-                let highlight_scene =
-                    fabric_highlight_scene(spatial_grid, visible_range, self.view_transform.scale, self.is_moving, entity);
+                let highlight_scene = fabric_highlight_scene(spatial_grid, entity);
                 self.scene.append(&highlight_scene, Some(transform));
             }
         } else {

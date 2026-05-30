@@ -55,18 +55,17 @@ impl SpatialFabricGrid {
 
         // Scan the IDs in the localized bucket
         for &lut_id in &bucket.lut_data {
-            if let Some(lut) = self.lut_index.get(&lut_id) {
-                if lut.bel_index == bel
-                    && is_on_rect_border(
-                        position.world_position,
-                        lut.position,
-                        LUT_WIDTH,
-                        LUT_HEIGHT,
-                        LUT_SELECT_THRESHOLD,
-                    )
-                {
-                    return Some(lut_id);
-                }
+            if let Some(lut) = self.lut_index.get(&lut_id)
+                && lut.bel_index == bel
+                && is_on_rect_border(
+                    position.world_position,
+                    lut.position,
+                    LUT_WIDTH,
+                    LUT_HEIGHT,
+                    LUT_SELECT_THRESHOLD,
+                )
+            {
+                return Some(lut_id);
             }
         }
         None

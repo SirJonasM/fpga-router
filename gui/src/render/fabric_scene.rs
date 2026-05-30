@@ -4,21 +4,11 @@ use crate::core::NodeMetadata;
 use crate::core::SpatialFabricGrid;
 use crate::core::VisibleTileRange;
 use vello::Scene;
-use vello::glyph::skrifa::color::Brush;
 use vello::peniko::Color;
 
-pub fn fabric_highlight_scene(
-    spatial_grid: &SpatialFabricGrid,
-    visible_range: VisibleTileRange,
-    scale: f64,
-    is_moving: bool,
-    selection: Entity,
-) -> Scene {
+pub fn fabric_highlight_scene(spatial_grid: &SpatialFabricGrid, selection: Entity) -> Scene {
     let mut scene = vello::Scene::new();
 
-    let draw_luts = scale > LUT_ZOOM_THRESHOLD;
-    let draw_edges = (!is_moving && scale > EDGE_ZOOM_THRESHOLD_UNDER_MOVING) || scale > EDGE_ZOOM_THRESHOLD;
-    let draw_nodes = (!is_moving && scale > NODE_ZOOM_THRESHOLD_UNDER_MOVING) || scale > NODE_ZOOM_THRESHOLD;
     match selection {
         Entity::Tile(tile) => {
             if let Some(tile) = spatial_grid.get_tile(tile) {
@@ -28,7 +18,7 @@ pub fn fabric_highlight_scene(
                     inner_line_color: Color::RED,
                     inner_line_width: TILE_INNER_LINE_WIDTH,
                 };
-                draw_tile_base(&tile, &mut scene, &highlighting)
+                draw_tile_base(tile, &mut scene, &highlighting)
             }
         }
         Entity::Lut(lut) => {
@@ -37,7 +27,7 @@ pub fn fabric_highlight_scene(
                     line_color: Color::RED,
                     line_width: LUT_LINE_WIDTH,
                 };
-                draw_lut_base(&lut, &mut scene, &highlighting)
+                draw_lut_base(lut, &mut scene, &highlighting)
             }
         }
         Entity::Node(node) => {
@@ -46,17 +36,17 @@ pub fn fabric_highlight_scene(
                     fill_color: Color::RED,
                     radius: WIRE_NODE_RADIUS * 1.2,
                 };
-                draw_node_base(&node, &mut scene, &highlighting);
+                draw_node_base(node, &mut scene, &highlighting);
                 for edge in spatial_grid.get_outgoing_edges(node.id) {
                     let highlighting = EdgeHighlightingConfig {
-                        line_highlighting: EdgeHighlighting::Solid(Color::YELLOW),
+                        line_highlighting: EdgeHighlighting::Solid(INCOMING_EDGE_COLOR),
                         line_width: WIRE_LINE_WIDTH * 2.0,
                     };
                     draw_edge_base(edge, &mut scene, &highlighting);
                 }
                 for edge in spatial_grid.get_incoming_edges(node.id) {
                     let highlighting = EdgeHighlightingConfig {
-                        line_highlighting: EdgeHighlighting::Solid(Color::RED),
+                        line_highlighting: EdgeHighlighting::Solid(OUTGOING_EDGE_COLOR),
                         line_width: WIRE_LINE_WIDTH * 2.0,
                     };
                     draw_edge_base(edge, &mut scene, &highlighting);
@@ -72,7 +62,7 @@ pub fn fabric_highlight_scene(
                     line_highlighting: EdgeHighlighting::Solid(Color::WHITE),
                     line_width: WIRE_LINE_WIDTH * 2.0,
                 };
-                draw_edge_base(&edge, &mut scene, &highlighting);
+                draw_edge_base(edge, &mut scene, &highlighting);
                 let mut highlighting = NodeHighlightingConfig {
                     fill_color: Color::YELLOW,
                     radius: WIRE_NODE_RADIUS * 1.2,
@@ -245,8 +235,8 @@ enum EdgeHighlighting {
     Solid(Color),
 }
 pub struct EdgeHighlightingConfig {
-    pub line_highlighting: EdgeHighlighting,
-    pub line_width: f64,
+    line_highlighting: EdgeHighlighting,
+    line_width: f64,
 }
 
 impl Default for EdgeHighlightingConfig {

@@ -80,18 +80,17 @@ impl SpatialFabricGrid {
         grid.tile_index = tile_index;
 
         for node in graph.nodes.iter() {
+            let label = node.id.to_string();
+            let id = *graph.get_node_id(&node.id()).unwrap();
             if let Some(pos) = get_node_pos(node) {
                 let Some(bucket) = grid.buckets.get_mut(&node.tile) else {
                     panic!("Error in pips and bel definition. Tile: {:?}", node.tile);
                 };
 
-                let label = node.id();
-                let id = *graph.get_node_id(&label).unwrap();
-
                 let node_data = NodeMetadata {
                     id,
                     position: pos,
-                    label: node.id(),
+                    label,
                     tile_id: node.tile,
                     outgoing_edges: Vec::new(),
                     incoming_edges: Vec::new(),
@@ -99,6 +98,41 @@ impl SpatialFabricGrid {
 
                 grid.node_index[id] = Some(node_data);
                 bucket.node_data.push(id);
+            } else {
+                let pre = graph
+                    .get_previous(id)
+                    .iter()
+                    .map(|x| graph.get_node(*x).id())
+                    .collect::<Vec<String>>();
+                if pre.len() == 1 {
+                    let prev_id = graph.get_node_id(&pre[0]).unwrap();
+                    let pre = graph
+                        .get_previous(*prev_id)
+                        .iter()
+                        .map(|x| graph.get_node(*x).id())
+                        .collect::<Vec<String>>();
+                    println!("[{}]", pre.join(", "));
+                }
+                println!("[{}]", pre.join(", "));
+                println!("{node}");
+                let next = graph
+                    .get_next(id)
+                    .iter()
+                    .map(|x| graph.get_node(*x).id())
+                    .collect::<Vec<String>>();
+                println!("[{}]", next.join(", "));
+
+                if next.len() == 1 {
+                    let next_id = graph.get_node_id(&next[0]).unwrap();
+                    let next = graph
+                        .get_next(*next_id)
+                        .iter()
+                        .map(|x| graph.get_node(*x).id())
+                        .collect::<Vec<String>>();
+                    println!("[{}]", next.join(", "));
+                }
+
+                println!();
             }
         }
 
@@ -282,10 +316,11 @@ impl SpatialFabricGrid {
         for &edge_id in &source_meta.outgoing_edges {
             if let Some(edge) = self.edge_index.get(&edge_id) {
                 // Check if the edge's target node matches our target destination criteria
-                if let Some(target_meta) = self.node_index[edge.target_node].as_ref() {
-                    if target_meta.tile_id == target_tile && target_meta.label == target_label {
-                        return Some(edge);
-                    }
+                if let Some(target_meta) = self.node_index[edge.target_node].as_ref()
+                    && target_meta.tile_id == target_tile
+                    && target_meta.label == target_label
+                {
+                    return Some(edge);
                 }
             }
         }

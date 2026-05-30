@@ -23,9 +23,6 @@ impl VisibleTileRange {
             max_y: (world_max.y / tile_step_y).ceil() as u8,
         }
     }
-    pub fn is_visibile(&self, tile_id: TileId) -> bool {
-        (self.min_x..=self.max_x).contains(&tile_id.0) && (self.min_y..=self.max_y).contains(&tile_id.1)
-    }
 }
 
 pub struct VisibleTileRangeIter {
