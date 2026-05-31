@@ -2,7 +2,7 @@ use crate::{
     constants::*,
     core::{
         Edge, TargetLocation,
-        entities::{EdgeId, Lut, LutId, NodeMetadata, Tile, get_node_pos},
+        entities::{EdgeId, LutId, LutMetadata, MuxId, MuxMetadata, MuxPorts, Tile, TileMetadata, TilePorts},
         layout::LayoutBuilder,
     },
 };
@@ -12,175 +12,124 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct SpatialFabricGrid {
     pub buckets: HashMap<TileId, TileBucket>,
-    pub node_index: Vec<Option<NodeMetadata>>,
+
+    pub tile_index: HashMap<TileId, TileMetadata>,
+    pub lut_index: HashMap<LutId, LutMetadata>,
+    pub mux_index: HashMap<MuxId, MuxMetadata>,
     pub edge_index: HashMap<EdgeId, Edge>,
-    pub lut_index: HashMap<LutId, Lut>,
-    pub tile_index: HashMap<TileId, Tile>,
 }
 #[derive(Debug)]
 pub struct TileBucket {
-    pub tile_data: TileId,
     pub lut_data: Vec<LutId>,
-    pub node_data: Vec<NodeId>,
+    pub mux_data: Vec<MuxId>,
     pub edge_data: Vec<EdgeId>,
 }
 
 impl SpatialFabricGrid {
     pub fn build_from_graph(graph: &router::FabricGraph, tile_manager: &router::TileManager) -> Self {
         let mut grid = Self::default();
-        let mut lut_index = HashMap::new();
-        let mut edge_index = HashMap::new();
         let mut tile_index = HashMap::new();
-
-        let max_node_id = graph
-            .nodes
-            .iter()
-            .filter_map(|node| graph.get_node_id(&node.id()))
-            .map(|id| id.raw() as usize)
-            .max()
-            .unwrap_or(0);
-
-        grid.node_index = vec![None; max_node_id + 1];
+        let mut lut_index = HashMap::new();
+        let mut mux_index: HashMap<(TileId, String), MuxMetadata> = HashMap::new();
+        let mut edge_index = HashMap::new();
 
         for tile in tile_manager.0.values() {
             let position_outer = LayoutBuilder::new().tile(&tile.id).build();
             let position_inner = LayoutBuilder::new().tile(&tile.id).tile_inner().build();
 
-            let tile_data = Tile {
+            let tile_data = TileMetadata {
                 id: tile.id,
                 position_outer,
                 position_inner,
+                ports: TilePorts::default(),
             };
-            tile_index.insert(tile.id, tile_data);
-
-            let bucket = grid.buckets.entry(tile.id).or_insert_with(|| TileBucket {
-                tile_data: tile.id,
+            grid.buckets.entry(tile.id).or_insert_with(|| TileBucket {
                 lut_data: Vec::new(),
-                node_data: Vec::new(),
+                mux_data: Vec::new(),
                 edge_data: Vec::new(),
             });
+            tile_index.insert(tile.id, tile_data);
+        }
 
-            let mut lut_list = vec![];
-            for lut in &tile.luts {
-                let pos = LayoutBuilder::new().tile(&tile.id).tile_inner().lut(lut.bel_index).build();
-                let id = lut_index.len();
-                let lut_struct = Lut {
-                    id,
-                    bel_index: lut.bel_index,
-                    position: pos,
-                    tile: tile.id,
-                };
-                lut_index.insert(id, lut_struct);
-                lut_list.push(id);
+        for (node_id, node) in graph.nodes() {
+            match &node.typ {
+                router::NodeType::Lut { bel, port } => {
+                    let id = (node.tile.0 as usize) << 16 | (node.tile.1 as usize) << 8 | (*bel as usize);
+                    let ports = lut_index.entry(id).or_insert(LutMetadata::default()).ports;
+                    match port {
+                        router::LutPort::Input(_) => ports.inputs.push(node_id),
+                        router::LutPort::Output => ports.output = Some(node_id),
+                        router::LutPort::CarryIn => ports.carry_in = Some(node_id),
+                        router::LutPort::CarryOut => ports.carry_out = Some(node_id),
+                        router::LutPort::Enable => ports.enable = Some(node_id),
+                        router::LutPort::SetReset => ports.set_reset = Some(node_id),
+                    }
+                }
+                router::NodeType::Tile { port } => {
+                    let tile_metadata = &mut tile_index.get_mut(&node.tile).unwrap().ports;
+                    match port {
+                        router::TilePort::CarryIn(_) => tile_metadata.carry_in = Some(node_id),
+                        router::TilePort::CarryOut(_) => tile_metadata.carry_out = Some(node_id),
+                        router::TilePort::Ground(_) => tile_metadata.ground = Some(node_id),
+                        router::TilePort::VCC(_) => tile_metadata.vcc = Some(node_id),
+                        router::TilePort::Lut(_) => tile_metadata.lut = Some(node_id),
+                    }
+                }
+                router::NodeType::Mux(mux_node) => {
+                    let label = node
+                        .id
+                        .replace("BEGb", "")
+                        .replace("BEG", "")
+                        .replace("MID", "")
+                        .replace("END", "");
+                    let id = &(node.tile, label.clone());
+                    let position = LayoutBuilder::new()
+                        .tile(&node.tile)
+                        .tile_inner()
+                        .mux_oriented(mux_node)
+                        .build();
+
+                    let ports = &mut mux_index
+                        .entry(id.clone())
+                        .or_insert_with(|| MuxMetadata {
+                            id: id.clone(),
+                            tile_id: node.tile,
+                            label,
+                            position,
+                            ports: MuxPorts::default(),
+                            outgoing: Vec::new(),
+                            incoming: Vec::new(),
+                        })
+                        .ports;
+                    match mux_node.port {
+                        router::MuxPort::Begin => ports.end = Some(node_id),
+                        router::MuxPort::BeginB => ports.begin_b = Some(node_id),
+                        router::MuxPort::Mid => ports.mid = Some(node_id),
+                        router::MuxPort::End => ports.end = Some(node_id),
+                    };
+                }
+                router::NodeType::Other => {}
             }
-            bucket.lut_data = lut_list;
+        }
+
+        for (source_node_id, edge) in graph.edges() {
+            let source = graph.get_node(source_node_id);
+            let target = graph.get_node(edge.node_id);
+        }
+
+        for (id, lut) in &lut_index {
+            let bucket = grid.buckets.get_mut(&lut.tile_id).unwrap();
+            bucket.lut_data.push((*id, lut.position));
+        }
+        for (id, mux) in &mux_index {
+            let bucket = grid.buckets.get_mut(&mux.tile_id).unwrap();
+            bucket.mux_data.push((id.clone(), mux.position));
         }
 
         grid.lut_index = lut_index;
         grid.tile_index = tile_index;
-
-        for node in graph.nodes.iter() {
-            let label = node.id.to_string();
-            let id = *graph.get_node_id(&node.id()).unwrap();
-            if let Some(pos) = get_node_pos(node) {
-                let Some(bucket) = grid.buckets.get_mut(&node.tile) else {
-                    panic!("Error in pips and bel definition. Tile: {:?}", node.tile);
-                };
-
-                let node_data = NodeMetadata {
-                    id,
-                    position: pos,
-                    label,
-                    tile_id: node.tile,
-                    outgoing_edges: Vec::new(),
-                    incoming_edges: Vec::new(),
-                };
-
-                grid.node_index[id] = Some(node_data);
-                bucket.node_data.push(id);
-            } else {
-                let pre = graph
-                    .get_previous(id)
-                    .iter()
-                    .map(|x| graph.get_node(*x).id())
-                    .collect::<Vec<String>>();
-                if pre.len() == 1 {
-                    let prev_id = graph.get_node_id(&pre[0]).unwrap();
-                    let pre = graph
-                        .get_previous(*prev_id)
-                        .iter()
-                        .map(|x| graph.get_node(*x).id())
-                        .collect::<Vec<String>>();
-                    println!("[{}]", pre.join(", "));
-                }
-                println!("[{}]", pre.join(", "));
-                println!("{node}");
-                let next = graph
-                    .get_next(id)
-                    .iter()
-                    .map(|x| graph.get_node(*x).id())
-                    .collect::<Vec<String>>();
-                println!("[{}]", next.join(", "));
-
-                if next.len() == 1 {
-                    let next_id = graph.get_node_id(&next[0]).unwrap();
-                    let next = graph
-                        .get_next(*next_id)
-                        .iter()
-                        .map(|x| graph.get_node(*x).id())
-                        .collect::<Vec<String>>();
-                    println!("[{}]", next.join(", "));
-                }
-
-                println!();
-            }
-        }
-
-        for (start_id, end_id) in graph.edges() {
-            let start_node = graph.get_node(start_id);
-            let end_node = graph.get_node(end_id.node_id);
-
-            if let Some(pos1) = get_node_pos(start_node)
-                && let Some(pos2) = get_node_pos(end_node)
-            {
-                let id = edge_index.len();
-                let edge_data = Edge {
-                    id,
-                    source_node: start_id,
-                    target_node: end_id.node_id,
-                    start_position: pos1,
-                    end_position: pos2,
-                };
-
-                let crossed_tiles = get_tiles_intersected_by_line(pos1, pos2);
-                for tile_id in crossed_tiles {
-                    if let Some(bucket) = grid.buckets.get_mut(&tile_id) {
-                        bucket.edge_data.push(id);
-                    }
-                }
-
-                if let Some(source_meta) = grid.node_index[start_id].as_mut() {
-                    source_meta.outgoing_edges.push(id);
-                }
-
-                if let Some(target_meta) = grid.node_index[end_id.node_id].as_mut() {
-                    target_meta.incoming_edges.push(id);
-                }
-
-                edge_index.insert(id, edge_data);
-            }
-        }
         grid.edge_index = edge_index;
-
-        let nodes_ref = &grid.node_index;
-        for bucket in grid.buckets.values_mut() {
-            bucket.node_data.sort_unstable_by(|a, b| {
-                let pos_a = nodes_ref[*a].as_ref().map(|n| n.position.x).unwrap_or(0.0);
-                let pos_b = nodes_ref[*b].as_ref().map(|n| n.position.x).unwrap_or(0.0);
-                pos_a.total_cmp(&pos_b)
-            });
-        }
-
+        grid.mux_index = mux_index;
         grid
     }
     pub fn find_location_at_world_pos(&self, x: f64, y: f64) -> TargetLocation {
@@ -204,13 +153,11 @@ impl SpatialFabricGrid {
         if !is_in_inner_box {
             return TargetLocation::Outer(tile_id);
         }
-        if let Some(bel) = bucket.lut_data.iter().find_map(|lut_id| {
-            let lut = self.lut_index.get(lut_id)?;
-
-            let lut_x_offset = x - lut.position.x;
-            let lut_y_offset = y - lut.position.y;
+        if let Some(bel) = bucket.lut_data.iter().find_map(|(lut_id, position)| {
+            let lut_x_offset = x - position.x;
+            let lut_y_offset = y - position.y;
             if (0.0..=LUT_WIDTH).contains(&lut_x_offset) & (0.0..=LUT_HEIGHT).contains(&lut_y_offset) {
-                Some(lut.bel_index)
+                self.lut_index.get(lut_id).map(|a| a.bel_index)
             } else {
                 None
             }
@@ -251,7 +198,7 @@ impl SpatialFabricGrid {
     }
 
     #[inline(always)]
-    pub fn get_node(&self, id: NodeId) -> Option<&NodeMetadata> {
+    pub fn get_node(&self, id: NodeId) -> Option<&MuxMetadata> {
         self.node_index[id].as_ref()
     }
 
@@ -272,33 +219,30 @@ impl SpatialFabricGrid {
 
     pub fn get_outgoing_edges(&self, id: NodeId) -> impl Iterator<Item = &Edge> {
         self.get_node(id)
-            .map(|meta| meta.outgoing_edges.iter().filter_map(|e_id| self.get_edge(*e_id)))
+            .map(|meta| meta.outgoing.iter().filter_map(|e_id| self.get_edge(*e_id)))
             .into_iter()
             .flatten()
     }
 
     pub fn get_incoming_edges(&self, id: NodeId) -> impl Iterator<Item = &Edge> {
         self.get_node(id)
-            .map(|meta| meta.incoming_edges.iter().filter_map(|e_id| self.get_edge(*e_id)))
+            .map(|meta| meta.incoming.iter().filter_map(|e_id| self.get_edge(*e_id)))
             .into_iter()
             .flatten()
     }
     /// Find a NodeId inside a specific tile that matches a string label
-    pub fn find_node_by_label(&self, tile_id: TileId, label: &str) -> Option<&NodeMetadata> {
+    pub fn find_node_by_label(&self, tile_id: TileId, label: &str) -> Option<&MuxMetadata> {
         let bucket = self.buckets.get(&tile_id)?;
 
-        bucket
-            .node_data
-            .iter()
-            .copied()
-            .find(|&node_id| {
-                if let Some(node_meta) = self.node_index[node_id].as_ref() {
-                    node_meta.label == label
-                } else {
-                    false
-                }
-            })
-            .and_then(|node_id| self.node_index[node_id].as_ref())
+        bucket.node_data.iter().copied().find_map(|(node_id, _position)| {
+            if let Some(node_meta) = self.node_index[node_id].as_ref()
+                && node_meta.label == label
+            {
+                Some(node_meta)
+            } else {
+                None
+            }
+        })
     }
 
     /// Find an EdgeId by specifying its source node's tile + label and its target node's tile + label
@@ -332,18 +276,15 @@ impl SpatialFabricGrid {
         let bucket = self.buckets.get(&tile_id)?;
 
         // Scan the LUTs present inside this single bucket
-        bucket
-            .lut_data
-            .iter()
-            .copied()
-            .find(|&lut_id| {
-                if let Some(lut) = self.lut_index.get(&lut_id) {
-                    lut.bel_index == bel_index
-                } else {
-                    false
-                }
-            })
-            .and_then(|lut_id| self.get_lut(lut_id))
+        bucket.lut_data.iter().copied().find_map(|lut_id| {
+            if let Some(lut) = self.lut_index.get(&lut_id.0)
+                && lut.bel_index == bel_index
+            {
+                Some(lut)
+            } else {
+                None
+            }
+        })
     }
 
     /// Checks if a structural Tile coordinates exists inside the grid, returning its verified TileId token

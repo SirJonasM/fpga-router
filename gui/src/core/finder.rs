@@ -11,7 +11,7 @@ use crate::{
 impl SpatialFabricGrid {
     pub fn find_entities_at_position(&self, position: &Position) -> Option<Entity> {
         self.find_node_at_pos(position)
-            .map(Entity::Node)
+            .map(Entity::Mux)
             .or_else(|| self.find_edge_at_pos(position).map(Entity::Edge))
             .or_else(|| self.find_lut_at_pos(position).map(Entity::Lut))
             .or_else(|| self.find_tile_at_pos(position).map(Entity::Tile))
@@ -55,7 +55,7 @@ impl SpatialFabricGrid {
 
         // Scan the IDs in the localized bucket
         for &lut_id in &bucket.lut_data {
-            if let Some(lut) = self.lut_index.get(&lut_id)
+            if let Some(lut) = self.lut_index.get(&lut_id.0)
                 && lut.bel_index == bel
                 && is_on_rect_border(
                     position.world_position,
@@ -65,7 +65,7 @@ impl SpatialFabricGrid {
                     LUT_SELECT_THRESHOLD,
                 )
             {
-                return Some(lut_id);
+                return Some(lut_id.0);
             }
         }
         None
@@ -88,14 +88,12 @@ impl SpatialFabricGrid {
         let mut min_distance_sq = TOLERANCE_SQ;
 
         // Bucket contains EdgeIds, grab actual geometry out of edge_index map
-        for &edge_id in &bucket.edge_data {
-            if let Some(edge) = self.edge_index.get(&edge_id) {
-                let dist_sq = distance_to_segment(position.world_position, edge.start_position, edge.end_position);
+        for &(edge_id, start, end) in &bucket.edge_data {
+            let dist_sq = distance_to_segment(position.world_position, start, end);
 
-                if dist_sq < min_distance_sq {
-                    min_distance_sq = dist_sq;
-                    closest_edge = Some(edge_id);
-                }
+            if dist_sq < min_distance_sq {
+                min_distance_sq = dist_sq;
+                closest_edge = Some(edge_id);
             }
         }
 
@@ -121,26 +119,23 @@ impl SpatialFabricGrid {
         let max_x = world_x + RADIUS;
 
         // Binary search setup over NodeIds using your custom bracket index reference structure
-        let nodes_ref = &self.node_index;
-        let start_idx = match bucket.node_data.binary_search_by(|&id| {
-            let pos_x = nodes_ref[id].as_ref().map(|n| n.position.x).unwrap_or(0.0);
-            pos_x.partial_cmp(&min_x).unwrap()
-        }) {
+        let start_idx = match bucket
+            .node_data
+            .binary_search_by(|&(_id, position)| position.x.partial_cmp(&min_x).unwrap())
+        {
             Ok(idx) | Err(idx) => idx,
         };
 
-        for &node_id in &bucket.node_data[start_idx..] {
-            if let Some(node) = nodes_ref[node_id].as_ref() {
-                if node.position.x > max_x {
-                    break;
-                }
-                let dx = world_x - node.position.x;
-                let dy = world_y - node.position.y;
-                let distance = dx * dx + dy * dy;
+        for &(node_id, position) in &bucket.node_data[start_idx..] {
+            if position.x > max_x {
+                break;
+            }
+            let dx = world_x - position.x;
+            let dy = world_y - position.y;
+            let distance = dx * dx + dy * dy;
 
-                if distance <= RADIUS_SQ {
-                    return Some(node_id);
-                }
+            if distance <= RADIUS_SQ {
+                return Some(node_id);
             }
         }
 

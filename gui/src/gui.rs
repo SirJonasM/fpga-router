@@ -76,21 +76,35 @@ pub fn draw_sidepanel(app: &mut App) -> Option<Entity> {
                 ui.label(format!("Selected Edge: {source_node}->{target_node}",));
             }
 
-            let response = ui.button("back");
-            if response.clicked() {
-                app.selected_entity.go_back();
+            let entity = ui
+                .horizontal(|ui| {
+                    let response = ui.button("back");
+                    if response.clicked() {
+                        app.selected_entity.go_back();
+                    }
+                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                        let response = ui.button("forward");
+                        if response.clicked() {
+                            app.selected_entity.go_forward();
+                        }
+                    });
+                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                        if let Some(current) = app.selected_entity.current {
+                            let response = ui.button("focus");
+                            if response.clicked() {
+                                return Some(current);
+                            }
+                        };
+
+                        None
+                    })
+                    .inner
+                })
+                .inner;
+            if entity.is_some() {
+                return entity;
             }
-            let response = ui.button("forward");
-            if response.clicked() {
-                app.selected_entity.go_forward();
-            }
-            if let Some(current) = app.selected_entity.current {
-                let response = ui.button("focus");
-                if response.clicked() {
-                    return Some(current);
-                }
-            }
-            if let Some(Entity::Node(node)) = app.selected_entity.current
+            if let Some(Entity::Mux(node)) = app.selected_entity.current
                 && let Some(graph) = &app.router.current_graph
             {
                 let node_id = graph.get_node(node).id();
@@ -114,7 +128,7 @@ pub fn draw_sidepanel(app: &mut App) -> Option<Entity> {
                         let node = graph.get_node(*node_id);
                         let spatial_grid = app.spatial_grid.as_ref()?;
                         let bucket = spatial_grid.buckets.get(&node.tile)?;
-                        bucket.node_data.iter().find(|a| *a == node_id).map(|a| Entity::Node(*a))
+                        bucket.node_data.iter().find(|a| &a.0 == node_id).map(|a| Entity::Mux(a.0))
                     } else {
                         None
                     }

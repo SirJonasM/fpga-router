@@ -23,8 +23,8 @@ pub use error::{FabricError, FabricResult};
 
 // Public API
 pub use api::*;
-pub use fabric::graph::{Fabric, FabricGraph, FabricGraphEdgeIterator};
-pub use fabric::node::{Compass, Edge, Node, NodeId, NodeType, TileId, Wire, WirePoint};
+pub use fabric::graph::{Fabric, FabricGraph, FabricGraphEdgeIterator, FabricNodeIterator};
+pub use fabric::node::{Compass, Edge, LutPort, MuxNode, MuxPort, Node, NodeId, NodeType, Port, TileId, TilePort};
 pub use fabric::parser::TimingModel;
 pub use fabric::tile_manager::{Lut, Tile, TileManager};
 pub use netlist::{NetExternal, NetInternal, NetListExternal, NetListInternal, NetResultExternal, NetResultInternal, Swap};

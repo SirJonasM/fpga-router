@@ -4,7 +4,7 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
     Fabric, FabricError, FabricResult, RouteNet,
-    fabric::node::{Node, NodeId, NodeType},
+    fabric::node::{LutPort, Node, NodeId, NodeType},
     netlist::{NetInternal, NetResultInternal},
 };
 
@@ -22,8 +22,12 @@ impl RouteNet for SimpleSolver {
             .iter()
             .filter_map(|sink| {
                 let sink_node = fabric.graph.get_node(*sink);
-                if let NodeType::LutInput(bel_index, _port_id) = sink_node.typ {
-                    return Some((sink, sink_node, bel_index));
+                if let NodeType::Lut {
+                    bel,
+                    port: LutPort::Input(_),
+                } = sink_node.typ
+                {
+                    return Some((sink, sink_node, bel));
                 }
                 None
             })
@@ -75,8 +79,12 @@ impl RouteNet for SimpleSolver {
             .filter(|a| !paths.contains_key(a))
             .for_each(|a| {
                 let node = fabric.graph.get_node(a);
-                if let NodeType::LutInput(bel_index, _port_id) = &node.typ {
-                    fabric.tile_manager.free_lut_input(node.tile, *bel_index, &node.id).unwrap();
+                if let NodeType::Lut {
+                    bel,
+                    port: LutPort::Input(_),
+                } = &node.typ
+                {
+                    fabric.tile_manager.free_lut_input(node.tile, *bel, &node.id).unwrap();
                 }
             });
         net.result = Some(NetResultInternal { paths, nodes });

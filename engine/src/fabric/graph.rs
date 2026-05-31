@@ -138,6 +138,35 @@ pub struct FabricGraph {
     /// Index of String ids from PIPS file to internal `NodeId`
     pub index: HashMap<String, NodeId>,
 }
+
+pub struct FabricNodeIterator<'a> {
+    nodes: &'a [Node],
+    current_node_idx: usize,
+}
+impl<'a> Iterator for FabricNodeIterator<'a> {
+    type Item = (NodeId, &'a Node);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_node_idx < self.nodes.len() {
+            let node = &self.nodes[self.current_node_idx];
+            let node_id = NodeId::new(self.current_node_idx);
+            self.current_node_idx += 1;
+            return Some((node_id, node));
+        }
+
+        None
+    }
+}
+
+impl<'a> FabricNodeIterator<'a> {
+    #[must_use]
+    pub fn new(graph: &'a FabricGraph) -> Self {
+        Self {
+            nodes: &graph.nodes,
+            current_node_idx: 0,
+        }
+    }
+}
 pub struct FabricGraphEdgeIterator<'a> {
     map: &'a [Vec<Edge>],
     current_node_idx: usize,
@@ -188,6 +217,14 @@ impl FabricGraph {
     }
     pub fn get_costs_mut(&mut self, node_id: NodeId) -> &mut Costs {
         &mut self.costs[node_id]
+    }
+    /// Iterates over all forward edges in the graph, returning
+    /// the source `NodeId` and a reference to the `Edge`.
+    pub fn nodes(&self) -> impl Iterator<Item = (NodeId, &Node)> {
+        self.nodes.iter().enumerate().map(move |(idx, node)| {
+            let source_id = NodeId::new(idx);
+            (source_id, node)
+        })
     }
     /// Iterates over all forward edges in the graph, returning
     /// the source `NodeId` and a reference to the `Edge`.

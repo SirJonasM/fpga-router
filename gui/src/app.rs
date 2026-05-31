@@ -365,7 +365,7 @@ impl App {
                 .get_tile(tile_id)
                 .map(|tile| (tile.mid_point(), TILE_FOCUS_SCALE)),
             Entity::Lut(lut_id) => spatial_grid.get_lut(lut_id).map(|lut| (lut.mid_point(), LUT_FOCUS_SCALE)),
-            Entity::Node(node_id) => spatial_grid.get_node(node_id).map(|node| (node.position, NODE_FOCUS_SCALE)),
+            Entity::Mux(node_id) => spatial_grid.get_node(node_id).map(|node| (node.position, NODE_FOCUS_SCALE)),
             Entity::Edge(edge_id) => spatial_grid.get_edge(edge_id).map(|edge| (edge.mid_point(), edge.focus())),
         }) else {
             return;
@@ -472,7 +472,7 @@ impl App {
                         let Some(node) = spatial_grid.find_node_by_label(tile_id, &label) else {
                             return;
                         };
-                        self.selected_entity.select(Entity::Node(node.id));
+                        self.selected_entity.select(Entity::Mux(node.id));
                         self.focus_point(node.position, NODE_FOCUS_SCALE);
                     }
                 }

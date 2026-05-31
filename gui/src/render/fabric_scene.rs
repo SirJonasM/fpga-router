@@ -1,6 +1,6 @@
 use crate::constants::*;
 use crate::core::Entity;
-use crate::core::NodeMetadata;
+use crate::core::MuxMetadata;
 use crate::core::SpatialFabricGrid;
 use crate::core::VisibleTileRange;
 use vello::Scene;
@@ -30,7 +30,7 @@ pub fn fabric_highlight_scene(spatial_grid: &SpatialFabricGrid, selection: Entit
                 draw_lut_base(lut, &mut scene, &highlighting)
             }
         }
-        Entity::Node(node) => {
+        Entity::Mux(node) => {
             if let Some(node) = spatial_grid.get_node(node) {
                 let highlighting = NodeHighlightingConfig {
                     fill_color: Color::RED,
@@ -95,13 +95,13 @@ pub fn fabric_base_scene(
         .into_iter()
         .filter_map(|tile_id| spatial_grid.buckets.get(&tile_id))
         .for_each(|bucket| {
-            if let Some(tile) = spatial_grid.get_tile(bucket.tile_data) {
+            if let Some(tile) = spatial_grid.get_tile(bucket.tile_data.0) {
                 draw_tile_base(tile, &mut scene, &tile_highlighting);
             }
 
             if draw_luts {
                 for lut in &bucket.lut_data {
-                    if let Some(lut) = spatial_grid.get_lut(*lut) {
+                    if let Some(lut) = spatial_grid.get_lut(lut.0) {
                         draw_lut_base(lut, &mut scene, &lut_highlighting);
                     }
                 }
@@ -109,7 +109,7 @@ pub fn fabric_base_scene(
 
             if draw_edges {
                 for edge in &bucket.edge_data {
-                    if let Some(edge) = spatial_grid.get_edge(*edge) {
+                    if let Some(edge) = spatial_grid.get_edge(edge.0) {
                         draw_edge_base(edge, &mut scene, &edge_highlighting);
                     }
                 }
@@ -117,7 +117,7 @@ pub fn fabric_base_scene(
 
             if draw_nodes {
                 for node in &bucket.node_data {
-                    if let Some(node) = spatial_grid.get_node(*node) {
+                    if let Some(node) = spatial_grid.get_node(node.0) {
                         draw_node_base(node, &mut scene, &node_highlighting);
                     }
                 }
@@ -202,7 +202,7 @@ fn draw_edge_base(edge: &crate::core::Edge, scene: &mut Scene, highlighting: &Ed
 }
 
 #[inline(always)]
-fn draw_node_base(node: &NodeMetadata, scene: &mut Scene, highlighting: &NodeHighlightingConfig) {
+fn draw_node_base(node: &MuxMetadata, scene: &mut Scene, highlighting: &NodeHighlightingConfig) {
     let circle = vello::kurbo::Circle::new(node.position, highlighting.radius);
     scene.fill(
         vello::peniko::Fill::NonZero,

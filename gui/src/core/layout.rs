@@ -1,4 +1,4 @@
-use router::{Compass, TileId, Wire, WirePoint};
+use router::{Compass, MuxNode, MuxPort, TileId, WirePoint};
 
 use crate::{
     constants::*,
@@ -60,15 +60,15 @@ impl LayoutBuilder<AtTileOuter> {
 
 impl LayoutBuilder<AtTileInner> {
     pub fn lut(self, lut_id: char) -> LayoutBuilder<AtLut> {
-        let (lx, ly) = get_lut_offset(lut_id);
+        let point = get_lut_offset(lut_id);
 
         LayoutBuilder {
-            x: self.x + lx,
-            y: self.y + ly,
+            x: self.x + point.x,
+            y: self.y + point.y,
             _marker: std::marker::PhantomData,
         }
     }
-    pub fn wire_oriented(mut self, wire: &Wire) -> Self {
+    pub fn mux_oriented(mut self, wire: &MuxNode) -> Self {
         let (local_x, local_y) = if wire.jump {
             (
                 0.0,

@@ -139,38 +139,53 @@ impl Display for Node {
     }
 }
 
-#[derive(Hash, Eq, PartialEq, Clone, Debug)]
-pub enum WirePoint {
-    Begin,
-    BeginB,
-    Mid,
-    End,
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Port {
+    Lut(LutPort),
+    Mux(MuxPort),
+    Tile(TilePort),
 }
 
 #[derive(Hash, Eq, PartialEq, Clone, Debug)]
-pub enum NodeType {
-    LutInput(char, u8),
-    LutOutput(char),
-    LutCarryIn(char),
-    LutCarryOut(char),
-    LutEnable(char),
-    LutSetReset(char),
+pub enum LutPort {
+    Input(u8),
+    Output,
+    CarryIn,
+    CarryOut,
+    Enable,
+    SetReset,
+}
+#[derive(Hash, Eq, PartialEq, Clone, Debug)]
+pub enum TilePort {
     CarryIn(u8),
     CarryOut(u8),
     Ground(u8),
     VCC(u8),
-    Wire(Wire),
     Lut(char),
-    Other,
 }
+
 #[derive(Hash, Eq, PartialEq, Clone, Debug)]
-pub struct Wire {
+pub struct MuxNode {
+    pub id: u8,
     pub direction: Compass,
     pub jump: bool,
     pub double: bool,
     pub length: u8,
-    pub wire_point: WirePoint,
-    pub id: u8,
+    pub port: MuxPort,
+}
+#[derive(Hash, Eq, PartialEq, Clone, Debug)]
+pub enum NodeType {
+    Lut { bel: char, port: LutPort },
+    Tile { port: TilePort },
+    Mux(MuxNode),
+    Other,
+}
+#[derive(Hash, Eq, PartialEq, Clone, Debug)]
+pub enum MuxPort {
+    Begin,
+    BeginB,
+    Mid,
+    End,
 }
 
 /// Structure representing costs associated with routing through a node

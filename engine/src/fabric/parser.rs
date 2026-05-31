@@ -117,7 +117,7 @@ const fn distance(a: &Node, b: &Node) -> f32 {
 #[cfg(test)]
 mod test {
     use crate::{
-        Wire,
+        MuxPort,
         fabric::node::{Compass, NodeType, TileId, WirePoint},
     };
 
@@ -149,7 +149,7 @@ mod test {
         let node1_expected = Node {
             id: "NN1END3".to_string(),
             tile: TileId(1, 0),
-            typ: NodeType::Wire(Wire {
+            typ: NodeType::MuxPort(MuxPort {
                 direction: Compass::North,
                 jump: false,
                 double: true,
@@ -161,7 +161,7 @@ mod test {
         let node2_expected = Node {
             id: "S1BEG0".to_string(),
             tile: TileId(1, 0),
-            typ: NodeType::Wire(Wire {
+            typ: NodeType::MuxPort(MuxPort {
                 direction: Compass::South,
                 jump: false,
                 double: false,
