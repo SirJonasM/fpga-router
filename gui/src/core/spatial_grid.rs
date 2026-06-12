@@ -1,12 +1,12 @@
 use crate::{
     constants::*,
     core::{
-        Edge, TargetLocation,
-        entities::{EdgeId, LutId, LutMetadata, MuxId, MuxMetadata, MuxPorts, Tile, TileMetadata, TilePorts},
+        Edge, Entity, TargetLocation,
+        entities::{EdgeId, LutId, LutMetadata, Metadata, MuxId, MuxMetadata, MuxPorts, Tile, TileMetadata, TilePorts},
         layout::LayoutBuilder,
     },
 };
-use router::{NodeId, TileId};
+use router::{MuxPort, NodeId, Port, TileId};
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -32,6 +32,7 @@ impl SpatialFabricGrid {
         let mut lut_index = HashMap::new();
         let mut mux_index: HashMap<(TileId, String), MuxMetadata> = HashMap::new();
         let mut edge_index = HashMap::new();
+        let mut node_lookup: HashMap<NodeId, (Entity, Port)> = HashMap::new();
 
         for tile in tile_manager.0.values() {
             let position_outer = LayoutBuilder::new().tile(&tile.id).build();
@@ -55,24 +56,28 @@ impl SpatialFabricGrid {
             match &node.typ {
                 router::NodeType::Lut { bel, port } => {
                     let id = (node.tile.0 as usize) << 16 | (node.tile.1 as usize) << 8 | (*bel as usize);
-                    let ports = lut_index.entry(id).or_insert(LutMetadata::default()).ports;
+                    let ports = &mut lut_index.entry(id).or_insert(LutMetadata::default()).ports;
+                    node_lookup.insert(node_id, (Entity::Lut(id.clone()), Port::Lut(port.clone())));
+                    let layout = LayoutBuilder::new().tile(&node.tile).tile_inner().lut(*bel);
                     match port {
-                        router::LutPort::Input(_) => ports.inputs.push(node_id),
-                        router::LutPort::Output => ports.output = Some(node_id),
-                        router::LutPort::CarryIn => ports.carry_in = Some(node_id),
-                        router::LutPort::CarryOut => ports.carry_out = Some(node_id),
-                        router::LutPort::Enable => ports.enable = Some(node_id),
-                        router::LutPort::SetReset => ports.set_reset = Some(node_id),
+                        router::LutPort::Input(id) => ports.inputs.insert(id, (node_id, layout.input(*id).build())),
+                        router::LutPort::Output => ports.output = Some((node_id, layout.output().build())),
+                        router::LutPort::CarryIn => ports.carry_in = Some((node_id, layout.carry_in().build())),
+                        router::LutPort::CarryOut => ports.carry_out = Some((node_id, layout.carry_out().build())),
+                        router::LutPort::Enable => ports.enable = Some((node_id, layout.enable().build())),
+                        router::LutPort::SetReset => ports.set_reset = Some((node_id, layout.set_reset().build())),
                     }
                 }
                 router::NodeType::Tile { port } => {
                     let tile_metadata = &mut tile_index.get_mut(&node.tile).unwrap().ports;
+                    node_lookup.insert(node_id, (Entity::Tile(node.tile), Port::Tile(port.clone())));
+                    let layout = LayoutBuilder::new().tile(&node.tile).tile_inner();
                     match port {
-                        router::TilePort::CarryIn(_) => tile_metadata.carry_in = Some(node_id),
-                        router::TilePort::CarryOut(_) => tile_metadata.carry_out = Some(node_id),
-                        router::TilePort::Ground(_) => tile_metadata.ground = Some(node_id),
-                        router::TilePort::VCC(_) => tile_metadata.vcc = Some(node_id),
-                        router::TilePort::Lut(_) => tile_metadata.lut = Some(node_id),
+                        router::TilePort::CarryIn(_) => tile_metadata.carry_in = Some((node_id, layout.carry_in().build())),
+                        router::TilePort::CarryOut(_) => tile_metadata.carry_out = Some((node_id, layout.carry_out().build())),
+                        router::TilePort::Ground(_) => tile_metadata.ground = Some((node_id, layout.ground().build())),
+                        router::TilePort::VCC(_) => tile_metadata.vcc = Some((node_id, layout.vdd().build())),
+                        router::TilePort::Lut(_) => tile_metadata.lut = Some((node_id, layout.vdd().build())),
                     }
                 }
                 router::NodeType::Mux(mux_node) => {
@@ -89,6 +94,7 @@ impl SpatialFabricGrid {
                         .mux_oriented(mux_node)
                         .build();
 
+                    node_lookup.insert(node_id, (Entity::Mux(id.clone()), Port::Mux(mux_node.port.clone())));
                     let ports = &mut mux_index
                         .entry(id.clone())
                         .or_insert_with(|| MuxMetadata {
@@ -101,29 +107,56 @@ impl SpatialFabricGrid {
                             incoming: Vec::new(),
                         })
                         .ports;
+                    let position = LayoutBuilder::new()
+                        .tile(&node.tile)
+                        .tile_inner()
+                        .mux_oriented(&mux_node)
+                        .build();
                     match mux_node.port {
-                        router::MuxPort::Begin => ports.end = Some(node_id),
-                        router::MuxPort::BeginB => ports.begin_b = Some(node_id),
-                        router::MuxPort::Mid => ports.mid = Some(node_id),
-                        router::MuxPort::End => ports.end = Some(node_id),
+                        router::MuxPort::Begin => ports.end = Some((node_id, position)),
+                        router::MuxPort::BeginB => ports.begin_b = Some((node_id, position)),
+                        router::MuxPort::Mid => ports.mid = Some((node_id, position)),
+                        router::MuxPort::End => ports.end = Some((node_id, position)),
                     };
                 }
                 router::NodeType::Other => {}
             }
         }
 
-        for (source_node_id, edge) in graph.edges() {
-            let source = graph.get_node(source_node_id);
-            let target = graph.get_node(edge.node_id);
+        let mut id = 0;
+        for (mux_id, mux) in &mux_index {
+            if let Some(end) = mux.ports.end {
+                let source = (Entity::Mux(mux_id.clone()), Port::Mux(MuxPort::End));
+                let start_position = mux.position;
+                let next_nodes = graph.get_next(end.0);
+                for next_node in next_nodes {
+                    let (target_id, target_port) = node_lookup.get(&next_node).unwrap();
+                    let target_data = match target_id {
+                        Entity::Tile(tile_id) => Metadata::Tile(tile_index.get(tile_id).unwrap().clone()),
+                        Entity::Lut(lut_id) => Metadata::Lut(lut_index.get(lut_id).unwrap().clone()),
+                        Entity::Mux(mux_id) => Metadata::Mux(mux_index.get(mux_id).unwrap().clone()),
+                        Entity::Edge(_) => continue,
+                    };
+                    let (_, target_position) = target_data.get_port(target_port).unwrap();
+                    let edge = Edge {
+                        id,
+                        source,
+                        start_position,
+                        target: (target_id.clone(), target_port.clone()),
+                        end_position: target_position,
+                    };
+                    edge_index.insert(id, edge);
+                }
+            }
         }
 
         for (id, lut) in &lut_index {
             let bucket = grid.buckets.get_mut(&lut.tile_id).unwrap();
-            bucket.lut_data.push((*id, lut.position));
+            bucket.lut_data.push(*id);
         }
         for (id, mux) in &mux_index {
             let bucket = grid.buckets.get_mut(&mux.tile_id).unwrap();
-            bucket.mux_data.push((id.clone(), mux.position));
+            bucket.mux_data.push(id.clone());
         }
 
         grid.lut_index = lut_index;

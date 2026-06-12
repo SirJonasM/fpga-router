@@ -180,6 +180,17 @@ pub enum NodeType {
     Mux(MuxNode),
     Other,
 }
+
+impl Node {
+    pub fn port(&self) -> Option<Port> {
+        match &self.typ {
+            NodeType::Lut { port, .. } => Some(Port::Lut(port.clone())),
+            NodeType::Tile { port } => Some(Port::Tile(port.clone())),
+            NodeType::Mux(mux_node) => Some(Port::Mux(mux_node.port.clone())),
+            NodeType::Other => None,
+        }
+    }
+}
 #[derive(Hash, Eq, PartialEq, Clone, Debug)]
 pub enum MuxPort {
     Begin,

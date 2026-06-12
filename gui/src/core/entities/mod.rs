@@ -5,7 +5,8 @@ mod tile;
 
 pub use edge::{Edge, EdgeId};
 pub use node::{
-    GraphNode, LutId, LutMetadata, LutPorts, MuxMetadata, MuxPorts, TileMetadata, TilePorts, get_lut_offset, get_node_pos,
+    GraphNode, LutId, LutMetadata, LutPorts, Metadata, MuxMetadata, MuxPorts, TileMetadata, TilePorts, get_lut_offset,
+    get_node_pos,
 };
 use router::TileId;
 use std::fmt::Display;

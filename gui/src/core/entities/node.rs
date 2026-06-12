@@ -1,6 +1,6 @@
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
-use router::{NodeId, NodeType, TileId};
+use router::{LutPort, MuxPort, NodeId, NodeType, Port, TileId, TilePort};
 use vello::kurbo::Point;
 
 use crate::{
@@ -10,27 +10,27 @@ use crate::{
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct MuxPorts {
-    pub begin: Option<NodeId>,
-    pub mid: Option<NodeId>,
-    pub begin_b: Option<NodeId>,
-    pub end: Option<NodeId>,
+    pub begin: Option<(NodeId, Point)>,
+    pub mid: Option<(NodeId, Point)>,
+    pub begin_b: Option<(NodeId, Point)>,
+    pub end: Option<(NodeId, Point)>,
 }
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct LutPorts {
-    pub inputs: Vec<NodeId>,
-    pub output: Option<NodeId>,
-    pub set_reset: Option<NodeId>,
-    pub enable: Option<NodeId>,
-    pub carry_in: Option<NodeId>,
-    pub carry_out: Option<NodeId>,
+    pub inputs: HashMap<u8, (NodeId, Point)>,
+    pub output: Option<(NodeId, Point)>,
+    pub set_reset: Option<(NodeId, Point)>,
+    pub enable: Option<(NodeId, Point)>,
+    pub carry_in: Option<(NodeId, Point)>,
+    pub carry_out: Option<(NodeId, Point)>,
 }
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct TilePorts {
-    pub carry_in: Option<NodeId>,
-    pub carry_out: Option<NodeId>,
-    pub ground: Option<NodeId>,
-    pub vcc: Option<NodeId>,
-    pub lut: Option<NodeId>,
+    pub carry_in: Option<(NodeId, Point)>,
+    pub carry_out: Option<(NodeId, Point)>,
+    pub ground: Option<(NodeId, Point)>,
+    pub vcc: Option<(NodeId, Point)>,
+    pub lut: Option<(NodeId, Point)>,
 }
 
 pub type MuxId = (TileId, String);
@@ -40,6 +40,55 @@ pub enum GraphNode {
     Lut(LutMetadata),
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum Metadata {
+    Tile(TileMetadata),
+    Lut(LutMetadata),
+    Mux(MuxMetadata),
+}
+impl Metadata {
+    pub fn get_port(&self, port: &Port) -> Option<(NodeId, Point)> {
+        match (self, port) {
+            (Self::Tile(tile_metadata), Port::Tile(tile_port)) => tile_metadata.get_port(tile_port),
+            (Self::Lut(lut_metadata), Port::Lut(lut_port)) => lut_metadata.get_port(lut_port),
+            (Self::Mux(mux_metadata), Port::Mux(mux_port)) => mux_metadata.get_port(mux_port),
+            _ => None,
+        }
+    }
+}
+impl TileMetadata {
+    pub fn get_port(&self, tile_port: &TilePort) -> Option<(NodeId, Point)> {
+        match tile_port {
+            router::TilePort::CarryIn(_) => self.ports.carry_in,
+            router::TilePort::CarryOut(_) => self.ports.carry_in,
+            router::TilePort::Ground(_) => self.ports.carry_in,
+            router::TilePort::VCC(_) => self.ports.carry_in,
+            router::TilePort::Lut(_) => self.ports.carry_in,
+        }
+    }
+}
+impl MuxMetadata {
+    pub fn get_port(&self, mux_port: &MuxPort) -> Option<(NodeId, Point)> {
+        match mux_port {
+            router::MuxPort::Begin => self.ports.begin,
+            router::MuxPort::BeginB => self.ports.begin_b,
+            router::MuxPort::Mid => self.ports.mid,
+            router::MuxPort::End => self.ports.end,
+        }
+    }
+}
+impl LutMetadata {
+    pub fn get_port(&self, lut_port: &LutPort) -> Option<(NodeId, Point)> {
+        match lut_port {
+            router::LutPort::Input(id) => self.ports.inputs.get(&id).copied(),
+            router::LutPort::Output => self.ports.output,
+            router::LutPort::CarryIn => self.ports.carry_in,
+            router::LutPort::CarryOut => self.ports.carry_out,
+            router::LutPort::Enable => self.ports.enable,
+            router::LutPort::SetReset => self.ports.set_reset,
+        }
+    }
+}
 #[derive(Clone, Debug, PartialEq)]
 pub struct TileMetadata {
     pub id: TileId,
@@ -58,13 +107,24 @@ pub struct MuxMetadata {
     pub incoming: Vec<EdgeId>,
 }
 
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct LutMetadata {
     pub tile_id: TileId,
     pub id: LutId,
     pub position: Point,
     pub ports: LutPorts,
     pub bel_index: char,
+}
+impl Default for LutMetadata {
+    fn default() -> Self {
+        Self {
+            tile_id: TileId(0, 0),
+            id: Default::default(),
+            position: Default::default(),
+            ports: Default::default(),
+            bel_index: Default::default(),
+        }
+    }
 }
 
 impl Display for MuxMetadata {
